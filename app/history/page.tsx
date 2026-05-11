@@ -10,8 +10,13 @@ export default function HistoryPage() {
           const a = getAgent(t.agentId);
           return (
             <div key={t.id} className="bg-card rounded-2xl p-3 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-bg flex items-center justify-center text-xl shrink-0">
-                {a?.emoji ?? "🤖"}
+              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-bg border border-white/10">
+                {a ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl">🤖</div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">

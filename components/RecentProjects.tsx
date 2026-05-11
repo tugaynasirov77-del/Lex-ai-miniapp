@@ -36,8 +36,9 @@ export default function RecentProjects() {
                   const a = getAgent(id);
                   if (!a) return null;
                   return (
-                    <div key={id} className="w-6 h-6 rounded-full bg-bg2 border border-white/10 flex items-center justify-center text-xs">
-                      {a.emoji}
+                    <div key={id} className="w-6 h-6 rounded-full overflow-hidden border border-white/10 bg-bg2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
                     </div>
                   );
                 })}

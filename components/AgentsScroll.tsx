@@ -19,10 +19,11 @@ export default function AgentsScroll() {
             onClick={() => openAgent(a.botUsername)}
             className="shrink-0 w-[88px] group"
           >
-            <div className="relative w-[88px] h-[88px] rounded-2xl glass flex items-center justify-center transition-all group-active:scale-95 group-hover:shadow-glowStrong">
-              <div className="absolute inset-0 rounded-2xl bg-accent-grad opacity-0 group-hover:opacity-20 group-active:opacity-30 transition-opacity" />
-              <span className="text-4xl relative z-10">{a.emoji}</span>
-              <span className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${a.status === "online" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-red-400"}`} />
+            <div className="relative w-[88px] h-[88px] rounded-2xl overflow-hidden glass transition-all group-active:scale-95 group-hover:shadow-glowStrong">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.avatar} alt={a.name} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-accent-grad opacity-0 group-hover:opacity-20 group-active:opacity-30 transition-opacity" />
+              <span className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border-2 border-bg ${a.status === "online" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-red-400"}`} />
             </div>
             <p className="text-center text-xs mt-2 font-medium truncate">{a.name}</p>
             <p className="text-center text-[10px] text-white/40 truncate">{a.role.split(" — ")[0]}</p>

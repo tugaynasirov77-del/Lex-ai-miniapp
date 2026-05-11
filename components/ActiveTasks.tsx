@@ -18,8 +18,13 @@ export default function ActiveTasks() {
             const a = getAgent(t.agentId);
             return (
               <div key={t.id} className="glass rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-xl shrink-0 border border-white/10">
-                  {a?.emoji ?? "🤖"}
+                <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                  {a ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xl">🤖</div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">

@@ -25,8 +25,13 @@ export default function AnalyticsPage() {
 
       <div className="px-4 mt-4">
         <div className="bg-card rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-bg flex items-center justify-center text-2xl">
-            {top?.emoji ?? "🏆"}
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-bg border border-white/10">
+            {top ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={top.avatar} alt={top.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-2xl">🏆</div>
+            )}
           </div>
           <div>
             <p className="text-xs text-muted">Самый активный агент</p>

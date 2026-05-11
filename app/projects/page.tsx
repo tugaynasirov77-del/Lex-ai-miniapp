@@ -24,7 +24,10 @@ export default function ProjectsPage() {
                 {p.agents.map((id) => {
                   const a = getAgent(id);
                   return a ? (
-                    <span key={id} title={a.name} className="text-lg">{a.emoji}</span>
+                    <div key={id} title={a.name} className="w-7 h-7 rounded-full overflow-hidden border border-white/10 -ml-1 first:ml-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
+                    </div>
                   ) : null;
                 })}
               </div>
