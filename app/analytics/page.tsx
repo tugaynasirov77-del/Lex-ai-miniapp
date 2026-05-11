@@ -3,7 +3,7 @@ import { ANALYTICS, getAgent } from "../../lib/mockData";
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-card rounded-2xl p-4">
+    <div className="glass rounded-2xl p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="text-2xl font-bold mt-1">{value}</p>
       {hint && <p className="text-[11px] text-muted mt-0.5">{hint}</p>}
@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="px-4 mt-4">
-        <div className="bg-card rounded-2xl p-4 flex items-center gap-3">
+        <div className="glass rounded-2xl p-4 flex items-center gap-3">
           <div className="w-12 h-12 rounded-full overflow-hidden bg-bg border border-white/10">
             {top ? (
               // eslint-disable-next-line @next/next/no-img-element

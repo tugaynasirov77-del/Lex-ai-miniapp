@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 const TAGS = [
-  { emoji: "✍️", label: "Написать пост" },
+  { emoji: "✍️", label: "Контент" },
   { emoji: "🔍", label: "Анализ" },
   { emoji: "💻", label: "Код" },
   { emoji: "📊", label: "Стратегия" },
@@ -20,46 +20,41 @@ function openOrchestrator(text: string) {
 
 export default function TaskHero() {
   const [text, setText] = useState("");
-
-  const submit = () => {
-    if (!text.trim()) return;
-    openOrchestrator(text.trim());
-  };
+  const submit = () => { if (text.trim()) openOrchestrator(text.trim()); };
 
   return (
-    <section className="px-4 mt-3 animate-fade-up" style={{ animationDelay: "60ms" }}>
-      <div className="glass rounded-2xl p-4 shadow-glow">
-        <div className="flex items-center gap-2">
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-            placeholder="Какую задачу решаем сегодня?"
-            className="flex-1 bg-transparent outline-none placeholder:text-white/40 text-[15px] py-1"
-          />
-          <button
-            onClick={submit}
-            aria-label="Отправить задачу"
-            className="w-10 h-10 rounded-xl bg-accent-grad flex items-center justify-center shadow-glow active:scale-95 transition-transform"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M3 12L21 4L13 22L11 13L3 12Z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
-          {TAGS.map((t) => (
-            <button
-              key={t.label}
-              onClick={() => setText(t.label)}
-              className="shrink-0 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/80 hover:bg-white/10 active:scale-95 transition"
-            >
-              <span className="mr-1">{t.emoji}</span>{t.label}
-            </button>
-          ))}
-        </div>
+    <section className="px-5 pt-6 animate-fade-up" style={{ animationDelay: "40ms" }}>
+      <h2 className="h1 mb-4">Какую задачу<br/>решаем сегодня?</h2>
+      <div className="glass glass-hover rounded-2xl p-2 pl-4 flex items-center gap-2">
+        <span className="text-base opacity-60">💬</span>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          placeholder="Опиши задачу команде…"
+          className="flex-1 bg-transparent outline-none placeholder:text-white/30 text-[15px] py-2.5"
+        />
+        <button
+          onClick={submit}
+          aria-label="Отправить"
+          className="w-10 h-10 rounded-xl bg-accentGrad flex items-center justify-center shadow-glowBtn hover:shadow-[0_4px_22px_rgba(110,86,207,0.55)]"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
-      <p className="text-[11px] text-white/40 mt-2 px-1">→ Задача уходит Андрею-Оркестратору</p>
+      <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+        {TAGS.map((t) => (
+          <button
+            key={t.label}
+            onClick={() => setText(`${t.emoji} ${t.label}: `)}
+            className="shrink-0 px-3 py-1.5 rounded-full glass text-xs text-ink/80 hover:border-accent/40"
+          >
+            <span className="mr-1">{t.emoji}</span>{t.label}
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

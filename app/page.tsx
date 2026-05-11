@@ -3,6 +3,7 @@ import TaskHero from "../components/TaskHero";
 import AgentsScroll from "../components/AgentsScroll";
 import ActiveTasks from "../components/ActiveTasks";
 import RecentProjects from "../components/RecentProjects";
+import QuickActions from "../components/QuickActions";
 
 export default function HomePage() {
   return (
@@ -12,6 +13,7 @@ export default function HomePage() {
       <AgentsScroll />
       <ActiveTasks />
       <RecentProjects />
+      <QuickActions />
     </>
   );
 }

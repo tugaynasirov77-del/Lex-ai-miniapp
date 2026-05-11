@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { AGENTS } from "../lib/mockData";
 
-interface TgUser {
-  first_name?: string;
-  photo_url?: string;
-}
+interface TgUser { first_name?: string; photo_url?: string; }
 
 export default function HomeHeader() {
   const [user, setUser] = useState<TgUser | null>(null);
@@ -16,25 +14,30 @@ export default function HomeHeader() {
   }, []);
 
   const initial = (user?.first_name ?? "").slice(0, 1).toUpperCase() || "👤";
+  const online = AGENTS.filter(a => a.status === "online").length;
 
   return (
-    <header className="px-4 pt-6 pb-2 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-xl bg-accent-grad flex items-center justify-center shadow-glow">
-          <span className="text-lg">⚡</span>
+    <header className="sticky top-0 z-30 px-5 pt-5 pb-4 backdrop-blur-xl bg-bg/70 border-b border-border">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-accentGrad flex items-center justify-center shadow-glowBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M13 2L4 14H12L11 22L20 10H12L13 2Z" fill="white" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-base font-bold tracking-tight leading-tight">LEX AI</h1>
+            <p className="text-[11px] text-muted leading-tight tnum">{AGENTS.length} агентов · {online} онлайн</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold leading-tight">LEX AI</h1>
-          <p className="text-[11px] text-muted leading-tight">8 агентов на связи</p>
+        <div className="w-9 h-9 rounded-full overflow-hidden border border-border bg-surface flex items-center justify-center">
+          {user?.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-sm font-semibold">{initial}</span>
+          )}
         </div>
-      </div>
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
-        {user?.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-base font-semibold">{initial}</span>
-        )}
       </div>
     </header>
   );

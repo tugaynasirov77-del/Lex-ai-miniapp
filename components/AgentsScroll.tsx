@@ -10,25 +10,35 @@ function openAgent(username: string) {
 
 export default function AgentsScroll() {
   return (
-    <section className="mt-6 animate-fade-up" style={{ animationDelay: "120ms" }}>
-      <h2 className="px-4 text-sm font-semibold text-white/90 mb-3">Агенты</h2>
-      <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar pb-1">
-        {AGENTS.map((a) => (
-          <button
-            key={a.id}
-            onClick={() => openAgent(a.botUsername)}
-            className="shrink-0 w-[88px] group"
-          >
-            <div className="relative w-[88px] h-[88px] rounded-2xl overflow-hidden glass transition-all group-active:scale-95 group-hover:shadow-glowStrong">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={a.avatar} alt={a.name} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-accent-grad opacity-0 group-hover:opacity-20 group-active:opacity-30 transition-opacity" />
-              <span className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border-2 border-bg ${a.status === "online" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-red-400"}`} />
-            </div>
-            <p className="text-center text-xs mt-2 font-medium truncate">{a.name}</p>
-            <p className="text-center text-[10px] text-white/40 truncate">{a.role.split(" — ")[0]}</p>
-          </button>
-        ))}
+    <section className="mt-8 animate-fade-up" style={{ animationDelay: "100ms" }}>
+      <div className="px-5 mb-3 flex items-center justify-between">
+        <span className="caption">Команда</span>
+        <span className="caption tnum">{AGENTS.length}</span>
+      </div>
+      <div className="flex gap-3 px-5 overflow-x-auto no-scrollbar pb-1">
+        {AGENTS.map((a, i) => {
+          const online = a.status === "online";
+          return (
+            <button
+              key={a.id}
+              onClick={() => openAgent(a.botUsername)}
+              className="shrink-0 w-[80px] flex flex-col items-center group animate-fade-up"
+              style={{ animationDelay: `${120 + i * 40}ms` }}
+            >
+              <div className="relative">
+                <div className={`w-[52px] h-[52px] rounded-full overflow-hidden ${online ? "shadow-ringOn" : "ring-2 ring-white/10"}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
+                </div>
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] rounded-full border-2 border-bg ${online ? "bg-success animate-pulse-dot" : "bg-white/25"}`}
+                />
+              </div>
+              <p className="mt-2 text-[11px] font-semibold leading-tight truncate max-w-full">{a.name}</p>
+              <p className="text-[10px] text-muted leading-tight truncate max-w-full">{a.role.split(" — ")[0]}</p>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

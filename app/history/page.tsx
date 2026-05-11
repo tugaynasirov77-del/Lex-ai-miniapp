@@ -9,7 +9,7 @@ export default function HistoryPage() {
         {HISTORY.map((t) => {
           const a = getAgent(t.agentId);
           return (
-            <div key={t.id} className="bg-card rounded-2xl p-3 flex items-start gap-3">
+            <div key={t.id} className="glass rounded-2xl p-3 flex items-start gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-bg border border-white/10">
                 {a ? (
                   // eslint-disable-next-line @next/next/no-img-element
