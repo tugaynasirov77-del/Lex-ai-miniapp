@@ -1,0 +1,77 @@
+export type AgentStatus = "online" | "offline";
+
+export interface Agent {
+  id: string;
+  name: string;
+  role: string;
+  emoji: string;
+  status: AgentStatus;
+  lastActive: string; // human-readable
+  botUsername: string; // tg username for deep link
+}
+
+export const AGENTS: Agent[] = [
+  { id: "andrey", name: "Андрей", role: "Оркестратор — координирует команду", emoji: "🧠", status: "online", lastActive: "только что", botUsername: "andrey_orchestrator_bot" },
+  { id: "milena", name: "Милена", role: "Маркетолог — стратегия и кампании", emoji: "📣", status: "online", lastActive: "5 мин назад", botUsername: "milena_marketing_bot" },
+  { id: "alexander", name: "Александр", role: "Стратег — долгосрочное планирование", emoji: "♟️", status: "online", lastActive: "12 мин назад", botUsername: "alexander_strategy_bot" },
+  { id: "alina", name: "Алина", role: "Копирайтер — тексты и сторителлинг", emoji: "✍️", status: "offline", lastActive: "1 час назад", botUsername: "alina_copywriter_bot" },
+  { id: "mikhail", name: "Михаил", role: "Кодер — разработка и автоматизация", emoji: "💻", status: "online", lastActive: "2 мин назад", botUsername: "mikhail_coder_bot" },
+  { id: "nikolay", name: "Николай", role: "Аналитик — данные и метрики", emoji: "📊", status: "online", lastActive: "20 мин назад", botUsername: "nikolay_analyst_bot" },
+  { id: "viktor", name: "Виктор", role: "Продажи — лиды и переговоры", emoji: "🤝", status: "offline", lastActive: "3 часа назад", botUsername: "viktor_sales_bot" },
+  { id: "arkadiy", name: "Аркадий", role: "Критик — проверка и качество", emoji: "🔍", status: "online", lastActive: "8 мин назад", botUsername: "arkadiy_critic_bot" },
+];
+
+export type ProjectStatus = "in_progress" | "done" | "paused";
+
+export interface Project {
+  id: string;
+  title: string;
+  status: ProjectStatus;
+  agents: string[]; // agent ids who participated
+  createdAt: string;
+  progress: number; // 0..100
+}
+
+export const PROJECTS: Project[] = [
+  { id: "p1", title: "Запуск онлайн-курса «Лекс»", status: "in_progress", agents: ["andrey", "milena", "alina", "nikolay"], createdAt: "2026-05-08", progress: 60 },
+  { id: "p2", title: "Лендинг для B2B продукта", status: "in_progress", agents: ["alexander", "alina", "mikhail"], createdAt: "2026-05-09", progress: 35 },
+  { id: "p3", title: "Аудит воронки продаж", status: "done", agents: ["nikolay", "viktor", "arkadiy"], createdAt: "2026-05-01", progress: 100 },
+  { id: "p4", title: "Контент-план на июнь", status: "paused", agents: ["milena", "alina"], createdAt: "2026-05-04", progress: 20 },
+  { id: "p5", title: "Интеграция CRM", status: "in_progress", agents: ["mikhail", "andrey"], createdAt: "2026-05-10", progress: 75 },
+];
+
+export type Feedback = "up" | "down" | null;
+
+export interface TaskHistoryItem {
+  id: string;
+  agentId: string;
+  description: string;
+  finishedAt: string; // human readable
+  durationMin: number;
+  feedback: Feedback;
+}
+
+export const HISTORY: TaskHistoryItem[] = [
+  { id: "t1", agentId: "alina", description: "Написала 3 поста для Instagram", finishedAt: "10 мин назад", durationMin: 8, feedback: "up" },
+  { id: "t2", agentId: "nikolay", description: "Собрал отчёт по конверсии за неделю", finishedAt: "32 мин назад", durationMin: 12, feedback: "up" },
+  { id: "t3", agentId: "mikhail", description: "Починил баг в форме регистрации", finishedAt: "1 час назад", durationMin: 25, feedback: "up" },
+  { id: "t4", agentId: "milena", description: "Подготовила бриф для рекламы", finishedAt: "2 часа назад", durationMin: 15, feedback: null },
+  { id: "t5", agentId: "viktor", description: "Обработал 4 входящих лида", finishedAt: "3 часа назад", durationMin: 20, feedback: "down" },
+  { id: "t6", agentId: "arkadiy", description: "Проверил тексты лендинга", finishedAt: "4 часа назад", durationMin: 7, feedback: "up" },
+  { id: "t7", agentId: "alexander", description: "Подготовил roadmap на квартал", finishedAt: "вчера", durationMin: 45, feedback: "up" },
+  { id: "t8", agentId: "andrey", description: "Разрулил конфликт задач между агентами", finishedAt: "вчера", durationMin: 5, feedback: "up" },
+  { id: "t9", agentId: "alina", description: "Переписала email-рассылку", finishedAt: "2 дня назад", durationMin: 18, feedback: "up" },
+  { id: "t10", agentId: "nikolay", description: "Сделал когортный анализ", finishedAt: "2 дня назад", durationMin: 30, feedback: null },
+];
+
+export const ANALYTICS = {
+  totalTasks: 247,
+  todayTasks: 18,
+  weekTasks: 96,
+  topAgentId: "alina",
+  avgResponseSec: 14,
+};
+
+export function getAgent(id: string) {
+  return AGENTS.find((a) => a.id === id);
+}
