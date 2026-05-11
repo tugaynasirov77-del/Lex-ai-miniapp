@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Script from "next/script";
 import BottomNav from "../components/BottomNav";
+import TelegramInit from "../components/TelegramInit";
 
 export const metadata: Metadata = {
   title: "Lex AI — Команда",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body className="bg-bg text-white min-h-screen">
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        <TelegramInit />
         <main className="pb-24 max-w-xl mx-auto">{children}</main>
         <BottomNav />
       </body>
