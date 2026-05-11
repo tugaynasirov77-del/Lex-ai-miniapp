@@ -11,14 +11,14 @@ export interface Agent {
 }
 
 export const AGENTS: Agent[] = [
-  { id: "andrey", name: "Андрей", role: "Оркестратор — координирует команду", emoji: "🧠", status: "online", lastActive: "только что", botUsername: "andrey_orchestrator_bot" },
-  { id: "milena", name: "Милена", role: "Маркетолог — стратегия и кампании", emoji: "📣", status: "online", lastActive: "5 мин назад", botUsername: "milena_marketing_bot" },
-  { id: "alexander", name: "Александр", role: "Стратег — долгосрочное планирование", emoji: "♟️", status: "online", lastActive: "12 мин назад", botUsername: "alexander_strategy_bot" },
-  { id: "alina", name: "Алина", role: "Копирайтер — тексты и сторителлинг", emoji: "✍️", status: "offline", lastActive: "1 час назад", botUsername: "alina_copywriter_bot" },
-  { id: "mikhail", name: "Михаил", role: "Кодер — разработка и автоматизация", emoji: "💻", status: "online", lastActive: "2 мин назад", botUsername: "mikhail_coder_bot" },
-  { id: "nikolay", name: "Николай", role: "Аналитик — данные и метрики", emoji: "📊", status: "online", lastActive: "20 мин назад", botUsername: "nikolay_analyst_bot" },
-  { id: "viktor", name: "Виктор", role: "Продажи — лиды и переговоры", emoji: "🤝", status: "offline", lastActive: "3 часа назад", botUsername: "viktor_sales_bot" },
-  { id: "arkadiy", name: "Аркадий", role: "Критик — проверка и качество", emoji: "🔍", status: "online", lastActive: "8 мин назад", botUsername: "arkadiy_critic_bot" },
+  { id: "andrey", name: "Андрей", role: "Оркестратор — координирует команду", emoji: "🧠", status: "online", lastActive: "только что", botUsername: "orkestrator1_bot" },
+  { id: "milena", name: "Милена", role: "Маркетолог — стратегия и кампании", emoji: "📣", status: "online", lastActive: "5 мин назад", botUsername: "milena_mark1_bot" },
+  { id: "alexander", name: "Александр", role: "Стратег — долгосрочное планирование", emoji: "♟️", status: "online", lastActive: "12 мин назад", botUsername: "Strateg_alex_bot" },
+  { id: "alina", name: "Алина", role: "Копирайтер — тексты и сторителлинг", emoji: "✍️", status: "offline", lastActive: "1 час назад", botUsername: "Alina_write1_bot" },
+  { id: "mikhail", name: "Михаил", role: "Кодер — разработка и автоматизация", emoji: "💻", status: "online", lastActive: "2 мин назад", botUsername: "Misha_koder1_bot" },
+  { id: "nikolay", name: "Николай", role: "Аналитик — данные и метрики", emoji: "📊", status: "online", lastActive: "20 мин назад", botUsername: "Researcher11_bot" },
+  { id: "viktor", name: "Виктор", role: "Продажи — лиды и переговоры", emoji: "🤝", status: "offline", lastActive: "3 часа назад", botUsername: "viktor_prodashi1_bot" },
+  { id: "arkadiy", name: "Аркадий", role: "Критик — проверка и качество", emoji: "🔍", status: "online", lastActive: "8 мин назад", botUsername: "critik_arkasha_bot" },
 ];
 
 export type ProjectStatus = "in_progress" | "done" | "paused";
