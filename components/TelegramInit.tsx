@@ -17,9 +17,9 @@ export default function TelegramInit() {
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (!tg) return;
-    tg.ready();
-    tg.expand();
-    tg.requestFullscreen?.();
+    try { tg.ready(); } catch {}
+    try { tg.expand(); } catch {}
+    try { tg.requestFullscreen?.(); } catch {}
   }, []);
   return null;
 }

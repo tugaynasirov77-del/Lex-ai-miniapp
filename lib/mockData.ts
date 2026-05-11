@@ -64,6 +64,19 @@ export const HISTORY: TaskHistoryItem[] = [
   { id: "t10", agentId: "nikolay", description: "Сделал когортный анализ", finishedAt: "2 дня назад", durationMin: 30, feedback: null },
 ];
 
+export interface ActiveTask {
+  id: string;
+  agentId: string;
+  description: string;
+  progress: number;
+}
+
+export const ACTIVE_TASKS: ActiveTask[] = [
+  { id: "a1", agentId: "alina", description: "Пишу 5 постов для запуска курса", progress: 65 },
+  { id: "a2", agentId: "nikolay", description: "Анализирую воронку конверсий", progress: 40 },
+  { id: "a3", agentId: "mikhail", description: "Допиливаю интеграцию CRM", progress: 80 },
+];
+
 export const ANALYTICS = {
   totalTasks: 247,
   todayTasks: 18,

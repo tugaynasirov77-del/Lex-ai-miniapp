@@ -12,7 +12,7 @@ const TABS = [
 export default function BottomNav() {
   const path = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10">
       <div className="max-w-xl mx-auto grid grid-cols-4">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
