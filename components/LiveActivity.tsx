@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AGENT_DEFS, type AgentKey } from "../lib/agents";
 import { getAgent } from "../lib/mockData";
-import { AGENT_THEME, type AgentId } from "../lib/agentTheme";
 
 type Stage = "received" | "routing" | "working" | "done" | "error";
 
@@ -18,75 +17,10 @@ interface State {
 
 const ANDREY = getAgent("andrey");
 
-function StepCard({
-  bg,
-  border,
-  shadow,
-  glow,
-  done,
-  children,
-  delay = 0,
-}: {
-  bg: string;
-  border: string;
-  shadow: string;
-  glow: string;
-  done?: boolean;
-  children: React.ReactNode;
-  delay?: number;
-}) {
+function Avatar({ src, alt, ring, size = 32 }: { src?: string; alt: string; ring?: string; size?: number }) {
   return (
-    <div
-      className="relative rounded-2xl p-3.5 animate-fade-up overflow-hidden"
-      style={{ background: bg, border: "1px solid rgba(0,0,0,0.04)", boxShadow: shadow, animationDelay: `${delay}ms`, opacity: done ? 0.7 : 1 }}
-    >
-      <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: border }} />
-      <span aria-hidden className="absolute right-[-20px] top-[-20px] w-[140px] h-[140px] rounded-full" style={{ background: glow }} />
-      <div className="relative pl-2">{children}</div>
-    </div>
-  );
-}
-
-function Connector({ from = "#0EA5E9", to = "#8B5CF6" }: { from?: string; to?: string }) {
-  return (
-    <div className="flex justify-center py-1.5" aria-hidden>
-      <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
-        <defs>
-          <linearGradient id={`grad-${from.slice(1)}-${to.slice(1)}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={from} />
-            <stop offset="1" stopColor={to} />
-          </linearGradient>
-        </defs>
-        <path d="M7 1v12M2 9l5 5 5-5" stroke={`url(#grad-${from.slice(1)}-${to.slice(1)})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
-  );
-}
-
-function Dots() {
-  return (
-    <span className="inline-flex items-center gap-1 ml-1" aria-hidden>
-      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: "linear-gradient(135deg, #0EA5E9, #8B5CF6)", animationDelay: "0ms" }} />
-      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: "linear-gradient(135deg, #0EA5E9, #8B5CF6)", animationDelay: "150ms" }} />
-      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: "linear-gradient(135deg, #0EA5E9, #8B5CF6)", animationDelay: "300ms" }} />
-    </span>
-  );
-}
-
-function Check({ gradient = "linear-gradient(135deg, #10B981, #0EA5E9)" }: { gradient?: string }) {
-  return (
-    <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: gradient }}>
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-        <path d="M5 12l5 5L20 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-}
-
-function GradAvatar({ src, alt, ringFrom, ringTo, size = 40 }: { src?: string; alt: string; ringFrom: string; ringTo: string; size?: number }) {
-  return (
-    <div className="rounded-full shrink-0 p-[2px]" style={{ width: size, height: size, background: `linear-gradient(135deg, ${ringFrom}, ${ringTo})` }}>
-      <div className="w-full h-full rounded-full overflow-hidden bg-white">
+    <div className="rounded-full shrink-0 p-[2px]" style={{ width: size, height: size, background: ring ?? "rgba(255,255,255,0.1)" }}>
+      <div className="w-full h-full rounded-full overflow-hidden bg-bg">
         {src && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={alt} className="w-full h-full object-cover" />
@@ -96,34 +30,162 @@ function GradAvatar({ src, alt, ringFrom, ringTo, size = 40 }: { src?: string; a
   );
 }
 
-function EmptyIllustration() {
+function Arrow() {
   return (
-    <svg width="78" height="42" viewBox="0 0 78 42" fill="none" aria-hidden className="mx-auto opacity-80">
-      <defs>
-        <linearGradient id="empty-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#0EA5E9"/>
-          <stop offset="1" stopColor="#8B5CF6"/>
-        </linearGradient>
-      </defs>
-      <circle cx="14" cy="16" r="6" stroke="#CBD5E1" strokeWidth="1.5"/>
-      <path d="M4 36c0-4 4.5-7 10-7s10 3 10 7" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="39" cy="14" r="7" stroke="url(#empty-grad)" strokeWidth="1.6"/>
-      <path d="M27 36c0-4.5 5.5-8 12-8s12 3.5 12 8" stroke="url(#empty-grad)" strokeWidth="1.6" strokeLinecap="round"/>
-      <circle cx="64" cy="16" r="6" stroke="#CBD5E1" strokeWidth="1.5"/>
-      <path d="M54 36c0-4 4.5-7 10-7s10 3 10 7" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round"/>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden style={{ color: "rgba(241,245,249,0.4)" }}>
+      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 }
 
-export default function LiveActivity({
-  task,
-  onReset,
-  setBusy,
+function Connector() {
+  return (
+    <div className="flex justify-center my-1" aria-hidden>
+      <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+        <defs>
+          <linearGradient id="conn-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#6366F1" />
+            <stop offset="1" stopColor="#F59E0B" />
+          </linearGradient>
+        </defs>
+        <path d="M7 1v10M2 8l5 5 5-5" stroke="url(#conn-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  );
+}
+
+function Dots({ color = "#3B82F6" }: { color?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1" aria-hidden>
+      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: color, animationDelay: "0ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: color, animationDelay: "150ms" }} />
+      <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: color, animationDelay: "300ms" }} />
+    </span>
+  );
+}
+
+interface MockTask {
+  fromAvatar?: string;
+  toAvatar?: string;
+  fromRing: string;
+  toRing: string;
+  arrowName: string;
+  title: string;
+  progress: number;
+  barGrad: string;
+  status: string;
+  statusColor: string;
+  bg: string;
+  borderGrad: string;
+  glow: string;
+  shadow: string;
+  age: string;
+}
+
+function TaskCard({ t }: { t: MockTask }) {
+  return (
+    <div className="relative rounded-2xl p-3.5 overflow-hidden"
+      style={{ background: t.bg, border: "1px solid rgba(255,255,255,0.06)", boxShadow: t.shadow }}>
+      <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: t.borderGrad }} />
+      <span aria-hidden className="absolute right-[-24px] top-[-24px] w-[140px] h-[140px] rounded-full" style={{ background: t.glow }} />
+      <div className="relative pl-2">
+        <div className="flex items-center gap-2 mb-2.5">
+          <Avatar src={t.fromAvatar} alt="from" ring={t.fromRing} />
+          <Arrow />
+          <Avatar src={t.toAvatar} alt="to" ring={t.toRing} />
+          <span className="text-[11px] text-muted">{t.arrowName}</span>
+        </div>
+        <p className="text-[14px] font-medium text-ink mb-2.5">{t.title}</p>
+        <div className="relative h-2 rounded-full overflow-hidden shimmer mb-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${t.progress}%`, background: t.barGrad }} />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Dots color={t.statusColor} />
+            <span className="text-[12px] text-muted">{t.status}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${t.statusColor}22`, color: t.statusColor, border: `1px solid ${t.statusColor}44` }}>В РАБОТЕ</span>
+            <span className="text-[11px] text-faint tnum">{t.age}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockActivity() {
+  const andrey = getAgent("andrey");
+  const alina = getAgent("alina");
+  const milena = getAgent("milena");
+  return (
+    <>
+      <TaskCard t={{
+        fromAvatar: andrey?.avatar, toAvatar: alina?.avatar,
+        fromRing: "linear-gradient(135deg, #3B82F6, #6366F1)",
+        toRing: "linear-gradient(135deg, #F59E0B, #EF4444)",
+        arrowName: "Алина · Копирайтер",
+        title: "Написать пост про вайбкодинг",
+        progress: 80,
+        barGrad: "linear-gradient(90deg, #3B82F6, #6366F1)",
+        status: "Алина пишет финал…",
+        statusColor: "#3B82F6",
+        bg: "rgba(59,130,246,0.06)",
+        borderGrad: "linear-gradient(180deg, #3B82F6, #6366F1)",
+        glow: "radial-gradient(closest-side, rgba(99,102,241,0.18), transparent)",
+        shadow: "0 8px 32px rgba(59,130,246,0.15)",
+        age: "2 мин",
+      }} />
+      <Connector />
+      <TaskCard t={{
+        fromAvatar: andrey?.avatar, toAvatar: milena?.avatar,
+        fromRing: "linear-gradient(135deg, #3B82F6, #6366F1)",
+        toRing: "linear-gradient(135deg, #EC4899, #8B5CF6)",
+        arrowName: "Милена · Маркетолог",
+        title: "Анализ топ AI-каналов Telegram",
+        progress: 45,
+        barGrad: "linear-gradient(90deg, #F59E0B, #EF4444)",
+        status: "Милена собирает данные…",
+        statusColor: "#F59E0B",
+        bg: "rgba(245,158,11,0.06)",
+        borderGrad: "linear-gradient(180deg, #F59E0B, #EF4444)",
+        glow: "radial-gradient(closest-side, rgba(245,158,11,0.16), transparent)",
+        shadow: "0 8px 32px rgba(245,158,11,0.12)",
+        age: "5 мин",
+      }} />
+    </>
+  );
+}
+
+function StepCard({
+  bg, border, shadow, glow, done, children, delay = 0,
 }: {
-  task: string | null;
-  onReset: () => void;
-  setBusy: (b: boolean) => void;
+  bg: string; border: string; shadow: string; glow: string;
+  done?: boolean; children: React.ReactNode; delay?: number;
 }) {
+  return (
+    <div className="relative rounded-2xl p-3.5 animate-fade-up overflow-hidden"
+      style={{ background: bg, border: "1px solid rgba(255,255,255,0.06)", boxShadow: shadow, animationDelay: `${delay}ms`, opacity: done ? 0.65 : 1 }}>
+      <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: border }} />
+      <span aria-hidden className="absolute right-[-24px] top-[-24px] w-[140px] h-[140px] rounded-full" style={{ background: glow }} />
+      <div className="relative pl-2">{children}</div>
+    </div>
+  );
+}
+
+function Check({ gradient = "linear-gradient(135deg, #10B981, #3B82F6)" }: { gradient?: string }) {
+  return (
+    <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: gradient }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12l5 5L20 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+export default function LiveActivity({
+  task, onReset, setBusy,
+}: { task: string | null; onReset: () => void; setBusy: (b: boolean) => void; }) {
   const [state, setState] = useState<State | null>(null);
   const progressTimer = useRef<number | null>(null);
 
@@ -173,13 +235,16 @@ export default function LiveActivity({
     return () => { cancelled = true; if (progressTimer.current) window.clearInterval(progressTimer.current); };
   }, [task, setBusy]);
 
+  // Hero state: mock tasks demo
   if (!state) {
     return (
-      <section className="px-4 mt-4 animate-fade-up">
-        <div className="rounded-2xl p-6 text-center"
-          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.6), rgba(239,246,255,0.6))", border: "1.5px dashed rgba(99,102,241,0.25)" }}>
-          <EmptyIllustration />
-          <p className="text-[14px] text-muted mt-3">Введи задачу выше — команда сразу приступит</p>
+      <section className="px-4 mt-6 animate-fade-up">
+        <div className="flex items-center justify-between mb-3">
+          <span className="caption">В работе</span>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>2 задачи</span>
+        </div>
+        <div>
+          <MockActivity />
         </div>
       </section>
     );
@@ -188,86 +253,84 @@ export default function LiveActivity({
   const { stage, agentId, reasoning, reply, error, progress } = state;
   const agent = agentId ? AGENT_DEFS[agentId] : null;
   const agentMeta = agentId ? getAgent(agentId) : null;
-  const agentTheme = agentId ? AGENT_THEME[agentId as AgentId] : null;
-  const andreyTheme = AGENT_THEME.andrey;
 
   const step1Done = stage !== "received";
   const step2Visible = stage !== "received";
-  const step2Done = stage === "working" || stage === "done";
   const step3Visible = stage === "done" || stage === "error";
 
   return (
-    <section className="px-4 mt-4 space-y-1 animate-fade-up">
-      {/* Step 1 — Blue→Purple DNA */}
+    <section className="px-4 mt-6 space-y-1 animate-fade-up">
+      <div className="flex items-center justify-between mb-3">
+        <span className="caption">В работе</span>
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>1 задача</span>
+      </div>
+
       <StepCard
-        bg="linear-gradient(135deg, #FFFFFF, #EFF6FF, #F5F3FF)"
-        border="linear-gradient(180deg, #0EA5E9, #8B5CF6)"
-        shadow="0 8px 24px rgba(139,92,246,0.12)"
-        glow="radial-gradient(closest-side, rgba(139,92,246,0.18), transparent)"
+        bg="rgba(59,130,246,0.06)"
+        border="linear-gradient(180deg, #3B82F6, #6366F1)"
+        shadow="0 8px 32px rgba(59,130,246,0.15)"
+        glow="radial-gradient(closest-side, rgba(99,102,241,0.18), transparent)"
         done={step1Done}
       >
         <div className="flex items-start gap-3">
-          <GradAvatar src={ANDREY?.avatar} alt="Андрей" ringFrom={andreyTheme.ringFrom} ringTo={andreyTheme.ringTo} />
+          <Avatar src={ANDREY?.avatar} alt="Андрей" ring="linear-gradient(135deg, #3B82F6, #6366F1)" size={36} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[14px] font-bold text-ink">Андрей</span>
               <span className="text-[11px] text-muted">· Оркестратор</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(14,165,233,0.12)", color: "#0EA5E9", border: "1px solid rgba(14,165,233,0.25)" }}>ПРИНЯТО</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(59,130,246,0.18)", color: "#93C5FD", border: "1px solid rgba(59,130,246,0.35)" }}>ПРИНЯТО</span>
               {step1Done && <Check />}
             </div>
             <p className="text-[13px] text-muted mt-1 break-words">«{state.task}»</p>
             {!step1Done && (
-              <p className="text-[13px] mt-1 flex items-center grad-text font-medium" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>
-                Принял задачу, анализирую<Dots />
+              <p className="text-[13px] mt-1.5 flex items-center gap-1.5" style={{ color: "#93C5FD" }}>
+                Анализирую<Dots />
               </p>
             )}
           </div>
         </div>
       </StepCard>
 
-      {step2Visible && agent && <Connector from="#8B5CF6" to="#F59E0B" />}
+      {step2Visible && agent && <Connector />}
 
-      {/* Step 2 — Amber DNA */}
-      {step2Visible && agent && agentTheme && (
+      {step2Visible && agent && (
         <StepCard
-          bg="linear-gradient(135deg, #FFFFFF, #FFFBEB, #FEF3C7)"
+          bg="rgba(245,158,11,0.06)"
           border="linear-gradient(180deg, #F59E0B, #EF4444)"
-          shadow="0 8px 24px rgba(245,158,11,0.14)"
+          shadow="0 8px 32px rgba(245,158,11,0.12)"
           glow="radial-gradient(closest-side, rgba(245,158,11,0.18), transparent)"
           done={stage === "done"}
           delay={50}
         >
           <div className="flex items-start gap-3">
-            <GradAvatar src={agentMeta?.avatar} alt={agent.name} ringFrom={agentTheme.ringFrom} ringTo={agentTheme.ringTo} />
+            <Avatar src={agentMeta?.avatar} alt={agent.name} ring="linear-gradient(135deg, #F59E0B, #EF4444)" size={36} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[14px] font-bold text-ink">Передаю {agent.name}</span>
                 <span className="text-[11px] text-muted">· {agent.role}</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.14)", color: "#B45309", border: "1px solid rgba(245,158,11,0.3)" }}>В РАБОТЕ</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.18)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.35)" }}>В РАБОТЕ</span>
               </div>
               {reasoning && <p className="text-[12px] text-muted mt-1">{reasoning}</p>}
               {stage === "working" && (
                 <div className="flex items-center gap-2 mt-2.5">
-                  <div className="relative flex-1 h-2 rounded-full overflow-hidden shimmer" style={{ background: "rgba(0,0,0,0.05)" }}>
+                  <div className="relative flex-1 h-2 rounded-full overflow-hidden shimmer" style={{ background: "rgba(255,255,255,0.06)" }}>
                     <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #F59E0B, #EF4444)" }} />
                   </div>
-                  <span className="text-[12px] font-bold tnum w-9 text-right grad-text" style={{ backgroundImage: "linear-gradient(90deg, #F59E0B, #EF4444)" }}>{progress}%</span>
+                  <span className="text-[12px] font-bold tnum w-9 text-right" style={{ color: "#FCD34D" }}>{progress}%</span>
                 </div>
               )}
-              {stage === "done" && <p className="text-[12px] text-muted mt-1">Готово</p>}
             </div>
           </div>
         </StepCard>
       )}
 
-      {step3Visible && <Connector from="#F59E0B" to="#10B981" />}
+      {step3Visible && <Connector />}
 
-      {/* Step 3 — Emerald DNA result */}
       {step3Visible && (
         <StepCard
-          bg="linear-gradient(135deg, #FFFFFF, #F0FDF4, #DCFCE7)"
-          border="linear-gradient(180deg, #10B981, #0EA5E9)"
-          shadow="0 8px 24px rgba(16,185,129,0.14)"
+          bg="rgba(16,185,129,0.06)"
+          border="linear-gradient(180deg, #10B981, #3B82F6)"
+          shadow="0 8px 32px rgba(16,185,129,0.14)"
           glow="radial-gradient(closest-side, rgba(16,185,129,0.18), transparent)"
           delay={120}
         >
@@ -277,32 +340,32 @@ export default function LiveActivity({
                 <Check />
                 <span className="text-[14px] font-bold text-ink">Готово</span>
                 {agent && <span className="text-[12px] text-muted">· {agent.name}</span>}
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto" style={{ background: "rgba(16,185,129,0.14)", color: "#047857", border: "1px solid rgba(16,185,129,0.3)" }}>РЕЗУЛЬТАТ</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto" style={{ background: "rgba(16,185,129,0.18)", color: "#6EE7B7", border: "1px solid rgba(16,185,129,0.35)" }}>РЕЗУЛЬТАТ</span>
               </div>
-              <div className="rounded-xl bg-white/70 p-3 text-[14px] leading-relaxed text-ink whitespace-pre-wrap break-words" style={{ border: "1px solid rgba(16,185,129,0.15)" }}>
+              <div className="rounded-xl p-3 text-[14px] leading-relaxed text-ink whitespace-pre-wrap break-words" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(16,185,129,0.15)" }}>
                 {reply}
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <button
                   onClick={() => reply && navigator.clipboard.writeText(reply).catch(() => {})}
                   className="rounded-xl px-3 py-2.5 text-[13px] font-semibold text-ink"
-                  style={{ background: "rgba(255,255,255,0.8)", border: "1px solid rgba(16,185,129,0.25)" }}
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(16,185,129,0.3)" }}
                 >Скопировать</button>
                 <button
                   onClick={onReset}
                   className="rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white"
-                  style={{ background: "linear-gradient(135deg, #10B981, #0EA5E9)", boxShadow: "0 4px 14px rgba(16,185,129,0.35)" }}
+                  style={{ background: "linear-gradient(135deg, #10B981, #3B82F6)", boxShadow: "0 4px 14px rgba(16,185,129,0.4)" }}
                 >Новая задача</button>
               </div>
             </>
           ) : (
             <>
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "linear-gradient(135deg, #EF4444, #F59E0B)" }}>!</span>
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "linear-gradient(135deg, #F43F5E, #F59E0B)" }}>!</span>
                 <span className="text-[14px] font-bold text-ink">Что-то пошло не так</span>
               </div>
               <p className="text-[13px] text-muted">{error}</p>
-              <button onClick={onReset} className="mt-3 text-[12px] font-bold grad-text" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>← Попробовать ещё раз</button>
+              <button onClick={onReset} className="mt-3 text-[12px] font-bold" style={{ color: "#3B82F6" }}>← Попробовать ещё раз</button>
             </>
           )}
         </StepCard>

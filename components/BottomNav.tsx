@@ -41,26 +41,18 @@ export default function BottomNav() {
   const path = usePathname();
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl"
-      style={{ background: "linear-gradient(to right, rgba(239,246,255,0.92), rgba(245,243,255,0.92))" }}>
-      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, #BAE6FD, #C4B5FD, #A7F3D0)" }} />
+      style={{ background: "rgba(15,17,23,0.9)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.4), rgba(99,102,241,0.4), rgba(16,185,129,0.4))" }} />
       <div className="max-w-xl mx-auto grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
           return (
-            <Link
-              key={t.href}
-              href={t.href}
-              className={`relative flex flex-col items-center pt-2.5 pb-2 text-[11px] font-medium ${active ? "" : "text-faint hover:text-ink"}`}
-              style={active ? { color: "transparent" } : undefined}
-            >
-              <span className={active ? "grad-text" : ""} style={active ? { color: "#0EA5E9" } : undefined}>
-                {/* icon uses currentColor; wrap with gradient on active via parent */}
-              </span>
-              <span className="mb-0.5" style={active ? { color: "#0EA5E9" } : undefined}>{t.icon}</span>
-              <span style={active ? { backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" } : undefined} className={active ? "grad-text font-semibold" : ""}>{t.label}</span>
-              {active && (
-                <span className="absolute -bottom-0 w-8 h-1 rounded-full" style={{ background: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }} />
-              )}
+            <Link key={t.href} href={t.href}
+              className="relative flex flex-col items-center pt-2.5 pb-2 text-[11px] font-medium"
+              style={{ color: active ? "#3B82F6" : "#475569" }}>
+              <span className="mb-0.5">{t.icon}</span>
+              <span style={active ? { backgroundImage: "linear-gradient(90deg, #3B82F6, #6366F1)" } : undefined} className={active ? "grad-text font-semibold" : ""}>{t.label}</span>
+              {active && <span className="absolute bottom-0 w-8 h-1 rounded-full" style={{ background: "linear-gradient(90deg, #3B82F6, #6366F1)" }} />}
             </Link>
           );
         })}
