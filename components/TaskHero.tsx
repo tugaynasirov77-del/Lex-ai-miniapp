@@ -3,10 +3,40 @@ import { useState } from "react";
 import Section from "./Section";
 
 const TAGS = [
-  { emoji: "✍️", label: "Контент", prefix: "Напиши пост для канала про " },
-  { emoji: "🔍", label: "Анализ", prefix: "Проанализируй конкурентов в нише " },
-  { emoji: "💻", label: "Код", prefix: "Напиши код для " },
-  { emoji: "📊", label: "Стратегия", prefix: "Составь стратегию для " },
+  {
+    label: "Контент", prefix: "Напиши пост для канала про ",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M4 20l4-1.5L19.3 7.2a2 2 0 0 0 0-2.8l-.7-.7a2 2 0 0 0-2.8 0L4.5 15.5 4 20Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+        <path d="M14 5.5l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Анализ", prefix: "Проанализируй конкурентов в нише ",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.6"/>
+        <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Код", prefix: "Напиши код для ",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M9 8l-4 4 4 4M15 8l4 4-4 4M13 6l-2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Стратегия", prefix: "Составь стратегию для ",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M4 20V8M10 20V4M16 20v-9M22 20H2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ];
 
 const ORCHESTRATOR = "orkestrator1_bot";
@@ -60,9 +90,9 @@ export default function TaskHero() {
           <button
             key={t.label}
             onClick={() => setText(t.prefix)}
-            className="shrink-0 px-3.5 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-[13px] hover:border-accent/40"
+            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-[13px] text-ink hover:border-accent/40"
           >
-            <span className="mr-1.5">{t.emoji}</span>{t.label}
+            <span className="text-accent">{t.icon}</span>{t.label}
           </button>
         ))}
       </div>
