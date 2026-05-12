@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Section from "./Section";
 
 const TAGS = [
   { emoji: "✍️", label: "Контент", prefix: "Напиши пост для канала про " },
@@ -21,11 +22,8 @@ function openOrchestrator(text: string) {
   const trimmed = text.trim();
   if (trimmed && navigator.clipboard) navigator.clipboard.writeText(trimmed).catch(() => {});
   const payload = trimmed ? toBase64Url(trimmed) : "";
-  // Telegram limits start param to 64 chars, alphanum + _ -. Skip if longer.
   const useStart = payload && payload.length <= 64;
-  const url = useStart
-    ? `https://t.me/${ORCHESTRATOR}?start=${payload}`
-    : `https://t.me/${ORCHESTRATOR}`;
+  const url = useStart ? `https://t.me/${ORCHESTRATOR}?start=${payload}` : `https://t.me/${ORCHESTRATOR}`;
   const tg = (window as any).Telegram?.WebApp;
   if (tg?.openTelegramLink) tg.openTelegramLink(url);
   else window.open(url, "_blank");
@@ -36,38 +34,39 @@ export default function TaskHero() {
   const submit = () => { if (text.trim()) openOrchestrator(text.trim()); };
 
   return (
-    <section className="px-5 pt-6 animate-fade-up" style={{ animationDelay: "40ms" }}>
-      <h2 className="h1 mb-4">Какую задачу<br/>решаем сегодня?</h2>
-      <div className="glass glass-hover rounded-2xl p-2 pl-4 flex items-center gap-2">
-        <span className="text-base opacity-60">💬</span>
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-          placeholder="Опиши задачу команде…"
-          className="flex-1 bg-transparent outline-none placeholder:text-white/30 text-[15px] py-2.5"
-        />
+    <Section number={1} title="Какую задачу решаем?" tone="purple" delay={40}>
+      <h2 className="h2 mb-3">Какую задачу решаем?</h2>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+            placeholder="Опишите задачу или выберите направление…"
+            className="w-full bg-transparent outline-none placeholder:text-white/30 text-[14px]"
+          />
+        </div>
         <button
           onClick={submit}
           aria-label="Отправить"
-          className="w-10 h-10 rounded-xl bg-accentGrad flex items-center justify-center shadow-glowBtn hover:shadow-[0_4px_22px_rgba(110,86,207,0.55)]"
+          className="w-12 h-12 rounded-2xl bg-accentGrad flex items-center justify-center shadow-glowBtn shrink-0"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12L21 4L13 22L11 13L3 12Z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
-      <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {TAGS.map((t) => (
           <button
             key={t.label}
             onClick={() => setText(t.prefix)}
-            className="shrink-0 px-3 py-1.5 rounded-full glass text-xs text-ink/80 hover:border-accent/40"
+            className="shrink-0 px-3.5 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-[13px] hover:border-accent/40"
           >
-            <span className="mr-1">{t.emoji}</span>{t.label}
+            <span className="mr-1.5">{t.emoji}</span>{t.label}
           </button>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

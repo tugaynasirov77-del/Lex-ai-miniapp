@@ -72,7 +72,9 @@ export interface ActiveTask {
   progress: number;
 }
 
-export const ACTIVE_TASKS: ActiveTask[] = [];
+export const ACTIVE_TASKS: ActiveTask[] = [
+  { id: "a1", agentId: "nikolay", description: "Подготовка анализа конкурентов", progress: 68 },
+];
 
 export const ANALYTICS = {
   totalTasks: 247,

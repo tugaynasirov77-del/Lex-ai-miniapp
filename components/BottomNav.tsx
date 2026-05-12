@@ -52,10 +52,11 @@ export default function BottomNav() {
             <Link
               key={t.href}
               href={t.href}
-              className={`flex flex-col items-center pt-2.5 pb-2 text-[11px] font-medium ${active ? "text-accent" : "text-muted hover:text-ink/80"}`}
+              className={`relative flex flex-col items-center pt-2.5 pb-2 text-[11px] font-medium ${active ? "text-accent" : "text-muted hover:text-ink/80"}`}
             >
               <span className="mb-0.5">{t.icon}</span>
               <span>{t.label}</span>
+              {active && <span className="absolute bottom-0 w-6 h-[2px] rounded-full bg-accent" />}
             </Link>
           );
         })}
