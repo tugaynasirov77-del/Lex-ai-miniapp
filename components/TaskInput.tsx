@@ -39,15 +39,17 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
           <h2 className="h1 mt-2 mb-4 grad-text" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>Какую задачу решаем?</h2>
 
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex-1 rounded-2xl bg-white px-4 py-3 flex items-center gap-2"
+            <div className="flex-1 rounded-2xl bg-white px-4 py-3 flex items-center gap-2 min-w-0"
               style={{ border: "1px solid rgba(186,230,253,0.6)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)" }}>
-              <span className="text-base opacity-60">💬</span>
+              <span className="text-base opacity-60 shrink-0">💬</span>
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
                 placeholder="Опиши задачу команде…"
-                className="flex-1 bg-transparent outline-none placeholder:text-faint text-[14px] text-ink"
+                dir="auto"
+                className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-faint text-[14px] text-ink"
+                style={{ caretColor: "#0EA5E9", caretShape: "block" as any }}
                 disabled={busy}
               />
             </div>

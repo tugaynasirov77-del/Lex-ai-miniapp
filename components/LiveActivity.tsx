@@ -212,7 +212,7 @@ export default function LiveActivity({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[14px] font-bold text-ink">Андрей</span>
               <span className="text-[11px] text-muted">· Оркестратор</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full grad-text" style={{ background: "rgba(239,246,255,0.7)", backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>ПРИНЯТО</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(14,165,233,0.12)", color: "#0EA5E9", border: "1px solid rgba(14,165,233,0.25)" }}>ПРИНЯТО</span>
               {step1Done && <Check />}
             </div>
             <p className="text-[13px] text-muted mt-1 break-words">«{state.task}»</p>
@@ -243,7 +243,7 @@ export default function LiveActivity({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[14px] font-bold text-ink">Передаю {agent.name}</span>
                 <span className="text-[11px] text-muted">· {agent.role}</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full grad-text" style={{ background: "rgba(255,251,235,0.8)", backgroundImage: "linear-gradient(90deg, #F59E0B, #EF4444)" }}>В РАБОТЕ</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.14)", color: "#B45309", border: "1px solid rgba(245,158,11,0.3)" }}>В РАБОТЕ</span>
               </div>
               {reasoning && <p className="text-[12px] text-muted mt-1">{reasoning}</p>}
               {stage === "working" && (
@@ -277,7 +277,7 @@ export default function LiveActivity({
                 <Check />
                 <span className="text-[14px] font-bold text-ink">Готово</span>
                 {agent && <span className="text-[12px] text-muted">· {agent.name}</span>}
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full grad-text ml-auto" style={{ background: "rgba(240,253,244,0.8)", backgroundImage: "linear-gradient(90deg, #10B981, #0EA5E9)" }}>РЕЗУЛЬТАТ</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto" style={{ background: "rgba(16,185,129,0.14)", color: "#047857", border: "1px solid rgba(16,185,129,0.3)" }}>РЕЗУЛЬТАТ</span>
               </div>
               <div className="rounded-xl bg-white/70 p-3 text-[14px] leading-relaxed text-ink whitespace-pre-wrap break-words" style={{ border: "1px solid rgba(16,185,129,0.15)" }}>
                 {reply}
