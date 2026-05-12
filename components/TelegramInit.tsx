@@ -10,6 +10,7 @@ declare global {
         requestFullscreen?: () => void;
         disableVerticalSwipes?: () => void;
         enableClosingConfirmation?: () => void;
+        disableClosingConfirmation?: () => void;
       };
     };
   }
@@ -23,7 +24,7 @@ export default function TelegramInit() {
     try { tg.expand(); } catch {}
     try { tg.requestFullscreen?.(); } catch {}
     try { tg.disableVerticalSwipes?.(); } catch {}
-    try { tg.enableClosingConfirmation?.(); } catch {}
+    try { tg.disableClosingConfirmation?.(); } catch {}
   }, []);
   return null;
 }

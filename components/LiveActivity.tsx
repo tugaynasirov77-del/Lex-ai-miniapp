@@ -30,14 +30,6 @@ function Avatar({ src, alt, ring, size = 32 }: { src?: string; alt: string; ring
   );
 }
 
-function Arrow() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden style={{ color: "rgba(241,245,249,0.4)" }}>
-      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
 function Connector() {
   return (
     <div className="flex justify-center my-1" aria-hidden>
@@ -61,99 +53,6 @@ function Dots({ color = "#3B82F6" }: { color?: string }) {
       <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: color, animationDelay: "150ms" }} />
       <span className="w-1.5 h-1.5 rounded-full animate-typing" style={{ background: color, animationDelay: "300ms" }} />
     </span>
-  );
-}
-
-interface MockTask {
-  fromAvatar?: string;
-  toAvatar?: string;
-  fromRing: string;
-  toRing: string;
-  arrowName: string;
-  title: string;
-  progress: number;
-  barGrad: string;
-  status: string;
-  statusColor: string;
-  bg: string;
-  borderGrad: string;
-  glow: string;
-  shadow: string;
-  age: string;
-}
-
-function TaskCard({ t }: { t: MockTask }) {
-  return (
-    <div className="relative rounded-2xl p-3.5 overflow-hidden"
-      style={{ background: t.bg, border: "1px solid rgba(255,255,255,0.06)", boxShadow: t.shadow }}>
-      <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: t.borderGrad }} />
-      <span aria-hidden className="absolute right-[-24px] top-[-24px] w-[140px] h-[140px] rounded-full" style={{ background: t.glow }} />
-      <div className="relative pl-2">
-        <div className="flex items-center gap-2 mb-2.5">
-          <Avatar src={t.fromAvatar} alt="from" ring={t.fromRing} />
-          <Arrow />
-          <Avatar src={t.toAvatar} alt="to" ring={t.toRing} />
-          <span className="text-[11px] text-muted">{t.arrowName}</span>
-        </div>
-        <p className="text-[14px] font-medium text-ink mb-2.5">{t.title}</p>
-        <div className="relative h-2 rounded-full overflow-hidden shimmer mb-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${t.progress}%`, background: t.barGrad }} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Dots color={t.statusColor} />
-            <span className="text-[12px] text-muted">{t.status}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${t.statusColor}22`, color: t.statusColor, border: `1px solid ${t.statusColor}44` }}>В РАБОТЕ</span>
-            <span className="text-[11px] text-faint tnum">{t.age}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockActivity() {
-  const andrey = getAgent("andrey");
-  const alina = getAgent("alina");
-  const milena = getAgent("milena");
-  return (
-    <>
-      <TaskCard t={{
-        fromAvatar: andrey?.avatar, toAvatar: alina?.avatar,
-        fromRing: "linear-gradient(135deg, #3B82F6, #6366F1)",
-        toRing: "linear-gradient(135deg, #F59E0B, #EF4444)",
-        arrowName: "Алина · Копирайтер",
-        title: "Написать пост про вайбкодинг",
-        progress: 80,
-        barGrad: "linear-gradient(90deg, #3B82F6, #6366F1)",
-        status: "Алина пишет финал…",
-        statusColor: "#3B82F6",
-        bg: "rgba(59,130,246,0.06)",
-        borderGrad: "linear-gradient(180deg, #3B82F6, #6366F1)",
-        glow: "radial-gradient(closest-side, rgba(99,102,241,0.18), transparent)",
-        shadow: "0 8px 32px rgba(59,130,246,0.15)",
-        age: "2 мин",
-      }} />
-      <Connector />
-      <TaskCard t={{
-        fromAvatar: andrey?.avatar, toAvatar: milena?.avatar,
-        fromRing: "linear-gradient(135deg, #3B82F6, #6366F1)",
-        toRing: "linear-gradient(135deg, #EC4899, #8B5CF6)",
-        arrowName: "Милена · Маркетолог",
-        title: "Анализ топ AI-каналов Telegram",
-        progress: 45,
-        barGrad: "linear-gradient(90deg, #F59E0B, #EF4444)",
-        status: "Милена собирает данные…",
-        statusColor: "#F59E0B",
-        bg: "rgba(245,158,11,0.06)",
-        borderGrad: "linear-gradient(180deg, #F59E0B, #EF4444)",
-        glow: "radial-gradient(closest-side, rgba(245,158,11,0.16), transparent)",
-        shadow: "0 8px 32px rgba(245,158,11,0.12)",
-        age: "5 мин",
-      }} />
-    </>
   );
 }
 
@@ -235,20 +134,7 @@ export default function LiveActivity({
     return () => { cancelled = true; if (progressTimer.current) window.clearInterval(progressTimer.current); };
   }, [task, setBusy]);
 
-  // Hero state: mock tasks demo
-  if (!state) {
-    return (
-      <section className="px-4 mt-6 animate-fade-up">
-        <div className="flex items-center justify-between mb-3">
-          <span className="caption">В работе</span>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>2 задачи</span>
-        </div>
-        <div>
-          <MockActivity />
-        </div>
-      </section>
-    );
-  }
+  if (!state) return null;
 
   const { stage, agentId, reasoning, reply, error, progress } = state;
   const agent = agentId ? AGENT_DEFS[agentId] : null;
