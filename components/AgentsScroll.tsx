@@ -23,7 +23,7 @@ export default function AgentsScroll() {
               style={{ animationDelay: `${120 + i * 40}ms` }}
             >
               <div className="relative">
-                <div className={`w-[52px] h-[52px] rounded-full overflow-hidden ring-2 ${online ? "ring-sky-400/70 shadow-[0_0_14px_rgba(56,189,248,0.45)]" : "ring-white/10"}`}>
+                <div className={`w-[52px] h-[52px] rounded-full overflow-hidden ${online ? "shadow-[0_0_16px_rgba(56,189,248,0.35)]" : ""}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
                 </div>

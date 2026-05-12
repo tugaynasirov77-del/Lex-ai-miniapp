@@ -8,6 +8,8 @@ declare global {
         ready: () => void;
         expand: () => void;
         requestFullscreen?: () => void;
+        disableVerticalSwipes?: () => void;
+        enableClosingConfirmation?: () => void;
       };
     };
   }
@@ -20,6 +22,8 @@ export default function TelegramInit() {
     try { tg.ready(); } catch {}
     try { tg.expand(); } catch {}
     try { tg.requestFullscreen?.(); } catch {}
+    try { tg.disableVerticalSwipes?.(); } catch {}
+    try { tg.enableClosingConfirmation?.(); } catch {}
   }, []);
   return null;
 }
