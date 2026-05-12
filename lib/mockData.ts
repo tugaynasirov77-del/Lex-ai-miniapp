@@ -15,10 +15,10 @@ export const AGENTS: Agent[] = [
   { id: "andrey", name: "Андрей", role: "Оркестратор — координирует команду", emoji: "🧠", avatar: "/agents/andrey.jpg", status: "online", lastActive: "только что", botUsername: "orkestrator1_bot" },
   { id: "milena", name: "Милена", role: "Маркетолог — стратегия и кампании", emoji: "📣", avatar: "/agents/milena.jpg", status: "online", lastActive: "5 мин назад", botUsername: "milena_mark1_bot" },
   { id: "alexander", name: "Александр", role: "Стратег — долгосрочное планирование", emoji: "♟️", avatar: "/agents/alexander.jpg", status: "online", lastActive: "12 мин назад", botUsername: "Strateg_alex_bot" },
-  { id: "alina", name: "Алина", role: "Копирайтер — тексты и сторителлинг", emoji: "✍️", avatar: "/agents/alina.jpg", status: "offline", lastActive: "1 час назад", botUsername: "Alina_write1_bot" },
+  { id: "alina", name: "Алина", role: "Копирайтер — тексты и сторителлинг", emoji: "✍️", avatar: "/agents/alina.jpg", status: "online", lastActive: "1 час назад", botUsername: "Alina_write1_bot" },
   { id: "mikhail", name: "Михаил", role: "Кодер — разработка и автоматизация", emoji: "💻", avatar: "/agents/mikhail.jpg", status: "online", lastActive: "2 мин назад", botUsername: "Misha_koder1_bot" },
   { id: "nikolay", name: "Николай", role: "Аналитик — данные и метрики", emoji: "📊", avatar: "/agents/nikolay.jpg", status: "online", lastActive: "20 мин назад", botUsername: "Researcher11_bot" },
-  { id: "viktor", name: "Виктор", role: "Продажи — лиды и переговоры", emoji: "🤝", avatar: "/agents/viktor.jpg", status: "offline", lastActive: "3 часа назад", botUsername: "viktor_prodashi1_bot" },
+  { id: "viktor", name: "Виктор", role: "Продажи — лиды и переговоры", emoji: "🤝", avatar: "/agents/viktor.jpg", status: "online", lastActive: "3 часа назад", botUsername: "viktor_prodashi1_bot" },
   { id: "arkadiy", name: "Аркадий", role: "Критик — проверка и качество", emoji: "🔍", avatar: "/agents/arkadiy.jpg", status: "online", lastActive: "8 мин назад", botUsername: "critik_arkasha_bot" },
 ];
 

@@ -35,7 +35,6 @@ export default function TaskHero() {
 
   return (
     <Section number={1} title="Какую задачу решаем?" tone="purple" delay={40}>
-      <h2 className="h2 mb-3">Какую задачу решаем?</h2>
       <div className="flex items-center gap-2 mb-3">
         <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
           <input

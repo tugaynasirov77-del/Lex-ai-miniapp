@@ -12,7 +12,7 @@ function openAgent(username: string) {
 export default function AgentsScroll() {
   return (
     <Section number={2} title="Команда" tone="blue" badge={AGENTS.length} delay={100}>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-2 px-2">
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-2 px-2 py-2">
         {AGENTS.map((a, i) => {
           const online = a.status === "online";
           return (
