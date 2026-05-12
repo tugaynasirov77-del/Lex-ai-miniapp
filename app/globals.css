@@ -3,55 +3,53 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html, body {
-  background: #08080F;
-  color: #EDEDEF;
+  background: #FAFAFA;
+  color: #0F0F0F;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "cv11", "ss01", "ss03";
 }
 
-body {
-  background:
-    radial-gradient(900px 500px at 50% -10%, rgba(110,86,207,0.18), transparent 60%),
-    radial-gradient(700px 500px at 100% 20%, rgba(91,70,176,0.10), transparent 60%),
-    #08080F;
-  background-attachment: fixed;
-  min-height: 100vh;
-}
+body { min-height: 100vh; }
 
 * { -webkit-tap-highlight-color: transparent; }
 
 button, a, [role="button"] {
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              background 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 200ms cubic-bezier(0.16,1,0.3,1),
+              background 200ms cubic-bezier(0.16,1,0.3,1),
+              border-color 200ms cubic-bezier(0.16,1,0.3,1),
+              box-shadow 200ms cubic-bezier(0.16,1,0.3,1),
+              opacity 200ms cubic-bezier(0.16,1,0.3,1);
 }
 
 button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 
-.glass {
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.07);
+.card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-radius: 16px;
+}
+
+.glass { /* legacy alias for older pages */
+  background: #FFFFFF;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
 
 .glass-hover:hover {
-  border-color: rgba(110,86,207,0.4);
-  box-shadow: 0 0 20px rgba(110,86,207,0.15);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.10);
 }
 
 .caption {
   text-transform: uppercase;
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,0.45);
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: #9CA3AF;
 }
 
 .tnum { font-variant-numeric: tabular-nums; }
@@ -60,16 +58,10 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 .h1 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  color: #0F0F0F;
 }
-.h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
-.body { font-size: 15px; font-weight: 400; line-height: 1.5; }
-
-.skeleton {
-  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
+.h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; color: #0F0F0F; }

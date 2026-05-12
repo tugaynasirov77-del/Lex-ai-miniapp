@@ -5,16 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#08080F",
-        surface: "#111118",
-        surface2: "#1A1A24",
-        border: "rgba(255,255,255,0.08)",
-        accent: "#6E56CF",
-        accent2: "#5B46B0",
-        success: "#30A46C",
-        warn: "#F76B15",
-        ink: "#EDEDEF",
-        muted: "rgba(255,255,255,0.45)",
+        bg: "#FAFAFA",
+        surface: "#FFFFFF",
+        border: "rgba(0,0,0,0.08)",
+        ink: "#0F0F0F",
+        muted: "#6B7280",
+        faint: "#9CA3AF",
+        sky: "#0EA5E9",
+        emerald: "#10B981",
+        amber: "#F59E0B",
+        indigo: "#6366F1",
+        red: "#EF4444",
+        accent: "#0EA5E9",
+        success: "#10B981",
+        warn: "#F59E0B",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
@@ -23,17 +27,14 @@ export default {
         expo: "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       boxShadow: {
-        glow: "0 0 20px rgba(110,86,207,0.15)",
-        glowBtn: "0 4px 15px rgba(110,86,207,0.4)",
-        ringOn: "0 0 0 2px rgba(110,86,207,0.5), 0 0 14px rgba(110,86,207,0.35)",
-      },
-      backgroundImage: {
-        accentGrad: "linear-gradient(135deg, #6E56CF 0%, #5B46B0 100%)",
+        card: "0 2px 12px rgba(0,0,0,0.06)",
+        cardHover: "0 4px 18px rgba(0,0,0,0.10)",
+        glowBtn: "0 4px 14px rgba(14,165,233,0.35)",
       },
       animation: {
         "fade-up": "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both",
         "pulse-dot": "pulseDot 1.6s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
+        "typing": "typing 1.2s ease-in-out infinite",
       },
       keyframes: {
         fadeUp: {
@@ -41,12 +42,12 @@ export default {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulseDot: {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(48,164,108,0.55)" },
-          "50%": { boxShadow: "0 0 0 6px rgba(48,164,108,0)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(16,185,129,0.45)" },
+          "50%": { boxShadow: "0 0 0 6px rgba(16,185,129,0)" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
+        typing: {
+          "0%, 100%": { opacity: "0.3" },
+          "50%": { opacity: "1" },
         },
       },
     },
