@@ -34,11 +34,11 @@ export interface Project {
 }
 
 export const PROJECTS: Project[] = [
-  { id: "p1", title: "Запуск онлайн-курса «Лекс»", status: "in_progress", agents: ["andrey", "milena", "alina", "nikolay"], createdAt: "2026-05-08", progress: 60 },
-  { id: "p2", title: "Лендинг для B2B продукта", status: "in_progress", agents: ["alexander", "alina", "mikhail"], createdAt: "2026-05-09", progress: 35 },
-  { id: "p3", title: "Аудит воронки продаж", status: "done", agents: ["nikolay", "viktor", "arkadiy"], createdAt: "2026-05-01", progress: 100 },
-  { id: "p4", title: "Контент-план на июнь", status: "paused", agents: ["milena", "alina"], createdAt: "2026-05-04", progress: 20 },
-  { id: "p5", title: "Интеграция CRM", status: "in_progress", agents: ["mikhail", "andrey"], createdAt: "2026-05-10", progress: 75 },
+  { id: "p1", title: "Запуск Telegram-воронки", status: "in_progress", agents: ["andrey", "mikhail", "milena"], createdAt: "Сегодня, 14:20", progress: 60 },
+  { id: "p2", title: "Контент-план на май", status: "done", agents: ["alina", "milena", "arkadiy"], createdAt: "Вчера", progress: 100 },
+  { id: "p3", title: "Анализ 12 конкурентов", status: "in_progress", agents: ["nikolay", "alexander", "arkadiy"], createdAt: "28 апр", progress: 45 },
+  { id: "p4", title: "Лендинг для B2B продукта", status: "in_progress", agents: ["alexander", "alina", "mikhail"], createdAt: "25 апр", progress: 35 },
+  { id: "p5", title: "Аудит воронки продаж", status: "paused", agents: ["nikolay", "viktor"], createdAt: "20 апр", progress: 50 },
 ];
 
 export type Feedback = "up" | "down" | null;

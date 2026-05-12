@@ -22,11 +22,11 @@ export default function AgentsScroll() {
             <button
               key={a.id}
               onClick={() => openAgent(a.botUsername)}
-              className="shrink-0 w-[80px] flex flex-col items-center group animate-fade-up"
+              className="shrink-0 w-[64px] flex flex-col items-center group animate-fade-up"
               style={{ animationDelay: `${120 + i * 40}ms` }}
             >
               <div className="relative">
-                <div className={`w-[52px] h-[52px] rounded-full overflow-hidden ${online ? "shadow-ringOn" : "ring-2 ring-white/10"}`}>
+                <div className={`w-[48px] h-[48px] rounded-full overflow-hidden ${online ? "shadow-ringOn" : "ring-2 ring-white/10"}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
                 </div>
