@@ -15,7 +15,6 @@ interface State {
   progress: number;
 }
 
-const ORCHESTRATOR = "orkestrator1_bot";
 const ANDREY = getAgent("andrey");
 
 function StepCard({
@@ -75,13 +74,6 @@ function Avatar({ src, alt, ring }: { src?: string; alt: string; ring?: boolean 
   );
 }
 
-function openOrchestratorChat() {
-  const url = `https://t.me/${ORCHESTRATOR}`;
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.openTelegramLink) tg.openTelegramLink(url);
-  else window.open(url, "_blank");
-}
-
 export default function LiveActivity({
   task,
   onReset,
@@ -93,20 +85,16 @@ export default function LiveActivity({
 }) {
   const [state, setState] = useState<State | null>(null);
   const progressTimer = useRef<number | null>(null);
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
 
   useEffect(() => {
     if (!task) {
       setState(null);
-      setFeedback(null);
       return;
     }
     let cancelled = false;
     const run = async () => {
       setBusy(true);
-      setFeedback(null);
       setState({ task, stage: "received", progress: 0 });
-
       await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
 
@@ -263,36 +251,20 @@ export default function LiveActivity({
               <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-[14px] leading-relaxed whitespace-pre-wrap break-words">
                 {reply}
               </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <button
-                  onClick={openOrchestratorChat}
-                  className="flex-1 min-w-[120px] rounded-xl bg-accentGrad px-3 py-2 text-[13px] font-semibold shadow-glowBtn"
-                >
-                  Открыть в чате
-                </button>
+              <div className="grid grid-cols-2 gap-2 mt-3">
                 <button
                   onClick={() => reply && navigator.clipboard.writeText(reply).catch(() => {})}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] font-semibold"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] font-semibold hover:border-accent/40"
                 >
                   Скопировать
                 </button>
                 <button
-                  onClick={() => setFeedback("up")}
-                  className={`rounded-xl border px-3 py-2 text-[13px] ${feedback === "up" ? "border-success bg-success/15 text-success" : "border-white/10 bg-white/[0.04]"}`}
-                  aria-label="Хорошо"
-                >👍</button>
-                <button
-                  onClick={() => setFeedback("down")}
-                  className={`rounded-xl border px-3 py-2 text-[13px] ${feedback === "down" ? "border-warn bg-warn/15 text-warn" : "border-white/10 bg-white/[0.04]"}`}
-                  aria-label="Плохо"
-                >👎</button>
+                  onClick={onReset}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] font-semibold hover:border-accent/40"
+                >
+                  Новая задача
+                </button>
               </div>
-              <button
-                onClick={onReset}
-                className="mt-3 w-full text-[12px] text-muted hover:text-ink"
-              >
-                ← Новая задача
-              </button>
             </>
           ) : (
             <>
