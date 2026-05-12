@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LiveActivityAmber from "./LiveActivityAmber";
+
+const TAG_PREFIX: Record<string, string> = {
+  "написать": "Напиши пост для канала про ",
+  "анализ": "Проанализируй конкурентов в нише ",
+  "код": "Напиши код для ",
+  "стратегия": "Составь стратегию для ",
+};
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 
@@ -121,11 +128,26 @@ export default function HomeScreen() {
   const [task, setTask]         = useState("");
   const [activeTask, setActiveTask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [kbOpen, setKbOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const initialH = vv.height;
+    const onResize = () => {
+      // keyboard considered open if viewport shrunk by 150px+
+      setKbOpen(initialH - vv.height > 150);
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
   const [activeNav, setActiveNav] = useState("home");
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const handleTagClick = (tag: string) => {
-    setActiveTag(prev => prev === tag ? null : tag);
+    setActiveTag(tag);
+    setTask(TAG_PREFIX[tag] ?? (tag + " "));
   };
 
   const handleSubmit = () => {
@@ -235,25 +257,27 @@ export default function HomeScreen() {
       )}
 
       {/* ── Навигация ── */}
-      <nav style={styles.nav}>
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
-          const isOn = activeNav === id;
-          return (
-            <button
-              key={id}
-              style={styles.navItem}
-              onClick={() => setActiveNav(id)}
-              aria-label={label}
-            >
-              <Icon active={isOn} />
-              <span style={{ ...styles.navLabel, ...(isOn ? styles.navLabelActive : {}) }}>
-                {label}
-              </span>
-              {isOn && <div style={styles.navPip} />}
-            </button>
-          );
-        })}
-      </nav>
+      {!kbOpen && (
+        <nav style={styles.nav}>
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+            const isOn = activeNav === id;
+            return (
+              <button
+                key={id}
+                style={styles.navItem}
+                onClick={() => setActiveNav(id)}
+                aria-label={label}
+              >
+                <Icon active={isOn} />
+                <span style={{ ...styles.navLabel, ...(isOn ? styles.navLabelActive : {}) }}>
+                  {label}
+                </span>
+                {isOn && <div style={styles.navPip} />}
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
@@ -470,18 +494,19 @@ const styles: Record<string, React.CSSProperties> = {
   recentText: { flex: 1 },
 
   recentTitle: {
-    fontWeight: 300,
+    fontWeight: 400,
     fontSize: 14,
-    color: "rgba(240,228,208,0.55)",
+    color: "rgba(244,234,218,0.92)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    letterSpacing: "-0.1px",
   },
 
   recentMeta: {
     fontWeight: 300,
     fontSize: 11,
-    color: "rgba(255,255,255,0.22)",
+    color: "rgba(240,160,40,0.55)",
     marginTop: 3,
   },
 
