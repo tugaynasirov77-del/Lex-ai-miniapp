@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { IconPen, IconSearch, IconCode, IconChart, IconChat, IconClock } from "./Icons";
+import { IconPen, IconSearch, IconCode, IconChart, IconChat } from "./Icons";
 
 const TAGS = [
   { Icon: IconPen, label: "Написать", prefix: "Напиши пост для канала про ", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.3)", color: "#93C5FD" },
@@ -8,8 +8,6 @@ const TAGS = [
   { Icon: IconCode, label: "Код", prefix: "Напиши код для ", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)", color: "#FCD34D" },
   { Icon: IconChart, label: "Стратегия", prefix: "Составь стратегию для ", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)", color: "#6EE7B7" },
 ];
-
-const RECENT = ["Анализ конкурентов", "Контент-план", "Код бота"];
 
 export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string) => void; busy: boolean }) {
   const [text, setText] = useState("");
@@ -21,21 +19,7 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
 
   return (
     <section className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "40ms" }}>
-      <h2 className="h1 mb-3">Какую задачу решаем?</h2>
-
-      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
-        {RECENT.map((r) => (
-          <button
-            key={r}
-            onClick={() => setText(r)}
-            disabled={busy}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] disabled:opacity-40"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#94A3B8" }}
-          >
-            <span className="opacity-70"><IconClock size={11} /></span>{r}
-          </button>
-        ))}
-      </div>
+      <h2 className="h1 mb-4">Какую задачу решаем?</h2>
 
       <div className="flex items-center gap-2 mb-3">
         <div className="flex-1 rounded-2xl px-4 py-3 flex items-center gap-2 min-w-0"

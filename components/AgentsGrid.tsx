@@ -3,11 +3,8 @@ import { AGENTS } from "../lib/mockData";
 
 type Status = "online" | "busy" | "offline";
 
-// Demo status overrides per spec (Alina busy, Arkadiy offline)
-const STATUS_OVERRIDE: Record<string, Status> = {
-  alina: "busy",
-  arkadiy: "offline",
-};
+// All online
+const STATUS_OVERRIDE: Record<string, Status> = {};
 
 const STATUS_COLOR: Record<Status, { ring: string; glow: string; dot: string; pulse: string }> = {
   online:  { ring: "#10B981", glow: "0 0 14px rgba(16,185,129,0.35)", dot: "#10B981", pulse: "animate-pulse-dot" },
