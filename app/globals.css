@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
 
 html, body {
   background: #FAFAFA;
@@ -13,7 +11,15 @@ html, body {
   font-feature-settings: "cv11", "ss01", "ss03";
 }
 
-body { min-height: 100vh; }
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(600px 400px at 100% 0%, #E8F4FD 0%, transparent 60%),
+    radial-gradient(700px 500px at 0% 30%, #EDE9FE 0%, transparent 60%),
+    radial-gradient(800px 500px at 50% 100%, #F0FDF4 0%, transparent 55%),
+    #FAFAFA;
+  background-attachment: fixed;
+}
 
 * { -webkit-tap-highlight-color: transparent; }
 
@@ -29,20 +35,19 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 
 .card {
   background: #FFFFFF;
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
   border-radius: 16px;
 }
 
-.glass { /* legacy alias for older pages */
-  background: #FFFFFF;
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+.glass {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  backdrop-filter: blur(16px);
 }
 
-.glass-hover:hover {
-  box-shadow: 0 4px 18px rgba(0,0,0,0.10);
-}
+.glass-hover:hover { box-shadow: 0 6px 22px rgba(0,0,0,0.08); }
 
 .caption {
   text-transform: uppercase;
@@ -52,16 +57,53 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
   color: #9CA3AF;
 }
 
-.tnum { font-variant-numeric: tabular-nums; }
+.grad-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
 
+.tnum { font-variant-numeric: tabular-nums; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.h1 {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  line-height: 1.15;
-  color: #0F0F0F;
-}
+.h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.15; color: #0F0F0F; }
 .h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; color: #0F0F0F; }
+
+/* Rainbow divider */
+.rainbow-line {
+  height: 2px;
+  background: linear-gradient(90deg, #0EA5E9 0%, #8B5CF6 50%, #10B981 100%);
+}
+
+/* Animated progress shimmer */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+}
+.animate-pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+
+@keyframes typing {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+.animate-typing { animation: typing 1s ease-in-out infinite; }
