@@ -14,10 +14,10 @@ html, body {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(600px 400px at 100% 0%, #E8F4FD 0%, transparent 60%),
-    radial-gradient(700px 500px at 0% 30%, #EDE9FE 0%, transparent 60%),
-    radial-gradient(800px 500px at 50% 100%, #F0FDF4 0%, transparent 55%),
-    #FAFAFA;
+    radial-gradient(700px 500px at 100% 0%, #7DD3FC 0%, rgba(125,211,252,0) 70%),
+    radial-gradient(800px 600px at 0% 25%, #C4B5FD 0%, rgba(196,181,253,0) 70%),
+    radial-gradient(900px 600px at 60% 100%, #86EFAC 0%, rgba(134,239,172,0) 65%),
+    #EEF2F7;
   background-attachment: fixed;
 }
 
