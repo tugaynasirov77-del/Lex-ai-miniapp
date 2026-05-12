@@ -83,10 +83,10 @@ function ClockIcon({ active }: { active?: boolean }) {
 
 function SendIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-      stroke="rgba(0,0,0,0.65)" strokeWidth="2.5"
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+      stroke="#0A0705" strokeWidth="2.4"
       strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" />
+      <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
 }
@@ -126,7 +126,6 @@ export default function HomeScreen() {
 
   const handleTagClick = (tag: string) => {
     setActiveTag(prev => prev === tag ? null : tag);
-    setTask(prev => prev ? prev : tag + " ");
   };
 
   const handleSubmit = () => {
@@ -269,10 +268,10 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     background: "#0A0705",
     position: "relative",
-    overflow: "hidden",
     fontFamily: "'DM Sans', -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column",
+    paddingBottom: "calc(env(safe-area-inset-bottom) + 78px)",
   },
 
   mesh: {
@@ -290,7 +289,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "calc(env(safe-area-inset-top) + 60px) 22px 0",
+    padding: "calc(env(safe-area-inset-top) + 96px) 22px 0",
     position: "relative",
     zIndex: 2,
   },
@@ -365,8 +364,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     background: "rgba(255,255,255,0.025)",
     border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 12,
-    padding: "15px 48px 15px 16px",
+    borderRadius: 14,
+    padding: "16px 60px 16px 18px",
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
     fontSize: 14,
@@ -380,18 +379,21 @@ const styles: Record<string, React.CSSProperties> = {
 
   sendBtn: {
     position: "absolute",
-    right: 30,
-    bottom: 11,
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    right: 32,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     border: "none",
     cursor: "pointer",
     background: "linear-gradient(135deg, #F0A020, #D05020)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "opacity 0.2s",
+    transition: "opacity 0.2s, transform 0.15s",
+    boxShadow: "0 4px 14px rgba(208,80,32,0.35)",
+    padding: 0,
   },
 
   tagsRow: {
@@ -489,14 +491,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   nav: {
+    position: "fixed",
+    left: "50%",
+    transform: "translateX(-50%)",
+    bottom: 0,
+    width: "100%",
+    maxWidth: 390,
     display: "flex",
     justifyContent: "space-around",
     padding: "13px 0 max(20px, env(safe-area-inset-bottom))",
-    borderTop: "1px solid rgba(255,255,255,0.04)",
-    marginTop: 12,
-    position: "relative",
-    zIndex: 2,
-    background: "transparent",
+    borderTop: "1px solid rgba(255,255,255,0.05)",
+    zIndex: 50,
+    background: "rgba(10,7,5,0.85)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
   },
 
   navItem: {
