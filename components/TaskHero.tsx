@@ -2,17 +2,30 @@
 import { useState } from "react";
 
 const TAGS = [
-  { emoji: "✍️", label: "Контент" },
-  { emoji: "🔍", label: "Анализ" },
-  { emoji: "💻", label: "Код" },
-  { emoji: "📊", label: "Стратегия" },
+  { emoji: "✍️", label: "Контент", prefix: "Напиши пост для канала про " },
+  { emoji: "🔍", label: "Анализ", prefix: "Проанализируй конкурентов в нише " },
+  { emoji: "💻", label: "Код", prefix: "Напиши код для " },
+  { emoji: "📊", label: "Стратегия", prefix: "Составь стратегию для " },
 ];
 
 const ORCHESTRATOR = "orkestrator1_bot";
 
+function toBase64Url(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 function openOrchestrator(text: string) {
-  if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
-  const url = `https://t.me/${ORCHESTRATOR}`;
+  const trimmed = text.trim();
+  if (trimmed && navigator.clipboard) navigator.clipboard.writeText(trimmed).catch(() => {});
+  const payload = trimmed ? toBase64Url(trimmed) : "";
+  // Telegram limits start param to 64 chars, alphanum + _ -. Skip if longer.
+  const useStart = payload && payload.length <= 64;
+  const url = useStart
+    ? `https://t.me/${ORCHESTRATOR}?start=${payload}`
+    : `https://t.me/${ORCHESTRATOR}`;
   const tg = (window as any).Telegram?.WebApp;
   if (tg?.openTelegramLink) tg.openTelegramLink(url);
   else window.open(url, "_blank");
@@ -48,7 +61,7 @@ export default function TaskHero() {
         {TAGS.map((t) => (
           <button
             key={t.label}
-            onClick={() => setText(`${t.emoji} ${t.label}: `)}
+            onClick={() => setText(t.prefix)}
             className="shrink-0 px-3 py-1.5 rounded-full glass text-xs text-ink/80 hover:border-accent/40"
           >
             <span className="mr-1">{t.emoji}</span>{t.label}
