@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import "@fontsource/dm-sans/200.css";
+import "@fontsource/dm-sans/300.css";
+import "@fontsource/dm-sans/400.css";
 import "./globals.css";
 import Script from "next/script";
-import BottomNav from "../components/BottomNav";
 import TelegramInit from "../components/TelegramInit";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
@@ -17,17 +19,16 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0F1117",
+  themeColor: "#0A0705",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" suppressHydrationWarning className={inter.variable}>
-      <body className="font-sans bg-bg text-ink min-h-screen">
+      <body className="bg-bg text-ink min-h-screen">
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <TelegramInit />
-        <main className="pb-28 max-w-xl mx-auto">{children}</main>
-        <BottomNav />
+        {children}
       </body>
     </html>
   );

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.2.8",
     "next": "^16.2.6",
     "react": "19.0.0",
     "react-dom": "19.0.0"

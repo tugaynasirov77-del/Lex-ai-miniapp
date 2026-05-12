@@ -1,24 +1,5 @@
-"use client";
-import { useState } from "react";
-import HomeHeader from "../components/HomeHeader";
-import TaskInput from "../components/TaskInput";
-import AgentsGrid from "../components/AgentsGrid";
-import LiveActivity from "../components/LiveActivity";
-import ResultsList from "../components/ResultsList";
-import MetricsRow from "../components/MetricsRow";
+import HomeScreen from "../components/HomeScreen";
 
 export default function HomePage() {
-  const [task, setTask] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  return (
-    <>
-      <HomeHeader />
-      <TaskInput onSubmit={(t) => setTask(t)} busy={busy} />
-      <AgentsGrid />
-      <LiveActivity task={task} onReset={() => { setTask(null); setBusy(false); }} setBusy={setBusy} />
-      <ResultsList />
-      <MetricsRow />
-    </>
-  );
+  return <HomeScreen />;
 }
