@@ -1,19 +1,18 @@
+"use client";
+import { useState } from "react";
 import HomeHeader from "../components/HomeHeader";
-import TaskHero from "../components/TaskHero";
-import AgentsScroll from "../components/AgentsScroll";
-import ActiveTasks from "../components/ActiveTasks";
-import RecentProjects from "../components/RecentProjects";
-import AnalyticsTeaser from "../components/AnalyticsTeaser";
+import TaskInput from "../components/TaskInput";
+import LiveActivity from "../components/LiveActivity";
 
 export default function HomePage() {
+  const [task, setTask] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
   return (
     <>
       <HomeHeader />
-      <TaskHero />
-      <AgentsScroll />
-      <ActiveTasks />
-      <RecentProjects />
-      <AnalyticsTeaser />
+      <TaskInput onSubmit={(t) => setTask(t)} busy={busy} />
+      <LiveActivity task={task} onReset={() => { setTask(null); setBusy(false); }} setBusy={setBusy} />
     </>
   );
 }
