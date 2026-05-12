@@ -10,7 +10,9 @@ const RESULTS = [
 export default function ResultsList() {
   return (
     <section className="px-4 mt-5 animate-fade-up" style={{ animationDelay: "320ms" }}>
-      <p className="caption mb-3 grad-text" style={{ backgroundImage: "linear-gradient(90deg, #10B981, #0EA5E9)" }}>Готово сегодня</p>
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-3" style={{ background: "linear-gradient(90deg, rgba(16,185,129,0.12), rgba(14,165,233,0.12))", border: "1px solid rgba(16,185,129,0.25)" }}>
+        <span className="text-[10px] font-bold tracking-[1.2px] uppercase grad-text" style={{ backgroundImage: "linear-gradient(90deg, #10B981, #0EA5E9)" }}>Готово сегодня</span>
+      </span>
       <div className="space-y-2">
         {RESULTS.map((r) => {
           const agent = getAgent(r.agentId);

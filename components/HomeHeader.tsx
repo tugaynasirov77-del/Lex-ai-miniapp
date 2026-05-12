@@ -17,7 +17,7 @@ export default function HomeHeader() {
   const online = AGENTS.filter(a => a.status === "online").length;
 
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-xl px-5 pt-[calc(env(safe-area-inset-top)+80px)] pb-3"
+    <header className="sticky top-0 z-30 backdrop-blur-xl px-5 pt-[calc(env(safe-area-inset-top)+108px)] pb-3"
       style={{ background: "linear-gradient(to right, rgba(239,246,255,0.85), rgba(245,243,255,0.85))" }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">

@@ -1,18 +1,15 @@
 "use client";
 import { useState } from "react";
+import { IconPen, IconSearch, IconCode, IconChart, IconChat, IconClock, IconSparkle } from "./Icons";
 
 const TAGS = [
-  { emoji: "✍️", label: "Написать", prefix: "Напиши пост для канала про ", bg: "linear-gradient(135deg, #EFF6FF, #F0FDF4)", border: "#BAE6FD", color: "#0369A1" },
-  { emoji: "🔍", label: "Анализ", prefix: "Проанализируй конкурентов в нише ", bg: "linear-gradient(135deg, #F5F3FF, #EEF2FF)", border: "#C4B5FD", color: "#6D28D9" },
-  { emoji: "💻", label: "Код", prefix: "Напиши код для ", bg: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", border: "#FDE68A", color: "#B45309" },
-  { emoji: "📊", label: "Стратегия", prefix: "Составь стратегию для ", bg: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "#A7F3D0", color: "#047857" },
+  { Icon: IconPen, label: "Написать", prefix: "Напиши пост для канала про ", bg: "linear-gradient(135deg, #EFF6FF, #F0FDF4)", border: "#BAE6FD", color: "#0369A1" },
+  { Icon: IconSearch, label: "Анализ", prefix: "Проанализируй конкурентов в нише ", bg: "linear-gradient(135deg, #F5F3FF, #EEF2FF)", border: "#C4B5FD", color: "#6D28D9" },
+  { Icon: IconCode, label: "Код", prefix: "Напиши код для ", bg: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", border: "#FDE68A", color: "#B45309" },
+  { Icon: IconChart, label: "Стратегия", prefix: "Составь стратегию для ", bg: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "#A7F3D0", color: "#047857" },
 ];
 
-const RECENT = [
-  "Анализ конкурентов",
-  "Контент-план",
-  "Код Telegram бота",
-];
+const RECENT = ["Анализ конкурентов", "Контент-план", "Код Telegram бота"];
 
 export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string) => void; busy: boolean }) {
   const [text, setText] = useState("");
@@ -28,20 +25,22 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
         className="relative rounded-2xl p-4 overflow-hidden"
         style={{
           background: "linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 60%, #F5F3FF 100%)",
-          border: "1px solid transparent",
-          backgroundClip: "padding-box",
+          border: "1px solid rgba(186,230,253,0.5)",
           boxShadow: "0 8px 24px rgba(14,165,233,0.12)",
         }}
       >
         <div aria-hidden className="absolute right-[-30px] top-[-30px] w-[180px] h-[180px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(139,92,246,0.18), transparent)" }} />
         <div className="relative">
-          <p className="caption" style={{ color: "#0EA5E9" }}>Новая задача</p>
-          <h2 className="h1 mt-2 mb-4 grad-text" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>Какую задачу решаем?</h2>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-2.5" style={{ background: "linear-gradient(90deg, rgba(14,165,233,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(14,165,233,0.25)" }}>
+            <span style={{ color: "#0EA5E9" }}><IconSparkle size={12} /></span>
+            <span className="text-[10px] font-bold tracking-[1.2px] uppercase grad-text" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>Новая задача</span>
+          </div>
+          <h2 className="h1 mb-4 grad-text" style={{ backgroundImage: "linear-gradient(90deg, #0EA5E9, #8B5CF6)" }}>Какую задачу решаем?</h2>
 
           <div className="flex items-center gap-2 mb-3">
             <div className="flex-1 rounded-2xl bg-white px-4 py-3 flex items-center gap-2 min-w-0"
               style={{ border: "1px solid rgba(186,230,253,0.6)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)" }}>
-              <span className="text-base opacity-60 shrink-0">💬</span>
+              <span className="shrink-0" style={{ color: "#0EA5E9" }}><IconChat size={16} /></span>
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -49,7 +48,7 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
                 placeholder="Опиши задачу команде…"
                 dir="auto"
                 className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-faint text-[14px] text-ink"
-                style={{ caretColor: "#0EA5E9", caretShape: "block" as any }}
+                style={{ caretColor: "#0EA5E9" }}
                 disabled={busy}
               />
             </div>
@@ -82,7 +81,7 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
                 className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold disabled:opacity-40"
                 style={{ background: t.bg, border: `1px solid ${t.border}`, color: t.color }}
               >
-                <span>{t.emoji}</span>{t.label}
+                <t.Icon size={13} />{t.label}
               </button>
             ))}
           </div>
@@ -94,9 +93,9 @@ export default function TaskInput({ onSubmit, busy }: { onSubmit: (task: string)
                 onClick={() => setText(r)}
                 disabled={busy}
                 className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] text-muted disabled:opacity-40"
-                style={{ background: "rgba(255,255,255,0.8)", border: "1px solid", borderImage: "linear-gradient(90deg, #BAE6FD, #C4B5FD) 1" }}
+                style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(186,230,253,0.55)" }}
               >
-                <span className="opacity-60">🕐</span>{r}
+                <span className="opacity-60"><IconClock size={11} /></span>{r}
               </button>
             ))}
           </div>

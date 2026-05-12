@@ -13,8 +13,10 @@ export default function AgentsGrid() {
   return (
     <section className="px-4 mt-5 animate-fade-up" style={{ animationDelay: "120ms" }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="caption grad-text" style={{ backgroundImage: "linear-gradient(90deg, #6366F1, #8B5CF6)" }}>Команда</p>
-        <span className="text-[11px] text-muted tnum">{AGENTS.length}</span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(99,102,241,0.25)" }}>
+          <span className="text-[10px] font-bold tracking-[1.2px] uppercase grad-text" style={{ backgroundImage: "linear-gradient(90deg, #6366F1, #8B5CF6)" }}>Команда</span>
+        </span>
+        <span className="text-[11px] font-bold tnum px-2 py-0.5 rounded-full" style={{ background: "rgba(99,102,241,0.10)", color: "#6366F1" }}>{AGENTS.length}</span>
       </div>
       <div className="grid grid-cols-4 gap-2.5">
         {AGENTS.map((a, i) => {
