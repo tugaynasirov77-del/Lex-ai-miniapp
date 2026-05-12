@@ -435,20 +435,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 7,
     cursor: "pointer",
     fontFamily: "'DM Sans', sans-serif",
-    fontWeight: 300,
+    fontWeight: 400,
     fontSize: 12,
     letterSpacing: "0.03em",
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    color: "rgba(255,255,255,0.4)",
-    transition: "border-color 0.15s, color 0.15s",
+    background: "rgba(240,140,40,0.08)",
+    border: "1px solid rgba(240,140,40,0.28)",
+    color: "rgba(245,200,120,0.95)",
+    transition: "transform 0.15s cubic-bezier(0.16,1,0.3,1)",
   },
 
-  tagActive: {
-    borderColor: "rgba(240,130,30,0.35)",
-    color: "rgba(240,160,40,0.8)",
-    background: "rgba(240,130,30,0.07)",
-  },
+  tagActive: {},
 
   divider: {
     height: 1,
@@ -494,9 +490,9 @@ const styles: Record<string, React.CSSProperties> = {
   recentText: { flex: 1 },
 
   recentTitle: {
-    fontWeight: 400,
+    fontWeight: 500,
     fontSize: 14,
-    color: "rgba(244,234,218,0.92)",
+    color: "#F5EBD7",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -504,9 +500,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   recentMeta: {
-    fontWeight: 300,
+    fontWeight: 400,
     fontSize: 11,
-    color: "rgba(240,160,40,0.55)",
+    color: "rgba(240,170,55,0.85)",
     marginTop: 3,
   },
 
