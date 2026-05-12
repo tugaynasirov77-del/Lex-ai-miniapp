@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LiveActivityAmber from "./LiveActivityAmber";
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 
@@ -118,6 +119,8 @@ function Sigil() {
 
 export default function HomeScreen() {
   const [task, setTask]         = useState("");
+  const [activeTask, setActiveTask] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [activeNav, setActiveNav] = useState("home");
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
@@ -127,11 +130,16 @@ export default function HomeScreen() {
   };
 
   const handleSubmit = () => {
-    if (!task.trim()) return;
-    // Здесь подключается Live Activity — передаёт задачу в Anthropic API
-    console.log("Задача отправлена:", task);
+    const t = task.trim();
+    if (!t || busy) return;
+    setActiveTask(t);
     setTask("");
     setActiveTag(null);
+  };
+
+  const handleReset = () => {
+    setActiveTask(null);
+    setBusy(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -173,13 +181,15 @@ export default function HomeScreen() {
           onKeyDown={handleKeyDown}
           placeholder="Опиши задачу команде..."
           rows={3}
+          disabled={busy}
         />
         <button
           style={{
             ...styles.sendBtn,
-            opacity: task.trim() ? 1 : 0.5,
+            opacity: task.trim() && !busy ? 1 : 0.5,
           }}
           onClick={handleSubmit}
+          disabled={busy}
           aria-label="Отправить"
         >
           <SendIcon />
@@ -205,21 +215,25 @@ export default function HomeScreen() {
       {/* ── Разделитель ── */}
       <div style={styles.divider} />
 
-      {/* ── Недавние ── */}
-      <section style={styles.recent}>
-        <p style={styles.recentLabel}>// недавние</p>
+      {/* ── Live Activity / Недавние ── */}
+      {activeTask ? (
+        <LiveActivityAmber task={activeTask} onReset={handleReset} onBusy={setBusy} />
+      ) : (
+        <section style={styles.recent}>
+          <p style={styles.recentLabel}>// недавние</p>
 
-        {RECENT_TASKS.map(item => (
-          <div key={item.id} style={styles.recentItem}>
-            <div style={styles.recentDot} />
-            <div style={styles.recentText}>
-              <p style={styles.recentTitle}>{item.title}</p>
-              <p style={styles.recentMeta}>{item.agent} · {item.time}</p>
+          {RECENT_TASKS.map(item => (
+            <div key={item.id} style={styles.recentItem}>
+              <div style={styles.recentDot} />
+              <div style={styles.recentText}>
+                <p style={styles.recentTitle}>{item.title}</p>
+                <p style={styles.recentMeta}>{item.agent} · {item.time}</p>
+              </div>
+              <span style={styles.recentArrow}>›</span>
             </div>
-            <span style={styles.recentArrow}>›</span>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
 
       {/* ── Навигация ── */}
       <nav style={styles.nav}>
@@ -276,7 +290,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "22px 22px 0",
+    padding: "calc(env(safe-area-inset-top) + 60px) 22px 0",
     position: "relative",
     zIndex: 2,
   },
@@ -289,8 +303,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   wordmark: {
     fontWeight: 300,
-    fontSize: 12,
-    color: "rgba(240,232,218,0.7)",
+    fontSize: 14,
+    color: "rgba(240,232,218,0.78)",
     letterSpacing: "0.26em",
   },
 
@@ -309,19 +323,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   hero: {
-    padding: "52px 22px 26px",
+    padding: "72px 22px 28px",
     position: "relative",
     zIndex: 2,
   },
 
   h1: {
     fontWeight: 200,
-    fontSize: 22,
-    color: "rgba(240,232,218,0.9)",
+    fontSize: 28,
+    color: "rgba(240,232,218,0.92)",
     lineHeight: 1.2,
-    marginBottom: 9,
+    marginBottom: 10,
     whiteSpace: "nowrap",
-    letterSpacing: "-0.3px",
+    letterSpacing: "-0.4px",
   },
 
   // Градиент на тексте — через background-clip
@@ -335,8 +349,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   sub: {
     fontWeight: 300,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.12)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.22)",
     letterSpacing: "0.04em",
   },
 
@@ -352,11 +366,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,255,255,0.025)",
     border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 12,
-    padding: "13px 46px 13px 15px",
+    padding: "15px 48px 15px 16px",
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
-    fontSize: 13,
-    color: "rgba(240,228,208,0.55)",
+    fontSize: 14,
+    color: "rgba(240,228,208,0.7)",
+    caretColor: "#F0A020",
     resize: "none",
     outline: "none",
     lineHeight: 1.5,
@@ -390,16 +405,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   tag: {
-    padding: "5px 12px",
-    borderRadius: 6,
+    padding: "7px 14px",
+    borderRadius: 7,
     cursor: "pointer",
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: "0.03em",
     background: "rgba(255,255,255,0.03)",
     border: "1px solid rgba(255,255,255,0.08)",
-    color: "rgba(255,255,255,0.25)",
+    color: "rgba(255,255,255,0.4)",
     transition: "border-color 0.15s, color 0.15s",
   },
 
@@ -426,10 +441,10 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentLabel: {
     fontWeight: 300,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: "0.1em",
-    color: "rgba(255,255,255,0.12)",
-    marginBottom: 10,
+    color: "rgba(255,255,255,0.22)",
+    marginBottom: 12,
   },
 
   recentItem: {
@@ -454,8 +469,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentTitle: {
     fontWeight: 300,
-    fontSize: 13,
-    color: "rgba(240,228,208,0.35)",
+    fontSize: 14,
+    color: "rgba(240,228,208,0.55)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -463,9 +478,9 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentMeta: {
     fontWeight: 300,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.12)",
-    marginTop: 2,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.22)",
+    marginTop: 3,
   },
 
   recentArrow: {
@@ -499,9 +514,9 @@ const styles: Record<string, React.CSSProperties> = {
   navLabel: {
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: "0.04em",
-    color: "rgba(255,255,255,0.12)",
+    color: "rgba(255,255,255,0.25)",
   },
 
   navLabelActive: {
