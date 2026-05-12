@@ -22,7 +22,7 @@ export default function Section({ number, title, tone, badge, right, children, d
   const t = TONE[tone];
   return (
     <section className="px-4 mt-4 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
-      <div className="glass rounded-2xl p-4 ring-1 ring-inset ring-white/5">
+      <div className="glass rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
             <span className={`w-1 h-4 rounded-full ${t.bar}`} />
