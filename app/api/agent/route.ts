@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { AGENT_DEFS, type AgentKey } from "@/lib/agents";
+import { AGENT_DEFS, LEX_TEAM_RULES, type AgentKey } from "@/lib/agents";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,8 +28,12 @@ export async function POST(req: NextRequest) {
       system: [
         {
           type: "text",
-          text: def.system,
+          text: LEX_TEAM_RULES,
           cache_control: { type: "ephemeral" },
+        },
+        {
+          type: "text",
+          text: def.system,
         },
       ],
       messages: [{ role: "user", content: task }],
