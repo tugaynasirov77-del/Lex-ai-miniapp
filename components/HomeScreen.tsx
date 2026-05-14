@@ -130,6 +130,23 @@ export default function HomeScreen() {
   const [busy, setBusy] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
 
+  // Прогрев кэша LEX_TEAM_RULES на mount, не чаще чем раз в 5 минут.
+  // Делает первый реальный запрос юзера дешевле в ~10 раз на input-токенах.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const last = Number(localStorage.getItem("lex_cache_warmup_at") || 0);
+      if (Date.now() - last < 5 * 60 * 1000) return; // ещё свежий
+      localStorage.setItem("lex_cache_warmup_at", String(Date.now()));
+    } catch {}
+    fetch("/api/orchestrate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: "warmup" }),
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const vv = window.visualViewport;

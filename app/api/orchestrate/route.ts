@@ -23,11 +23,13 @@ export async function POST(req: NextRequest) {
   }
 
   const client = new Anthropic({ apiKey });
+  // warmup: минимальный запрос, единственная цель — записать LEX_TEAM_RULES в кэш Anthropic
+  const isWarmup = task.trim().toLowerCase() === "warmup";
 
   try {
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 100,
+      max_tokens: isWarmup ? 1 : 100,
       system: [
         {
           type: "text",
@@ -47,6 +49,19 @@ export async function POST(req: NextRequest) {
       .map((b) => b.text)
       .join("\n")
       .trim();
+
+    // на warmup-запросах не парсим выбор агента — это не настоящая задача
+    if (isWarmup) {
+      return NextResponse.json({
+        warmed: true,
+        usage: {
+          input_tokens: response.usage?.input_tokens,
+          output_tokens: response.usage?.output_tokens,
+          cache_creation_input_tokens: response.usage?.cache_creation_input_tokens || 0,
+          cache_read_input_tokens: response.usage?.cache_read_input_tokens || 0,
+        },
+      });
+    }
 
     let parsed: OrchestrateResult | null = null;
     try {
