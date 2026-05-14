@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ORCHESTRATOR_SYSTEM, AGENT_DEFS, type AgentKey } from "../../../lib/agents";
+import Anthropic from "@anthropic-ai/sdk";
+import { ORCHESTRATOR_SYSTEM, AGENT_DEFS, type AgentKey } from "@/lib/agents";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -21,42 +22,53 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "task is required" }, { status: 400 });
   }
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 200,
-      system: ORCHESTRATOR_SYSTEM,
-      messages: [{ role: "user", content: task }],
-    }),
-  });
+  const client = new Anthropic({ apiKey });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    return NextResponse.json({ error: "Anthropic API error", details: errText }, { status: 502 });
-  }
-  const data = (await res.json()) as { content: Array<{ type: string; text?: string }> };
-  const text = data.content?.find((b) => b.type === "text")?.text?.trim() ?? "";
-
-  let parsed: OrchestrateResult | null = null;
   try {
-    const m = text.match(/\{[\s\S]*\}/);
-    if (m) {
-      const obj = JSON.parse(m[0]);
-      if (VALID_AGENTS.includes(obj.agentId)) {
-        parsed = { agentId: obj.agentId, reasoning: String(obj.reasoning ?? "").slice(0, 200) };
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 100,
+      system: [
+        {
+          type: "text",
+          text: ORCHESTRATOR_SYSTEM,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: task }],
+    });
+
+    const text = response.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("\n")
+      .trim();
+
+    let parsed: OrchestrateResult | null = null;
+    try {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) {
+        const obj = JSON.parse(m[0]);
+        if (VALID_AGENTS.includes(obj.agentId)) {
+          parsed = { agentId: obj.agentId, reasoning: String(obj.reasoning ?? "").slice(0, 200) };
+        }
       }
+    } catch {}
+
+    if (!parsed) {
+      parsed = { agentId: "alina", reasoning: "По умолчанию направил копирайтеру" };
     }
-  } catch {}
 
-  if (!parsed) {
-    parsed = { agentId: "alina", reasoning: "По умолчанию направил копирайтеру" };
+    return NextResponse.json({
+      ...parsed,
+      usage: {
+        input_tokens: response.usage?.input_tokens,
+        output_tokens: response.usage?.output_tokens,
+        cache_creation_input_tokens: response.usage?.cache_creation_input_tokens || 0,
+        cache_read_input_tokens: response.usage?.cache_read_input_tokens || 0,
+      },
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: "Anthropic API error", details: e?.message ?? String(e) }, { status: 502 });
   }
-
-  return NextResponse.json(parsed);
 }

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "@fontsource/dm-sans": "^5.2.8",
     "next": "^16.2.6",
     "react": "19.0.0",
