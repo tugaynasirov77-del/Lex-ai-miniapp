@@ -14,7 +14,7 @@ export default function Header({ title, subtitle, accent }: { title: string; sub
         style={{
           fontWeight: 200,
           fontSize: 28,
-          color: "rgba(240,232,218,0.92)",
+          color: "#F8F0DC",
           lineHeight: 1.2,
           letterSpacing: "-0.4px",
           marginBottom: 8,
@@ -40,7 +40,7 @@ export default function Header({ title, subtitle, accent }: { title: string; sub
           style={{
             fontWeight: 300,
             fontSize: 13,
-            color: "rgba(255,255,255,0.22)",
+            color: "rgba(255,255,255,0.45)",
             letterSpacing: "0.04em",
           }}
         >

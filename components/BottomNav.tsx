@@ -101,7 +101,7 @@ export default function BottomNav() {
               alignItems: "center",
               gap: 3,
               padding: "0 4px",
-              color: "rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.3)",
               textDecoration: "none",
               position: "relative",
             }}
@@ -114,7 +114,7 @@ export default function BottomNav() {
                 fontWeight: 300,
                 fontSize: 10,
                 letterSpacing: "0.04em",
-                color: "rgba(255,255,255,0.25)",
+                color: "rgba(255,255,255,0.5)",
                 ...(active
                   ? {
                       background: "linear-gradient(135deg, #F0A020, #D05020)",

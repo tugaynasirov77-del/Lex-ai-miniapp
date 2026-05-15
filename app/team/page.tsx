@@ -30,7 +30,7 @@ export default function TeamPage() {
               </div>
               <span className="relative flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${a.status === "online" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
-                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>{a.status === "online" ? "онлайн" : "офлайн"}</span>
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.6)" }}>{a.status === "online" ? "онлайн" : "офлайн"}</span>
               </span>
             </div>
             <div>

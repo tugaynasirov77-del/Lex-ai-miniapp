@@ -34,7 +34,7 @@ export default function TopBar() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Sigil />
-        <span style={{ fontWeight: 300, fontSize: 14, color: "rgba(240,232,218,0.78)", letterSpacing: "0.26em" }}>
+        <span style={{ fontWeight: 300, fontSize: 14, color: "#F1E3C4", letterSpacing: "0.26em" }}>
           LEX AI
         </span>
       </div>
@@ -50,7 +50,7 @@ export default function TopBar() {
           justifyContent: "center",
           fontSize: 10,
           fontWeight: 300,
-          color: "rgba(255,255,255,0.2)",
+          color: "rgba(255,255,255,0.4)",
         }}
       >
         Д

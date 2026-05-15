@@ -28,9 +28,9 @@ function fmtTok(n: number): string {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="glass rounded-xl p-4">
-      <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>{label}</p>
-      <p className="text-2xl mt-1" style={{ fontWeight: 200, color: "rgba(240,232,218,0.92)" }}>{value}</p>
-      {hint && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{hint}</p>}
+      <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.04em" }}>{label}</p>
+      <p className="text-2xl mt-1" style={{ fontWeight: 200, color: "#F8F0DC" }}>{value}</p>
+      {hint && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{hint}</p>}
     </div>
   );
 }

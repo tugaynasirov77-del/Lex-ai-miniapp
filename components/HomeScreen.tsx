@@ -246,7 +246,7 @@ const styles: Record<string, React.CSSProperties> = {
   wordmark: {
     fontWeight: 300,
     fontSize: 14,
-    color: "rgba(240,232,218,0.78)",
+    color: "#F1E3C4",
     letterSpacing: "0.26em",
   },
 
@@ -261,7 +261,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     fontSize: 10,
     fontWeight: 300,
-    color: "rgba(255,255,255,0.2)",
+    color: "rgba(255,255,255,0.4)",
   },
 
   hero: {
@@ -273,7 +273,7 @@ const styles: Record<string, React.CSSProperties> = {
   h1: {
     fontWeight: 200,
     fontSize: 28,
-    color: "rgba(240,232,218,0.92)",
+    color: "#F8F0DC",
     lineHeight: 1.2,
     marginBottom: 10,
     whiteSpace: "nowrap",
@@ -292,7 +292,7 @@ const styles: Record<string, React.CSSProperties> = {
   sub: {
     fontWeight: 300,
     fontSize: 13,
-    color: "rgba(255,255,255,0.22)",
+    color: "rgba(255,255,255,0.45)",
     letterSpacing: "0.04em",
   },
 
@@ -312,7 +312,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
     fontSize: 14,
-    color: "rgba(240,228,208,0.7)",
+    color: "#EDDCB4",
     caretColor: "#F0A020",
     resize: "none",
     outline: "none",
@@ -384,7 +384,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 300,
     fontSize: 11,
     letterSpacing: "0.1em",
-    color: "rgba(255,255,255,0.22)",
+    color: "rgba(255,255,255,0.45)",
     marginBottom: 12,
   },
 
@@ -421,7 +421,7 @@ const styles: Record<string, React.CSSProperties> = {
   recentMeta: {
     fontWeight: 400,
     fontSize: 11,
-    color: "rgba(240,170,55,0.85)",
+    color: "rgba(255,190,80,0.95)",
     marginTop: 3,
   },
 
