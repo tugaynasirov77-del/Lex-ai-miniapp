@@ -3,7 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/", label: "Команда",
+  { href: "/", label: "Главная",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+        <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  { href: "/team", label: "Команда",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <circle cx="9" cy="9" r="3.2" stroke="currentColor" strokeWidth="1.8"/>
@@ -39,20 +47,20 @@ const TABS = [
 
 export default function BottomNav() {
   const path = usePathname();
+  if (path === "/") return null;
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl"
-      style={{ background: "rgba(15,17,23,0.9)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.4), rgba(99,102,241,0.4), rgba(16,185,129,0.4))" }} />
-      <div className="max-w-xl mx-auto grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+      style={{ background: "rgba(10,7,5,0.85)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="max-w-xl mx-auto grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
           return (
             <Link key={t.href} href={t.href}
-              className="relative flex flex-col items-center pt-2.5 pb-2 text-[11px] font-medium"
-              style={{ color: active ? "#3B82F6" : "#475569" }}>
+              className="relative flex flex-col items-center pt-2.5 pb-2 text-[10px] font-medium"
+              style={{ color: active ? "#F0A020" : "#475569" }}>
               <span className="mb-0.5">{t.icon}</span>
-              <span style={active ? { backgroundImage: "linear-gradient(90deg, #3B82F6, #6366F1)" } : undefined} className={active ? "grad-text font-semibold" : ""}>{t.label}</span>
-              {active && <span className="absolute bottom-0 w-8 h-1 rounded-full" style={{ background: "linear-gradient(90deg, #3B82F6, #6366F1)" }} />}
+              <span>{t.label}</span>
+              {active && <span className="absolute bottom-0 w-8 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #F0A020, #D05020)" }} />}
             </Link>
           );
         })}

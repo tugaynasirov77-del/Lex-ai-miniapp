@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import LiveActivityAmber from "./LiveActivityAmber";
 import { loadRecent, formatAgo, type RecentTaskEntry } from "../lib/recentTasks";
 
@@ -16,10 +17,10 @@ const TAG_PREFIX: Record<string, string> = {
 const QUICK_TAGS = ["написать", "анализ", "код", "стратегия"];
 
 const NAV_ITEMS = [
-  { id: "home",     label: "главная", icon: HomeIcon     },
-  { id: "team",     label: "команда", icon: UsersIcon    },
-  { id: "projects", label: "проекты", icon: FoldersIcon  },
-  { id: "history",  label: "история", icon: ClockIcon    },
+  { id: "home",     label: "главная", icon: HomeIcon,    href: "/"          },
+  { id: "team",     label: "команда", icon: UsersIcon,   href: "/team"      },
+  { id: "projects", label: "проекты", icon: FoldersIcon, href: "/projects"  },
+  { id: "history",  label: "история", icon: ClockIcon,   href: "/history"   },
 ];
 
 // ─── Иконки (inline SVG, без зависимостей) ──────────────────────────────────
@@ -111,6 +112,7 @@ function Sigil() {
 // ─── Главный компонент ───────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [task, setTask]         = useState("");
   const [activeTask, setActiveTask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -275,13 +277,16 @@ export default function HomeScreen() {
       {/* ── Навигация ── */}
       {!kbOpen && (
         <nav style={styles.nav}>
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ id, label, icon: Icon, href }) => {
             const isOn = activeNav === id;
             return (
               <button
                 key={id}
                 style={styles.navItem}
-                onClick={() => setActiveNav(id)}
+                onClick={() => {
+                  setActiveNav(id);
+                  if (id !== "home") router.push(href);
+                }}
                 aria-label={label}
               >
                 <Icon active={isOn} />
