@@ -1,0 +1,22 @@
+name: analyst-daily
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "auto | weekly"
+        required: false
+        default: "auto"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run analyst cron
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          MODE="${MODE:-auto}"
+          curl -fsS -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "https://lex-ai-miniapp.vercel.app/api/cron/analyst?mode=$MODE" \
+            || echo "analyst cron failed"
