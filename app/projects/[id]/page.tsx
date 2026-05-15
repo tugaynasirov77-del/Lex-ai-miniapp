@@ -14,6 +14,18 @@ type AnalyticsBlock = {
   top_posts: { message_id: number; text: string | null; views: number | null; published_at: string | null }[];
 };
 
+type Competitor = {
+  id: string;
+  username: string;
+  title: string | null;
+  subscribers: number | null;
+  posts_count: number;
+  top_post_message_id: number | null;
+  top_post_views: number | null;
+  top_post_text: string | null;
+  last_synced_at: string | null;
+};
+
 const ROLE_LABEL: Record<ProjectAgentRole, { name: string; emoji: string; desc: string }> = {
   analyst: { name: "Аналитик", emoji: "📊", desc: "Статистика и рост канала, отчёты" },
   scout: { name: "Разведчик", emoji: "🔍", desc: "Конкуренты, тренды, темы" },
@@ -43,6 +55,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [budget, setBudget] = useState<ProjectBudgetRow | null>(null);
   const [agents, setAgents] = useState<ProjectAgentRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsBlock | null>(null);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [competitorInput, setCompetitorInput] = useState("");
+  const [addingComp, setAddingComp] = useState(false);
+  const [compError, setCompError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +77,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setBudget(d.budget);
       setAgents(d.agents ?? []);
       setAnalytics(d.analytics ?? null);
+      setCompetitors(d.competitors ?? []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -108,6 +125,43 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const spent = budget?.spent_usd_current_month ?? 0;
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
+
+  const addCompetitor = async () => {
+    if (!competitorInput.trim()) return;
+    hapticImpact("medium");
+    setAddingComp(true);
+    setCompError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/competitors`, {
+        method: "POST",
+        body: JSON.stringify({ username: competitorInput.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "не получилось");
+      hapticNotify("success");
+      setCompetitorInput("");
+      setCompetitors((arr) => {
+        const filtered = arr.filter((c) => c.username !== d.competitor.username);
+        return [d.competitor, ...filtered].sort((a, b) => (b.subscribers ?? 0) - (a.subscribers ?? 0));
+      });
+    } catch (e: any) {
+      setCompError(e.message);
+      hapticNotify("error");
+    } finally {
+      setAddingComp(false);
+    }
+  };
+
+  const removeCompetitor = async (username: string) => {
+    hapticImpact("light");
+    try {
+      await tgFetch(`/api/projects/${id}/competitors?username=${encodeURIComponent(username)}`, { method: "DELETE" });
+      setCompetitors((arr) => arr.filter((c) => c.username !== username));
+      hapticNotify("success");
+    } catch {
+      hapticNotify("error");
+    }
+  };
 
   const remove = async () => {
     if (!project) return;
@@ -316,6 +370,91 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
             )}
+
+            <div className="glass rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">🔍 Конкуренты</h4>
+                <span className="text-[10px] text-muted uppercase tracking-wider">{competitors.length} канал{competitors.length === 1 ? "" : competitors.length > 1 && competitors.length < 5 ? "а" : "ов"}</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={competitorInput}
+                  onChange={(e) => setCompetitorInput(e.target.value)}
+                  placeholder="@конкурент или t.me/..."
+                  className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-sm outline-none placeholder:text-muted"
+                  style={{ fontFamily: "'DM Sans', sans-serif", caretColor: "#F0A020" }}
+                  onKeyDown={(e) => e.key === "Enter" && addCompetitor()}
+                />
+                <button
+                  onClick={addCompetitor}
+                  disabled={!competitorInput.trim() || addingComp}
+                  className="text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+                >
+                  {addingComp ? "..." : "+"}
+                </button>
+              </div>
+              {compError && (
+                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-300">{compError}</div>
+              )}
+              {competitors.length === 0 && !compError && (
+                <p className="text-xs text-muted leading-relaxed">
+                  Добавь канал-конкурента — будем следить за его ростом и топ-постами вместе с твоим.
+                </p>
+              )}
+              {competitors.map((c) => {
+                const mine = analytics?.latest_subscribers ?? 0;
+                const diff = (c.subscribers ?? 0) - mine;
+                return (
+                  <div key={c.id} className="border-t border-white/5 pt-3 space-y-1.5 first:border-t-0 first:pt-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={`https://t.me/${c.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-sm text-ink hover:text-amber truncate block"
+                        >
+                          {c.title || `@${c.username}`}
+                        </a>
+                        <div className="text-[11px] text-muted">@{c.username}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-base font-semibold">{(c.subscribers ?? 0).toLocaleString("ru-RU")}</div>
+                        {mine > 0 && (
+                          <div
+                            className="text-[10px]"
+                            style={{ color: diff > 0 ? "#ef4444" : "#22d3a5" }}
+                          >
+                            {diff > 0 ? "+" : ""}
+                            {diff.toLocaleString("ru-RU")} к тебе
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {c.top_post_text && c.top_post_message_id && (
+                      <a
+                        href={`https://t.me/${c.username}/${c.top_post_message_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between gap-2 text-[11px] py-1 px-2 rounded-md bg-white/[0.03] hover:bg-white/[0.06]"
+                      >
+                        <span className="truncate flex-1 text-ink/75">
+                          ↑ {c.top_post_text.replace(/\n+/g, " ").slice(0, 60)}
+                        </span>
+                        <span className="text-amber shrink-0">👁 {(c.top_post_views ?? 0).toLocaleString("ru-RU")}</span>
+                      </a>
+                    )}
+                    <button
+                      onClick={() => removeCompetitor(c.username)}
+                      className="text-[10px] text-rose-400/70 hover:text-rose-400"
+                    >
+                      убрать
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
 
             <div className="space-y-2">
               <h4 className="font-semibold text-sm px-1">Команда на канале</h4>

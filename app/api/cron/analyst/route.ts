@@ -1,6 +1,7 @@
 import { getSupabase } from "../../../../lib/supabase";
 import { getChat, getChatMembersCount } from "../../../../lib/telegramBot";
 import { fetchChannelPreview } from "../../../../lib/parseTmePreview";
+import { syncCompetitor } from "../../../../lib/scoutSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,7 +90,34 @@ async function processProject(p: ProjectRow) {
     .eq("project_id", p.id)
     .eq("role", "analyst");
 
-  return { project_id: p.id, channel: p.channel_username, subscribers, posts: posts.length };
+  const { data: competitors } = await sb
+    .from("competitor_channels")
+    .select("username")
+    .eq("project_id", p.id);
+
+  let competitorsSynced = 0;
+  for (const c of competitors ?? []) {
+    try {
+      await syncCompetitor(p.id, c.username);
+      competitorsSynced++;
+    } catch {}
+  }
+
+  if ((competitors?.length ?? 0) > 0) {
+    await sb
+      .from("project_agents")
+      .update({ last_run_at: new Date().toISOString(), status: "active" })
+      .eq("project_id", p.id)
+      .eq("role", "scout");
+  }
+
+  return {
+    project_id: p.id,
+    channel: p.channel_username,
+    subscribers,
+    posts: posts.length,
+    competitors_synced: competitorsSynced,
+  };
 }
 
 async function sendWeeklyReport(p: ProjectRow) {

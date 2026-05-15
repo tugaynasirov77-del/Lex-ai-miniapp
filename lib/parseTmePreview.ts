@@ -32,6 +32,38 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+export type ChannelMeta = {
+  title: string | null;
+  subscribers: number | null;
+  description: string | null;
+};
+
+export async function fetchChannelMeta(username: string): Promise<ChannelMeta> {
+  const res = await fetch(`https://t.me/${encodeURIComponent(username)}`, {
+    headers: { "user-agent": "Mozilla/5.0 (compatible; LEX-AI-Scout/1.0)" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`t.me meta HTTP ${res.status}`);
+  const html = await res.text();
+
+  const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
+  const descMatch = html.match(/<meta property="og:description" content="([^"]+)"/);
+  const subsMatch = html.match(/<div class="tgme_page_extra">([^<]+)<\/div>/);
+
+  let subscribers: number | null = null;
+  if (subsMatch) {
+    const txt = subsMatch[1].replace(/[ \s]+/g, " ").trim();
+    const m = txt.match(/([\d\s,.]+)\s*(?:subscriber|подписчик|members|участник)/i);
+    if (m) subscribers = parseInt(m[1].replace(/[^\d]/g, ""), 10) || null;
+  }
+
+  return {
+    title: titleMatch ? titleMatch[1].trim() : null,
+    subscribers,
+    description: descMatch ? descMatch[1].trim() : null,
+  };
+}
+
 export async function fetchChannelPreview(username: string): Promise<ParsedPost[]> {
   const url = `https://t.me/s/${encodeURIComponent(username)}`;
   const res = await fetch(url, {
