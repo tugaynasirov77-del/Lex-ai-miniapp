@@ -18,10 +18,11 @@ const TAG_PREFIX: Record<string, string> = {
 const QUICK_TAGS = ["написать", "анализ", "код", "стратегия"];
 
 const NAV_ITEMS = [
-  { id: "home",     label: "главная", icon: HomeIcon,    href: "/"          },
-  { id: "team",     label: "команда", icon: UsersIcon,   href: "/team"      },
-  { id: "projects", label: "проекты", icon: FoldersIcon, href: "/projects"  },
-  { id: "history",  label: "история", icon: ClockIcon,   href: "/history"   },
+  { id: "home",      label: "главная",  icon: HomeIcon,    href: "/"          },
+  { id: "team",      label: "команда",  icon: UsersIcon,   href: "/team"      },
+  { id: "projects",  label: "проекты",  icon: FoldersIcon, href: "/projects"  },
+  { id: "history",   label: "история",  icon: ClockIcon,   href: "/history"   },
+  { id: "analytics", label: "статы",    icon: ChartIcon,   href: "/analytics" },
 ];
 
 // ─── Иконки (inline SVG, без зависимостей) ──────────────────────────────────
@@ -61,6 +62,16 @@ function FoldersIcon({ active }: { active?: boolean }) {
       stroke={active ? "#F0A020" : "currentColor"}
       strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+
+function ChartIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#F0A020" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 19V11M12 19V6M19 19V14" />
     </svg>
   );
 }
@@ -561,7 +572,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     background: "none",
     border: "none",
-    padding: "0 8px",
+    padding: "0 4px",
     color: "rgba(255,255,255,0.12)",
   },
 

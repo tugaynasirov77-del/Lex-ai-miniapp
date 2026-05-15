@@ -250,6 +250,7 @@ export default function LiveActivityAmber({
     const t = followUp.trim();
     if (!t || !state || !state.agentId || followBusy) return;
     hapticImpact("medium");
+    setCritique("");
     const agentId = state.agentId;
     const next: Msg[] = [...state.messages, { role: "user", content: t }];
     setFollowUp("");
