@@ -45,6 +45,8 @@ type Draft = {
   published_message_id?: number | null;
   published_at?: string | null;
   chosen_title?: string | null;
+  plan_id?: string | null;
+  plan_day?: string | null;
 };
 
 type ScoutSuggestion = {
@@ -210,10 +212,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       const d3 = await r3.json();
       result.plan = { ok: !!d3.ok, skipped: d3.skipped };
 
-      setPipeline({ step: "4/4 черновик поста", running: true });
-      const r4 = await tgFetch(`/api/projects/${id}/drafts`, { method: "POST" });
-      const d4 = await r4.json();
-      result.draft = { ok: !!d4.ok, skipped: d4.skipped, cost: d4.cost };
+      const planJson = await r3.json();
+      const newPlanId = planJson.plan_id;
+      const planRes = await tgFetch(`/api/projects/${id}/plan`);
+      const planData = (await planRes.json()).plan;
+      const items: PlanItem[] = planData?.items ?? [];
+
+      let totalCost = 0;
+      let made = 0;
+      for (let i = 0; i < items.length; i++) {
+        setPipeline({ step: `4/4 пишу пост ${i + 1}/${items.length} (${items[i].day})`, running: true });
+        const r4 = await tgFetch(`/api/projects/${id}/drafts`, {
+          method: "POST",
+          body: JSON.stringify({
+            plan_id: newPlanId ?? planData?.id,
+            plan_day: items[i].day,
+            topic: items[i].topic,
+            hook: items[i].hook,
+          }),
+        });
+        const d4 = await r4.json();
+        if (d4.ok) { made++; totalCost += d4.cost ?? 0; }
+        if (d4.skipped) break;
+      }
+      result.draft = { ok: made > 0, cost: totalCost };
+      if (made === 0) result.draft.skipped = "не удалось сгенерить ни одного поста";
 
       hapticNotify("success");
       setPipelineResult(result);
@@ -268,6 +291,39 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       hapticNotify("error");
     } finally {
       setPlanGenerating(false);
+    }
+  };
+
+  const generateDraftForPlanItem = async (planItem: PlanItem) => {
+    if (!plan) return;
+    hapticImpact("medium");
+    setGenerating(true);
+    setExpandedDraft(null);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/drafts`, {
+        method: "POST",
+        body: JSON.stringify({
+          plan_id: plan.id,
+          plan_day: planItem.day,
+          topic: planItem.topic,
+          hook: planItem.hook,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.skipped) {
+        hapticNotify("warning");
+        if (d.skipped) setError(d.skipped);
+        else setError(d.error || "не удалось");
+        return;
+      }
+      hapticNotify("success");
+      await load();
+      if (d.draft_id) setExpandedDraft(d.draft_id);
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -567,10 +623,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <span className="text-amber font-medium shrink-0">04</span>
                     <span className="text-ink/85">
                       {pipelineResult.draft?.skipped
-                        ? `черновик: ${pipelineResult.draft.skipped}`
+                        ? `посты: ${pipelineResult.draft.skipped}`
                         : pipelineResult.draft?.ok
-                        ? `новый черновик готов ($ ${(pipelineResult.draft.cost ?? 0).toFixed(4)})`
-                        : "черновик: пропущено"}
+                        ? `посты для плана готовы ($ ${(pipelineResult.draft.cost ?? 0).toFixed(4)})`
+                        : "посты: пропущено"}
                     </span>
                   </div>
                 </div>
@@ -837,120 +893,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               })}
             </div>
 
-            <div className="glass rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">05</span><SectionIcon name="drafts" /><span>Черновики</span></h4>
-                <button
-                  onClick={generateDraft}
-                  disabled={generating}
-                  className="text-xs px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
-                >
-                  {generating ? "генерю…" : "+ сгенерить"}
-                </button>
-              </div>
-              {drafts.length === 0 && (
-                <p className="text-xs text-muted leading-relaxed">
-                  Контентщик создаст черновик автоматически (или нажми «сгенерить»). Sonnet 4.6 + Редактор Haiku 4.5, 3 A/B заголовка.
-                </p>
-              )}
-              {drafts.map((draft) => {
-                const isExpanded = expandedDraft === draft.id;
-                const isPublished = !!draft.published_message_id;
-                const isApproved = draft.status === "approved";
-                return (
-                  <div key={draft.id} className="border-t border-white/5 pt-3 first:border-t-0 first:pt-0">
-                    <button
-                      onClick={() => { hapticImpact("light"); setExpandedDraft(isExpanded ? null : draft.id); }}
-                      className="w-full text-left"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="text-sm font-medium flex-1">{draft.chosen_title || draft.title_variants[0] || "(без заголовка)"}</div>
-                        <span className="text-[10px] shrink-0 px-1.5 py-0.5 rounded-full" style={{
-                          background: isPublished ? "rgba(34,211,165,0.15)" : isApproved ? "rgba(240,160,32,0.15)" : "rgba(255,255,255,0.05)",
-                          color: isPublished ? "#22d3a5" : isApproved ? "#F0A020" : "rgba(255,255,255,0.5)"
-                        }}>{isPublished ? "опубликован" : isApproved ? "готов к публикации" : "на проверке"}</span>
-                      </div>
-                      <div className="text-xs text-muted line-clamp-2">{draft.body.slice(0, 120)}{draft.body.length > 120 ? "…" : ""}</div>
-                    </button>
-                    {isExpanded && (
-                      <div className="mt-3 space-y-2.5 pl-1">
-                        {!isApproved && !isPublished && (
-                          <div>
-                            <div className="text-[10px] text-muted uppercase tracking-wider mb-1">3 варианта заголовка</div>
-                            <div className="space-y-1">
-                              {draft.title_variants.map((t, i) => (
-                                <div key={i} className="text-xs text-ink/90 flex gap-2">
-                                  <span className="text-amber">{i + 1}.</span>
-                                  <span className="flex-1">{t}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст</div>
-                          <div className="text-xs whitespace-pre-wrap text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5">
-                            {draft.body}
-                          </div>
-                        </div>
-                        {!isApproved && !isPublished && (
-                          <>
-                            <div className="text-[10px] text-muted">
-                              цена генерации: ${Number(draft.cost_usd).toFixed(4)}
-                            </div>
-                            <div className="flex gap-2 pt-1">
-                              <button
-                                onClick={() => decideDraft(draft.id, "approved")}
-                                className="flex-1 text-xs py-2 rounded-md font-medium"
-                                style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
-                              >
-                                одобрить
-                              </button>
-                              <button
-                                onClick={() => decideDraft(draft.id, "rejected")}
-                                className="flex-1 text-xs py-2 rounded-md font-medium"
-                                style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}
-                              >
-                                отклонить
-                              </button>
-                            </div>
-                          </>
-                        )}
-                        {isApproved && !isPublished && (
-                          <div className="space-y-2 pt-1">
-                            <div className="text-[10px] text-muted uppercase tracking-wider">опубликовать с заголовком</div>
-                            {draft.title_variants.map((t, i) => (
-                              <button
-                                key={i}
-                                onClick={() => publishDraft(draft, i)}
-                                className="w-full text-left text-xs p-2 rounded-md font-medium flex items-center gap-2"
-                                style={{ background: "rgba(240, 160, 32, 0.12)", color: "#F0A020" }}
-                              >
-                                <span className="text-[10px] opacity-70">вариант {i + 1}</span>
-                                <span className="flex-1 truncate text-ink/90">{t}</span>
-                                <span className="text-[10px]">→</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {isPublished && project?.channel_username && (
-                          <a
-                            href={`https://t.me/${project.channel_username}/${draft.published_message_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block w-full text-center text-xs py-2 rounded-md font-medium"
-                            style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
-                          >
-                            открыть пост в канале →
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -1063,17 +1005,81 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {plan.summary}
                     </div>
                   )}
-                  <div className="space-y-1.5">
-                    {plan.items.map((it, i) => (
-                      <div key={i} className="flex gap-2 items-start text-xs">
-                        <span className="text-amber font-medium uppercase shrink-0 w-7 pt-0.5">{it.day}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-ink/90">{it.topic}</div>
-                          <div className="text-muted line-clamp-1">{it.hook}</div>
-                          {it.why && <div className="text-[10px] text-muted/70 italic mt-0.5">{it.why}</div>}
+                  <div className="space-y-2">
+                    {plan.items.map((it, i) => {
+                      const dayDraft = drafts.find((d) => d.plan_id === plan.id && d.plan_day === it.day);
+                      const isExpanded = expandedDraft === (dayDraft?.id ?? `plan-${i}`);
+                      const isPublished = !!dayDraft?.published_message_id;
+                      const isApproved = dayDraft?.status === "approved";
+                      const stateLabel = isPublished ? "опубликован" : isApproved ? "готов" : dayDraft ? "на проверке" : "нет поста";
+                      const stateColor = isPublished ? "#22d3a5" : isApproved ? "#F0A020" : dayDraft ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)";
+                      const stateBg = isPublished ? "rgba(34,211,165,0.15)" : isApproved ? "rgba(240,160,32,0.15)" : "rgba(255,255,255,0.05)";
+                      return (
+                        <div key={i} className="border-t border-white/5 pt-2 first:border-t-0 first:pt-0">
+                          <button
+                            onClick={() => { hapticImpact("light"); setExpandedDraft(isExpanded ? null : (dayDraft?.id ?? `plan-${i}`)); }}
+                            className="w-full text-left"
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="text-amber font-medium uppercase shrink-0 w-7 text-xs pt-0.5">{it.day}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-ink/95">{it.topic}</div>
+                                <div className="text-[11px] text-muted line-clamp-1">{it.hook}</div>
+                              </div>
+                              <span className="text-[10px] shrink-0 px-1.5 py-0.5 rounded-full" style={{ background: stateBg, color: stateColor }}>{stateLabel}</span>
+                            </div>
+                          </button>
+                          {isExpanded && (
+                            <div className="mt-2 ml-9 space-y-2.5">
+                              {it.why && <div className="text-[11px] text-muted/80 italic leading-snug">{it.why}</div>}
+                              {!dayDraft && (
+                                <button
+                                  onClick={() => generateDraftForPlanItem(it)}
+                                  disabled={generating}
+                                  className="w-full text-xs py-2 rounded-md font-medium disabled:opacity-40"
+                                  style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+                                >
+                                  {generating ? "пишу…" : "написать пост"}
+                                </button>
+                              )}
+                              {dayDraft && (
+                                <>
+                                  <div>
+                                    <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
+                                    <div className="text-xs whitespace-pre-wrap text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5">{dayDraft.body}</div>
+                                  </div>
+                                  {!isApproved && !isPublished && (
+                                    <>
+                                      <div className="text-[10px] text-muted">3 варианта заголовка: {dayDraft.title_variants.map((t, j) => `${j + 1}) ${t}`).join(" · ")}</div>
+                                      <div className="flex gap-2">
+                                        <button onClick={() => decideDraft(dayDraft.id, "approved")} className="flex-1 text-xs py-2 rounded-md font-medium" style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}>одобрить</button>
+                                        <button onClick={() => decideDraft(dayDraft.id, "rejected")} className="flex-1 text-xs py-2 rounded-md font-medium" style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}>отклонить</button>
+                                        <button onClick={() => generateDraftForPlanItem(it)} disabled={generating} className="text-xs py-2 px-3 rounded-md font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "#F5EDD8" }}>заново</button>
+                                      </div>
+                                    </>
+                                  )}
+                                  {isApproved && !isPublished && (
+                                    <div className="space-y-1.5">
+                                      <div className="text-[10px] text-muted uppercase tracking-wider">опубликовать с заголовком</div>
+                                      {dayDraft.title_variants.map((t, j) => (
+                                        <button key={j} onClick={() => publishDraft(dayDraft, j)} className="w-full text-left text-xs p-2 rounded-md font-medium flex items-center gap-2" style={{ background: "rgba(240, 160, 32, 0.12)", color: "#F0A020" }}>
+                                          <span className="text-[10px] opacity-70">{j + 1}</span>
+                                          <span className="flex-1 truncate text-ink/90">{t}</span>
+                                          <span className="text-[10px]">→</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {isPublished && project?.channel_username && (
+                                    <a href={`https://t.me/${project.channel_username}/${dayDraft.published_message_id}`} target="_blank" rel="noopener noreferrer" className="block w-full text-center text-xs py-2 rounded-md font-medium" style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}>открыть пост в канале →</a>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="text-[10px] text-muted">
                     неделя с {new Date(plan.week_start).toLocaleDateString("ru-RU")} • $ {Number(plan.cost_usd).toFixed(4)}
@@ -1084,7 +1090,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">06</span><SectionIcon name="community" /><span>Комьюнити</span></h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">05</span><SectionIcon name="community" /><span>Комьюнити</span></h4>
                 <span className="text-[10px] text-muted">ожидает чат</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">

@@ -75,7 +75,10 @@ function buildUserContext(opts: {
   return lines.join("\n");
 }
 
-export async function generateDraftForProject(projectId: string): Promise<{ draftId: string; cost: number } | { skipped: string }> {
+export async function generateDraftForProject(
+  projectId: string,
+  seed?: { planId?: string; planDay?: string; topic?: string; hook?: string }
+): Promise<{ draftId: string; cost: number } | { skipped: string }> {
   const sb = getSupabase();
   const { data: project } = await sb
     .from("projects")
@@ -107,7 +110,12 @@ export async function generateDraftForProject(projectId: string): Promise<{ draf
   });
 
   const strategyHint = buildStrategyHint(niche?.patterns, niche?.summary ?? null);
-  const finalContext = strategyHint ? `${strategyHint}\n\n${userContext}` : userContext;
+  const seedHint = seed?.topic
+    ? `КОНКРЕТНАЯ ТЕМА ДЛЯ ЭТОГО ПОСТА (из плана недели на ${seed.planDay ?? "день"}):\nТема: ${seed.topic}${seed.hook ? `\nЗатравочный hook: ${seed.hook}` : ""}\nПиши строго по этой теме, ничего не придумывай свежее.`
+    : "";
+
+  const parts = [strategyHint, seedHint, userContext].filter(Boolean);
+  const finalContext = parts.join("\n\n");
 
   const client = new Anthropic({ apiKey });
 
@@ -166,11 +174,13 @@ export async function generateDraftForProject(projectId: string): Promise<{ draf
       project_id: projectId,
       title_variants: draft.titles.slice(0, 3),
       body: draft.body,
-      source: "auto",
+      source: seed?.planId ? "plan" : "auto",
       model_writer: WRITER_MODEL,
       model_editor: EDITOR_MODEL,
       cost_usd: totalCost,
       status: "pending",
+      plan_id: seed?.planId ?? null,
+      plan_day: seed?.planDay ?? null,
     })
     .select("id")
     .single();
