@@ -1,0 +1,13 @@
+name: scout-discover
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://lex-ai-miniapp.vercel.app/api/cron/scout-discover \
+            || echo "scout failed"
