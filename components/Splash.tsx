@@ -7,9 +7,12 @@ export default function Splash() {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setFading(true), 900);
-    const t2 = setTimeout(() => setVisible(false), 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t1 = setTimeout(() => setFading(true), 3000);
+    const t2 = setTimeout(() => setVisible(false), 3600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
   if (!visible) return null;
@@ -21,141 +24,220 @@ export default function Splash() {
         position: "fixed",
         inset: 0,
         zIndex: 100,
-        background: "#0A0705",
+        background: "#000",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        flexDirection: "column",
-        gap: 22,
         opacity: fading ? 0 : 1,
         transition: "opacity 600ms cubic-bezier(0.16,1,0.3,1)",
         pointerEvents: fading ? "none" : "auto",
+        overflow: "hidden",
       }}
     >
-      {/* glow позади */}
       <div
         style={{
-          position: "absolute",
-          width: 320,
-          height: 320,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(240,155,35,0.22) 0%, rgba(240,155,35,0) 60%)",
-          filter: "blur(20px)",
-          animation: "lexGlow 2.4s ease-in-out infinite",
-        }}
-      />
-
-      {/* сигил */}
-      <div style={{ animation: "lexSigilIn 700ms cubic-bezier(0.16,1,0.3,1) both" }}>
-        <svg width="72" height="72" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="splashSigilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F0A020" />
-              <stop offset="100%" stopColor="#C04020" />
-            </linearGradient>
-          </defs>
-          <polygon
-            points="15,3 27,10 27,20 15,27 3,20 3,10"
-            fill="none"
-            stroke="rgba(240,160,40,0.35)"
-            strokeWidth="0.8"
-            style={{ animation: "lexRingPulse 2.4s ease-in-out infinite" }}
-          />
-          <polygon
-            points="15,7 23,12 23,18 15,23 7,18 7,12"
-            fill="rgba(220,100,30,0.10)"
-            stroke="rgba(220,100,30,0.55)"
-            strokeWidth="0.7"
-          />
-          <circle cx="15" cy="15" r="2.6" fill="url(#splashSigilGrad)">
-            <animate attributeName="r" values="2.6;3.2;2.6" dur="1.8s" repeatCount="indefinite" />
-          </circle>
-        </svg>
-      </div>
-
-      {/* wordmark */}
-      <div
-        style={{
-          animation: "lexWordIn 800ms cubic-bezier(0.16,1,0.3,1) 200ms both",
-          letterSpacing: "0.42em",
-          fontFamily: "'DM Sans', sans-serif",
-          fontWeight: 200,
-          fontSize: 22,
-          color: "#F5EDD8",
-          paddingLeft: "0.42em",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          height: 160,
         }}
       >
-        LEX{" "}
-        <span
-          style={{
-            background: "linear-gradient(135deg, #F0A020 0%, #E06020 55%, #C04020 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            fontWeight: 300,
-          }}
-        >
-          AI
-        </span>
-      </div>
-
-      {/* подзаголовок */}
-      <p
-        style={{
-          animation: "lexWordIn 800ms cubic-bezier(0.16,1,0.3,1) 350ms both",
-          fontFamily: "'DM Sans', sans-serif",
-          fontWeight: 300,
-          fontSize: 13,
-          color: "rgba(255,255,255,0.45)",
-          letterSpacing: "0.16em",
-          marginTop: -10,
-        }}
-      >
-        КОМАНДА · 8 АГЕНТОВ
-      </p>
-
-      {/* линия-индикатор загрузки */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "22%",
-          width: 64,
-          height: 2,
-          borderRadius: 1,
-          background: "rgba(255,255,255,0.08)",
-          overflow: "hidden",
-        }}
-      >
+        {/* Робот + кольцо */}
         <div
           style={{
-            width: "40%",
-            height: "100%",
-            background: "linear-gradient(90deg, transparent, #F0A020, transparent)",
-            animation: "lexLine 1.4s ease-in-out infinite",
+            position: "relative",
+            width: 160,
+            height: 160,
+            flexShrink: 0,
+            zIndex: 2,
+            animation: "lexBotIn 700ms cubic-bezier(0.16,1,0.3,1) both",
           }}
-        />
+        >
+          {/* мягкое свечение позади */}
+          <div
+            style={{
+              position: "absolute",
+              inset: -20,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(240,155,35,0.22) 0%, rgba(240,155,35,0) 65%)",
+              filter: "blur(8px)",
+              animation: "lexBotGlow 2.6s ease-in-out infinite",
+            }}
+          />
+
+          {/* вращающееся кольцо-дуга */}
+          <svg
+            width="160"
+            height="160"
+            viewBox="0 0 160 160"
+            style={{
+              position: "absolute",
+              inset: 0,
+              animation:
+                "lexRingSpin 1.2s cubic-bezier(0.4,0,0.2,1) 350ms both",
+            }}
+          >
+            <defs>
+              <linearGradient id="splRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F0A020" stopOpacity="0" />
+                <stop offset="40%" stopColor="#F0A020" stopOpacity="1" />
+                <stop offset="100%" stopColor="#C04020" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <circle
+              cx="80"
+              cy="80"
+              r="62"
+              fill="none"
+              stroke="url(#splRing)"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeDasharray="390"
+              strokeDashoffset="390"
+              style={{
+                animation:
+                  "lexRingDraw 1.2s cubic-bezier(0.4,0,0.2,1) 350ms forwards",
+                filter: "drop-shadow(0 0 6px rgba(240,160,40,0.55))",
+              }}
+            />
+          </svg>
+
+          {/* сам робот — сфера */}
+          <svg
+            width="100"
+            height="100"
+            viewBox="0 0 100 100"
+            style={{
+              position: "absolute",
+              left: 30,
+              top: 30,
+            }}
+          >
+            <defs>
+              <radialGradient id="splBotBody" cx="50%" cy="35%" r="60%">
+                <stop offset="0%" stopColor="#2a1f15" />
+                <stop offset="55%" stopColor="#15100B" />
+                <stop offset="100%" stopColor="#080503" />
+              </radialGradient>
+              <radialGradient id="splEye" cx="50%" cy="50%" r="60%">
+                <stop offset="0%" stopColor="#FFD680" />
+                <stop offset="55%" stopColor="#F0A020" />
+                <stop offset="100%" stopColor="#C04020" />
+              </radialGradient>
+              <filter id="splEyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="1.2" />
+              </filter>
+            </defs>
+
+            {/* тело сферы */}
+            <circle cx="50" cy="50" r="44" fill="url(#splBotBody)" />
+            {/* блик сверху */}
+            <ellipse
+              cx="50"
+              cy="28"
+              rx="20"
+              ry="6"
+              fill="rgba(255,180,80,0.10)"
+            />
+            {/* контурная подсветка */}
+            <circle
+              cx="50"
+              cy="50"
+              r="44"
+              fill="none"
+              stroke="rgba(240,160,40,0.25)"
+              strokeWidth="0.6"
+            />
+
+            {/* глаза */}
+            <g style={{ animation: "lexEyesBlink 4s ease-in-out infinite 1.6s" }}>
+              <rect x="32" y="44" width="10" height="14" rx="5" fill="url(#splEye)" filter="url(#splEyeGlow)" />
+              <rect x="58" y="44" width="10" height="14" rx="5" fill="url(#splEye)" filter="url(#splEyeGlow)" />
+              {/* пин-блики */}
+              <ellipse cx="37" cy="48" rx="1.2" ry="2" fill="rgba(255,255,255,0.85)" />
+              <ellipse cx="63" cy="48" rx="1.2" ry="2" fill="rgba(255,255,255,0.85)" />
+            </g>
+          </svg>
+        </div>
+
+        {/* Текст LEX AI — выезжает из-за робота */}
+        <div
+          style={{
+            position: "relative",
+            marginLeft: 18,
+            overflow: "hidden",
+            paddingRight: 4,
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 200,
+              fontSize: 38,
+              letterSpacing: "0.38em",
+              color: "#F5EDD8",
+              paddingLeft: "0.38em",
+              whiteSpace: "nowrap",
+              animation:
+                "lexTextSlide 900ms cubic-bezier(0.16,1,0.3,1) 1700ms both",
+              transformOrigin: "left center",
+            }}
+          >
+            LEX{" "}
+            <span
+              style={{
+                background:
+                  "linear-gradient(135deg, #F0A020 0%, #E06020 55%, #C04020 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                fontWeight: 300,
+              }}
+            >
+              AI
+            </span>
+          </div>
+        </div>
       </div>
 
       <style>{`
-        @keyframes lexGlow {
-          0%, 100% { opacity: 0.4; transform: scale(0.95); }
-          50% { opacity: 0.9; transform: scale(1.05); }
+        @keyframes lexBotIn {
+          0% { opacity: 0; transform: scale(0.6); }
+          100% { opacity: 1; transform: scale(1); }
         }
-        @keyframes lexRingPulse {
-          0%, 100% { opacity: 0.35; }
-          50% { opacity: 0.9; }
+        @keyframes lexBotGlow {
+          0%, 100% { opacity: 0.5; transform: scale(0.95); }
+          50% { opacity: 1; transform: scale(1.08); }
         }
-        @keyframes lexSigilIn {
-          0% { opacity: 0; transform: scale(0.6) rotate(-12deg); }
-          100% { opacity: 1; transform: scale(1) rotate(0); }
+        @keyframes lexRingSpin {
+          0% { transform: rotate(-90deg); }
+          100% { transform: rotate(270deg); }
         }
-        @keyframes lexWordIn {
-          0% { opacity: 0; transform: translateY(8px); }
-          100% { opacity: 1; transform: translateY(0); }
+        @keyframes lexRingDraw {
+          0% { stroke-dashoffset: 390; }
+          100% { stroke-dashoffset: 0; }
         }
-        @keyframes lexLine {
-          0% { transform: translateX(-160%); }
-          100% { transform: translateX(420%); }
+        @keyframes lexTextSlide {
+          0% {
+            opacity: 0;
+            transform: translateX(-40px);
+            filter: blur(8px);
+          }
+          60% {
+            opacity: 1;
+            filter: blur(0);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+            filter: blur(0);
+          }
+        }
+        @keyframes lexEyesBlink {
+          0%, 92%, 100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.1); }
         }
       `}</style>
     </div>
