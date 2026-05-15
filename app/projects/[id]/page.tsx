@@ -14,6 +14,15 @@ type AnalyticsBlock = {
   top_posts: { message_id: number; text: string | null; views: number | null; published_at: string | null }[];
 };
 
+type Draft = {
+  id: string;
+  title_variants: string[];
+  body: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  cost_usd: number;
+};
+
 type Competitor = {
   id: string;
   username: string;
@@ -56,6 +65,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [agents, setAgents] = useState<ProjectAgentRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsBlock | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [generating, setGenerating] = useState(false);
+  const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
   const [competitorInput, setCompetitorInput] = useState("");
   const [addingComp, setAddingComp] = useState(false);
   const [compError, setCompError] = useState<string | null>(null);
@@ -78,6 +90,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setAgents(d.agents ?? []);
       setAnalytics(d.analytics ?? null);
       setCompetitors(d.competitors ?? []);
+      setDrafts(d.drafts ?? []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -125,6 +138,44 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const spent = budget?.spent_usd_current_month ?? 0;
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
+
+  const generateDraft = async () => {
+    hapticImpact("medium");
+    setGenerating(true);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/drafts`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok || d.skipped) {
+        hapticNotify("warning");
+        if (d.skipped) setError(d.skipped);
+        else setError(d.error || "не удалось");
+        return;
+      }
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const decideDraft = async (draftId: string, status: "approved" | "rejected") => {
+    hapticImpact(status === "approved" ? "medium" : "light");
+    setDrafts((arr) => arr.filter((d) => d.id !== draftId));
+    setExpandedDraft(null);
+    try {
+      await tgFetch(`/api/projects/${id}/drafts`, {
+        method: "PATCH",
+        body: JSON.stringify({ draft_id: draftId, status }),
+      });
+      hapticNotify("success");
+    } catch {
+      hapticNotify("error");
+      await load();
+    }
+  };
 
   const addCompetitor = async () => {
     if (!competitorInput.trim()) return;
@@ -451,6 +502,79 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     >
                       убрать
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="glass rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">✍️ Черновики</h4>
+                <button
+                  onClick={generateDraft}
+                  disabled={generating}
+                  className="text-xs px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+                >
+                  {generating ? "генерю…" : "+ сгенерить"}
+                </button>
+              </div>
+              {drafts.length === 0 && (
+                <p className="text-xs text-muted leading-relaxed">
+                  Контентщик создаст черновик автоматически (или нажми «сгенерить»). Sonnet 4.6 + Редактор Haiku 4.5, 3 A/B заголовка.
+                </p>
+              )}
+              {drafts.map((draft) => {
+                const isExpanded = expandedDraft === draft.id;
+                return (
+                  <div key={draft.id} className="border-t border-white/5 pt-3 first:border-t-0 first:pt-0">
+                    <button
+                      onClick={() => { hapticImpact("light"); setExpandedDraft(isExpanded ? null : draft.id); }}
+                      className="w-full text-left"
+                    >
+                      <div className="text-sm font-medium mb-1">{draft.title_variants[0] ?? "(без заголовка)"}</div>
+                      <div className="text-xs text-muted line-clamp-2">{draft.body.slice(0, 120)}{draft.body.length > 120 ? "…" : ""}</div>
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-3 space-y-2.5 pl-1">
+                        <div>
+                          <div className="text-[10px] text-muted uppercase tracking-wider mb-1">3 варианта заголовка</div>
+                          <div className="space-y-1">
+                            {draft.title_variants.map((t, i) => (
+                              <div key={i} className="text-xs text-ink/90 flex gap-2">
+                                <span className="text-amber">{i + 1}.</span>
+                                <span className="flex-1">{t}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст</div>
+                          <div className="text-xs whitespace-pre-wrap text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5">
+                            {draft.body}
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-muted">
+                          цена генерации: ${Number(draft.cost_usd).toFixed(4)}
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={() => decideDraft(draft.id, "approved")}
+                            className="flex-1 text-xs py-2 rounded-md font-medium"
+                            style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
+                          >
+                            ✓ одобрить
+                          </button>
+                          <button
+                            onClick={() => decideDraft(draft.id, "rejected")}
+                            className="flex-1 text-xs py-2 rounded-md font-medium"
+                            style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}
+                          >
+                            ✕ отклонить
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
