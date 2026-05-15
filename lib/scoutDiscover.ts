@@ -49,7 +49,8 @@ function safeJson<T>(s: string): T | null {
 }
 
 export async function discoverCompetitorsForProject(
-  projectId: string
+  projectId: string,
+  opts: { useNicheSearch?: boolean } = {}
 ): Promise<{ found: number; cost: number; suggestions: any[] } | { skipped: string }> {
   const sb = getSupabase();
   const { data: project } = await sb
@@ -95,17 +96,19 @@ export async function discoverCompetitorsForProject(
 
   let nicheCandidates: Awaited<ReturnType<typeof searchNicheChannels>>["candidates"] = [];
   let nicheCost = 0;
-  try {
-    const r = await searchNicheChannels({
-      projectId,
-      channelTitle: meta.title || project.channel_title || project.title,
-      channelDescription: meta.description,
-      recentPostSamples: livePosts.slice(0, 5).map((p) => p.text || "").filter(Boolean),
-      excludeUsernames: excludeForNiche,
-    });
-    nicheCandidates = r.candidates;
-    nicheCost = r.cost;
-  } catch {}
+  if (opts.useNicheSearch) {
+    try {
+      const r = await searchNicheChannels({
+        projectId,
+        channelTitle: meta.title || project.channel_title || project.title,
+        channelDescription: meta.description,
+        recentPostSamples: livePosts.slice(0, 5).map((p) => p.text || "").filter(Boolean),
+        excludeUsernames: excludeForNiche,
+      });
+      nicheCandidates = r.candidates;
+      nicheCost = r.cost;
+    } catch {}
+  }
 
   const allCandidates = [...new Set(
     [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions, ...nicheCandidates.map((c) => c.username)].map((s) => s.toLowerCase())

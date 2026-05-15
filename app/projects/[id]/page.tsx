@@ -260,12 +260,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const runScout = async () => {
+  const runScout = async (niche = false) => {
     hapticImpact("medium");
     setScouting(true);
     setError(null);
     try {
-      const r = await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
+      const url = niche ? `/api/projects/${id}/suggestions?niche=1` : `/api/projects/${id}/suggestions`;
+      const r = await tgFetch(url, { method: "POST" });
       const d = await r.json();
       if (!r.ok || d.skipped) {
         hapticNotify("warning");
@@ -567,16 +568,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">🔍 Конкуренты</h4>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={runScout}
+                    onClick={() => runScout(false)}
                     disabled={scouting}
                     className="text-[11px] px-2 py-1 rounded-md font-medium disabled:opacity-40"
                     style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}
                   >
-                    {scouting ? "ищу…" : "🤖 разведка"}
+                    {scouting ? "…" : "🤖 разведка"}
                   </button>
-                  <span className="text-[10px] text-muted uppercase tracking-wider">{competitors.length}</span>
+                  <button
+                    onClick={() => runScout(true)}
+                    disabled={scouting}
+                    className="text-[11px] px-2 py-1 rounded-md font-medium disabled:opacity-40"
+                    style={{ background: "rgba(240, 160, 32, 0.08)", color: "#F0A020", border: "1px solid rgba(240, 160, 32, 0.3)" }}
+                    title="Поиск в интернете (~$0.14)"
+                  >
+                    🌐
+                  </button>
+                  <span className="text-[10px] text-muted uppercase tracking-wider ml-1">{competitors.length}</span>
                 </div>
               </div>
 
