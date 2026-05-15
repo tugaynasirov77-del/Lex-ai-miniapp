@@ -29,7 +29,7 @@ export default function HistoryPage() {
   return (
     <>
       <Header title="История" accent="задач" subtitle={`${list.length} записей`} />
-      <div className="px-5 space-y-2 pb-24">
+      <div className="space-y-2 pb-24" style={{ paddingLeft: 22, paddingRight: 22 }}>
         {list.length === 0 && (
           <p className="text-sm text-muted py-8 text-center">
             пока пусто — отправь первую задачу на главной

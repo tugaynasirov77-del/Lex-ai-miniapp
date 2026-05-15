@@ -52,7 +52,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl"
       style={{ background: "rgba(10,7,5,0.85)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="max-w-xl mx-auto grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto grid grid-cols-5 pb-[env(safe-area-inset-bottom)]" style={{ maxWidth: 390 }}>
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
           return (

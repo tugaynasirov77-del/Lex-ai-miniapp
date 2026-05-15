@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
   return (
     <>
       <Header title="Аналитика" accent="данных" subtitle="метрики команды" />
-      <div className="px-5 pb-24">
+      <div className="pb-24" style={{ paddingLeft: 22, paddingRight: 22 }}>
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Всего задач" value={String(stats.total)} />
           <Stat label="Сегодня" value={String(stats.today)} hint="за 24 часа" />

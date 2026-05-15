@@ -16,7 +16,7 @@ export default function TeamPage() {
   return (
     <>
       <Header title="Команда" accent={`${AGENTS.length}`} subtitle="агентов в сети" />
-      <div className="px-5 grid grid-cols-2 gap-3 pb-24">
+      <div className="grid grid-cols-2 gap-3 pb-24" style={{ paddingLeft: 22, paddingRight: 22 }}>
         {AGENTS.map((a) => (
           <button
             key={a.id}

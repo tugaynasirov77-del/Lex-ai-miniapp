@@ -31,7 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <TelegramInit />
         <TgBackButton />
-        {children}
+        <main style={{ width: "100%", maxWidth: 390, margin: "0 auto", minHeight: "100dvh", position: "relative" }}>
+          {children}
+        </main>
         <BottomNav />
       </body>
     </html>

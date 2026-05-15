@@ -71,7 +71,7 @@ export default function ProjectsPage() {
   return (
     <>
       <Header title="Проекты" accent={`${projects.length}`} subtitle="активных" />
-      <div className="px-5 pb-24 space-y-3">
+      <div className="pb-24 space-y-3" style={{ paddingLeft: 22, paddingRight: 22 }}>
 
         {tgId && (
           <div className="glass rounded-xl p-2.5 flex gap-2 items-center">
