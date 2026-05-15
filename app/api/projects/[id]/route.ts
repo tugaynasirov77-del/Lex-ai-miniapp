@@ -55,11 +55,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .order("subscribers", { ascending: false, nullsFirst: false }),
     sb
       .from("content_drafts")
-      .select("id,title_variants,body,status,created_at,cost_usd")
+      .select("id,title_variants,body,status,created_at,cost_usd,published_message_id,published_at,chosen_title")
       .eq("project_id", id)
-      .eq("status", "pending")
+      .in("status", ["pending", "approved"])
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(15),
     sb
       .from("content_plans")
       .select("id,week_start,items,summary,created_at,cost_usd")

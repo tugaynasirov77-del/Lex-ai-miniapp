@@ -64,7 +64,6 @@ const TABS = [
   { href: "/",          label: "главная",  Icon: HomeIcon    },
   { href: "/team",      label: "команда",  Icon: UsersIcon   },
   { href: "/projects",  label: "проекты",  Icon: FoldersIcon },
-  { href: "/history",   label: "история",  Icon: ClockIcon   },
   { href: "/analytics", label: "статы",    Icon: ChartIcon   },
 ];
 

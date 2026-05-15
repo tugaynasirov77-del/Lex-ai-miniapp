@@ -42,6 +42,9 @@ type Draft = {
   status: "pending" | "approved" | "rejected";
   created_at: string;
   cost_usd: number;
+  published_message_id?: number | null;
+  published_at?: string | null;
+  chosen_title?: string | null;
 };
 
 type ScoutSuggestion = {
@@ -290,9 +293,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const publishDraft = async (draft: Draft, titleIndex: number) => {
+    hapticImpact("heavy");
+    try {
+      const r = await tgFetch(`/api/projects/${id}/drafts/${draft.id}/publish`, {
+        method: "POST",
+        body: JSON.stringify({ titleIndex }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "не удалось опубликовать");
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    }
+  };
+
   const decideDraft = async (draftId: string, status: "approved" | "rejected") => {
     hapticImpact(status === "approved" ? "medium" : "light");
-    setDrafts((arr) => arr.filter((d) => d.id !== draftId));
     setExpandedDraft(null);
     try {
       await tgFetch(`/api/projects/${id}/drafts`, {
@@ -300,6 +319,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ draft_id: draftId, status }),
       });
       hapticNotify("success");
+      if (status === "rejected") {
+        setDrafts((arr) => arr.filter((d) => d.id !== draftId));
+      } else {
+        await load();
+      }
     } catch {
       hapticNotify("error");
       await load();
@@ -832,53 +856,95 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               )}
               {drafts.map((draft) => {
                 const isExpanded = expandedDraft === draft.id;
+                const isPublished = !!draft.published_message_id;
+                const isApproved = draft.status === "approved";
                 return (
                   <div key={draft.id} className="border-t border-white/5 pt-3 first:border-t-0 first:pt-0">
                     <button
                       onClick={() => { hapticImpact("light"); setExpandedDraft(isExpanded ? null : draft.id); }}
                       className="w-full text-left"
                     >
-                      <div className="text-sm font-medium mb-1">{draft.title_variants[0] ?? "(без заголовка)"}</div>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="text-sm font-medium flex-1">{draft.chosen_title || draft.title_variants[0] || "(без заголовка)"}</div>
+                        <span className="text-[10px] shrink-0 px-1.5 py-0.5 rounded-full" style={{
+                          background: isPublished ? "rgba(34,211,165,0.15)" : isApproved ? "rgba(240,160,32,0.15)" : "rgba(255,255,255,0.05)",
+                          color: isPublished ? "#22d3a5" : isApproved ? "#F0A020" : "rgba(255,255,255,0.5)"
+                        }}>{isPublished ? "опубликован" : isApproved ? "готов к публикации" : "на проверке"}</span>
+                      </div>
                       <div className="text-xs text-muted line-clamp-2">{draft.body.slice(0, 120)}{draft.body.length > 120 ? "…" : ""}</div>
                     </button>
                     {isExpanded && (
                       <div className="mt-3 space-y-2.5 pl-1">
-                        <div>
-                          <div className="text-[10px] text-muted uppercase tracking-wider mb-1">3 варианта заголовка</div>
-                          <div className="space-y-1">
-                            {draft.title_variants.map((t, i) => (
-                              <div key={i} className="text-xs text-ink/90 flex gap-2">
-                                <span className="text-amber">{i + 1}.</span>
-                                <span className="flex-1">{t}</span>
-                              </div>
-                            ))}
+                        {!isApproved && !isPublished && (
+                          <div>
+                            <div className="text-[10px] text-muted uppercase tracking-wider mb-1">3 варианта заголовка</div>
+                            <div className="space-y-1">
+                              {draft.title_variants.map((t, i) => (
+                                <div key={i} className="text-xs text-ink/90 flex gap-2">
+                                  <span className="text-amber">{i + 1}.</span>
+                                  <span className="flex-1">{t}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <div>
                           <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст</div>
                           <div className="text-xs whitespace-pre-wrap text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5">
                             {draft.body}
                           </div>
                         </div>
-                        <div className="text-[10px] text-muted">
-                          цена генерации: ${Number(draft.cost_usd).toFixed(4)}
-                        </div>
-                        <div className="flex gap-2 pt-1">
-                          <button
-                            onClick={() => decideDraft(draft.id, "approved")}
-                            className="flex-1 text-xs py-2 rounded-md font-medium"
+                        {!isApproved && !isPublished && (
+                          <>
+                            <div className="text-[10px] text-muted">
+                              цена генерации: ${Number(draft.cost_usd).toFixed(4)}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <button
+                                onClick={() => decideDraft(draft.id, "approved")}
+                                className="flex-1 text-xs py-2 rounded-md font-medium"
+                                style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
+                              >
+                                одобрить
+                              </button>
+                              <button
+                                onClick={() => decideDraft(draft.id, "rejected")}
+                                className="flex-1 text-xs py-2 rounded-md font-medium"
+                                style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}
+                              >
+                                отклонить
+                              </button>
+                            </div>
+                          </>
+                        )}
+                        {isApproved && !isPublished && (
+                          <div className="space-y-2 pt-1">
+                            <div className="text-[10px] text-muted uppercase tracking-wider">опубликовать с заголовком</div>
+                            {draft.title_variants.map((t, i) => (
+                              <button
+                                key={i}
+                                onClick={() => publishDraft(draft, i)}
+                                className="w-full text-left text-xs p-2 rounded-md font-medium flex items-center gap-2"
+                                style={{ background: "rgba(240, 160, 32, 0.12)", color: "#F0A020" }}
+                              >
+                                <span className="text-[10px] opacity-70">вариант {i + 1}</span>
+                                <span className="flex-1 truncate text-ink/90">{t}</span>
+                                <span className="text-[10px]">→</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {isPublished && project?.channel_username && (
+                          <a
+                            href={`https://t.me/${project.channel_username}/${draft.published_message_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full text-center text-xs py-2 rounded-md font-medium"
                             style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
                           >
-                            ✓ одобрить
-                          </button>
-                          <button
-                            onClick={() => decideDraft(draft.id, "rejected")}
-                            className="flex-1 text-xs py-2 rounded-md font-medium"
-                            style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}
-                          >
-                            ✕ отклонить
-                          </button>
-                        </div>
+                            открыть пост в канале →
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
