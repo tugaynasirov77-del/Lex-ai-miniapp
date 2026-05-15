@@ -2,7 +2,7 @@ export default function Header({ title, subtitle, accent }: { title: string; sub
   return (
     <header
       style={{
-        paddingTop: "calc(env(safe-area-inset-top) + 96px)",
+        paddingTop: 72,
         paddingLeft: 22,
         paddingRight: 22,
         paddingBottom: 24,

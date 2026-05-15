@@ -3,81 +3,143 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hapticSelection } from "../lib/telegram";
 
+function HomeIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "url(#bnNavGrad)" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <defs>
+        <linearGradient id="bnNavGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F0A020" />
+          <stop offset="100%" stopColor="#D05020" />
+        </linearGradient>
+      </defs>
+      <path d="M3 9.5L12 3L21 9.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
+      <path d="M9 21V12h6v9" />
+    </svg>
+  );
+}
+function UsersIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#F0A020" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
+      <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87" />
+    </svg>
+  );
+}
+function FoldersIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#F0A020" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+function ClockIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#F0A020" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+function ChartIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#F0A020" : "currentColor"}
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 19V11M12 19V6M19 19V14" />
+    </svg>
+  );
+}
+
 const TABS = [
-  { href: "/", label: "Главная",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-        <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  { href: "/team", label: "Команда",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="9" cy="9" r="3.2" stroke="currentColor" strokeWidth="1.8"/>
-        <circle cx="17" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.8"/>
-        <path d="M3 18.5c0-2.5 2.7-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-        <path d="M15 16.5c.5-1.3 2.3-2 4-2 1.3 0 2.5.4 3 1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  { href: "/projects", label: "Проекты",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3 7.5C3 6.4 3.9 5.5 5 5.5h4.2c.5 0 1 .2 1.4.6L12 7.5h7c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  { href: "/history", label: "История",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
-        <path d="M12 7v5l3.5 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  { href: "/analytics", label: "Аналитика",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M5 19V11M12 19V6M19 19V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
+  { href: "/",          label: "главная",  Icon: HomeIcon    },
+  { href: "/team",      label: "команда",  Icon: UsersIcon   },
+  { href: "/projects",  label: "проекты",  Icon: FoldersIcon },
+  { href: "/history",   label: "история",  Icon: ClockIcon   },
+  { href: "/analytics", label: "статы",    Icon: ChartIcon   },
 ];
 
 export default function BottomNav() {
   const path = usePathname();
-  if (path === "/") return null;
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl"
-      style={{ background: "rgba(10,7,5,0.85)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="mx-auto grid grid-cols-5 pb-[env(safe-area-inset-bottom)]" style={{ maxWidth: 390 }}>
-        {TABS.map((t) => {
-          const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
-          return (
-            <Link key={t.href} href={t.href}
-              onClick={() => hapticSelection()}
-              className="relative flex flex-col items-center pt-3 pb-2"
+    <nav
+      style={{
+        position: "fixed",
+        left: "50%",
+        transform: "translateX(-50%)",
+        bottom: 0,
+        width: "100%",
+        maxWidth: 390,
+        display: "flex",
+        justifyContent: "space-around",
+        padding: "13px 0 max(20px, env(safe-area-inset-bottom))",
+        borderTop: "1px solid rgba(255,255,255,0.05)",
+        zIndex: 50,
+        background: "rgba(10,7,5,0.85)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+      }}
+    >
+      {TABS.map(({ href, label, Icon }) => {
+        const active = href === "/" ? path === "/" : path.startsWith(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={() => hapticSelection()}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+              padding: "0 4px",
+              color: "rgba(255,255,255,0.12)",
+              textDecoration: "none",
+              position: "relative",
+            }}
+            aria-label={label}
+          >
+            <Icon active={active} />
+            <span
               style={{
-                color: active ? "rgba(240,160,40,0.95)" : "rgba(255,255,255,0.25)",
                 fontFamily: "'DM Sans', sans-serif",
                 fontWeight: 300,
                 fontSize: 10,
                 letterSpacing: "0.04em",
-              }}>
-              <span className="mb-1">{t.icon}</span>
-              <span style={active ? {
-                background: "linear-gradient(135deg, #F0A020, #D05020)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              } : undefined}>{t.label}</span>
-              {active && <span className="absolute bottom-0 w-3.5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #F0A020, #D05020)" }} />}
-            </Link>
-          );
-        })}
-      </div>
+                color: "rgba(255,255,255,0.25)",
+                ...(active
+                  ? {
+                      background: "linear-gradient(135deg, #F0A020, #D05020)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }
+                  : {}),
+              }}
+            >
+              {label}
+            </span>
+            {active && (
+              <div
+                style={{
+                  width: 14,
+                  height: 2,
+                  borderRadius: 1,
+                  background: "linear-gradient(90deg, #F0A020, #D05020)",
+                }}
+              />
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

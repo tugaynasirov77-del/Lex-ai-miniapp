@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import LiveActivityAmber from "./LiveActivityAmber";
 import { loadRecent, formatAgo, type RecentTaskEntry } from "../lib/recentTasks";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
@@ -16,76 +15,6 @@ const TAG_PREFIX: Record<string, string> = {
 // ─── Данные ─────────────────────────────────────────────────────────────────
 
 const QUICK_TAGS = ["написать", "анализ", "код", "стратегия"];
-
-const NAV_ITEMS = [
-  { id: "home",      label: "главная",  icon: HomeIcon,    href: "/"          },
-  { id: "team",      label: "команда",  icon: UsersIcon,   href: "/team"      },
-  { id: "projects",  label: "проекты",  icon: FoldersIcon, href: "/projects"  },
-  { id: "history",   label: "история",  icon: ClockIcon,   href: "/history"   },
-  { id: "analytics", label: "статы",    icon: ChartIcon,   href: "/analytics" },
-];
-
-// ─── Иконки (inline SVG, без зависимостей) ──────────────────────────────────
-
-function HomeIcon({ active }: { active?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke={active ? "url(#navGrad)" : "currentColor"}
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <defs>
-        <linearGradient id="navGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#F0A020" />
-          <stop offset="100%" stopColor="#D05020" />
-        </linearGradient>
-      </defs>
-      <path d="M3 9.5L12 3L21 9.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
-      <path d="M9 21V12h6v9" />
-    </svg>
-  );
-}
-
-function UsersIcon({ active }: { active?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke={active ? "#F0A020" : "currentColor"}
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="4" />
-      <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
-      <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87" />
-    </svg>
-  );
-}
-
-function FoldersIcon({ active }: { active?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke={active ? "#F0A020" : "currentColor"}
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-    </svg>
-  );
-}
-
-function ChartIcon({ active }: { active?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke={active ? "#F0A020" : "currentColor"}
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 19V11M12 19V6M19 19V14" />
-    </svg>
-  );
-}
-
-function ClockIcon({ active }: { active?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke={active ? "#F0A020" : "currentColor"}
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </svg>
-  );
-}
 
 function SendIcon() {
   return (
@@ -124,11 +53,9 @@ function Sigil() {
 // ─── Главный компонент ───────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const router = useRouter();
   const [task, setTask]         = useState("");
   const [activeTask, setActiveTask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [kbOpen, setKbOpen] = useState(false);
   const [recent, setRecent] = useState<RecentTaskEntry[]>([]);
 
   useEffect(() => {
@@ -152,19 +79,6 @@ export default function HomeScreen() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const initialH = vv.height;
-    const onResize = () => {
-      // keyboard considered open if viewport shrunk by 150px+
-      setKbOpen(initialH - vv.height > 150);
-    };
-    vv.addEventListener("resize", onResize);
-    return () => vv.removeEventListener("resize", onResize);
-  }, []);
-  const [activeNav, setActiveNav] = useState("home");
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const handleTagClick = (tag: string) => {
@@ -288,32 +202,6 @@ export default function HomeScreen() {
         </section>
       )}
 
-      {/* ── Навигация ── */}
-      {!kbOpen && (
-        <nav style={styles.nav}>
-          {NAV_ITEMS.map(({ id, label, icon: Icon, href }) => {
-            const isOn = activeNav === id;
-            return (
-              <button
-                key={id}
-                style={styles.navItem}
-                onClick={() => {
-                  hapticSelection();
-                  setActiveNav(id);
-                  if (id !== "home") router.push(href);
-                }}
-                aria-label={label}
-              >
-                <Icon active={isOn} />
-                <span style={{ ...styles.navLabel, ...(isOn ? styles.navLabelActive : {}) }}>
-                  {label}
-                </span>
-                {isOn && <div style={styles.navPip} />}
-              </button>
-            );
-          })}
-        </nav>
-      )}
     </div>
   );
 }
@@ -323,15 +211,10 @@ export default function HomeScreen() {
 const styles: Record<string, React.CSSProperties> = {
   shell: {
     width: "100%",
-    maxWidth: 390,
-    minHeight: "100dvh",
-    margin: "0 auto",
-    background: "#0A0705",
     position: "relative",
     fontFamily: "'DM Sans', -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column",
-    paddingBottom: "calc(env(safe-area-inset-bottom) + 78px)",
   },
 
   mesh: {
@@ -547,54 +430,4 @@ const styles: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,0.1)",
   },
 
-  nav: {
-    position: "fixed",
-    left: "50%",
-    transform: "translateX(-50%)",
-    bottom: 0,
-    width: "100%",
-    maxWidth: 390,
-    display: "flex",
-    justifyContent: "space-around",
-    padding: "13px 0 max(20px, env(safe-area-inset-bottom))",
-    borderTop: "1px solid rgba(255,255,255,0.05)",
-    zIndex: 50,
-    background: "rgba(10,7,5,0.85)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  },
-
-  navItem: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 3,
-    cursor: "pointer",
-    background: "none",
-    border: "none",
-    padding: "0 4px",
-    color: "rgba(255,255,255,0.12)",
-  },
-
-  navLabel: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontWeight: 300,
-    fontSize: 10,
-    letterSpacing: "0.04em",
-    color: "rgba(255,255,255,0.25)",
-  },
-
-  navLabelActive: {
-    background: "linear-gradient(135deg, #F0A020, #D05020)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text",
-  },
-
-  navPip: {
-    width: 14,
-    height: 2,
-    borderRadius: 1,
-    background: "linear-gradient(90deg, #F0A020, #D05020)",
-  },
 };
