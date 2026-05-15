@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import LiveActivityAmber from "./LiveActivityAmber";
+import { loadRecent, formatAgo, type RecentTaskEntry } from "../lib/recentTasks";
 
 const TAG_PREFIX: Record<string, string> = {
   "написать": "Напиши пост для канала про ",
@@ -10,24 +11,9 @@ const TAG_PREFIX: Record<string, string> = {
   "стратегия": "Составь стратегию для ",
 };
 
-// ─── Типы ───────────────────────────────────────────────────────────────────
-
-interface RecentTask {
-  id: string;
-  title: string;
-  agent: string;
-  time: string;
-}
-
 // ─── Данные ─────────────────────────────────────────────────────────────────
 
 const QUICK_TAGS = ["написать", "анализ", "код", "стратегия"];
-
-const RECENT_TASKS: RecentTask[] = [
-  { id: "1", title: "3 поста для канала вайбкодинг", agent: "Алина", time: "10 мин" },
-  { id: "2", title: "Контент-стратегия на Q2 2026",  agent: "Милена", time: "1 ч"    },
-  { id: "3", title: "Telegram бот для записи",        agent: "Михаил", time: "3 ч"   },
-];
 
 const NAV_ITEMS = [
   { id: "home",     label: "главная", icon: HomeIcon     },
@@ -129,6 +115,11 @@ export default function HomeScreen() {
   const [activeTask, setActiveTask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
+  const [recent, setRecent] = useState<RecentTaskEntry[]>([]);
+
+  useEffect(() => {
+    setRecent(loadRecent());
+  }, [activeTask]);
 
   // Прогрев кэша LEX_TEAM_RULES на mount, не чаще чем раз в 5 минут.
   // Делает первый реальный запрос юзера дешевле в ~10 раз на input-токенах.
@@ -260,16 +251,24 @@ export default function HomeScreen() {
         <section style={styles.recent}>
           <p style={styles.recentLabel}>// недавние</p>
 
-          {RECENT_TASKS.map(item => (
-            <div key={item.id} style={styles.recentItem}>
-              <div style={styles.recentDot} />
-              <div style={styles.recentText}>
-                <p style={styles.recentTitle}>{item.title}</p>
-                <p style={styles.recentMeta}>{item.agent} · {item.time}</p>
+          {recent.length === 0 ? (
+            <p style={{ ...styles.recentMeta, marginTop: 4 }}>пока пусто — отправь первую задачу</p>
+          ) : (
+            recent.map(item => (
+              <div
+                key={item.id}
+                style={styles.recentItem}
+                onClick={() => setTask(item.title)}
+              >
+                <div style={styles.recentDot} />
+                <div style={styles.recentText}>
+                  <p style={styles.recentTitle}>{item.title}</p>
+                  <p style={styles.recentMeta}>{item.agentName} · {formatAgo(item.createdAt)}</p>
+                </div>
+                <span style={styles.recentArrow}>›</span>
               </div>
-              <span style={styles.recentArrow}>›</span>
-            </div>
-          ))}
+            ))
+          )}
         </section>
       )}
 

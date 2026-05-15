@@ -1,19 +1,116 @@
-import Header from "../../components/Header";
-import { PROJECTS, getAgent } from "../../lib/mockData";
+"use client";
 
-const STATUS_LABEL = {
+import { useEffect, useState } from "react";
+import Header from "../../components/Header";
+import { getAgent } from "../../lib/mockData";
+import { getTgId, tgFetch } from "../../lib/telegram";
+import type { ProjectRow } from "../../lib/supabase";
+
+const STATUS_LABEL: Record<ProjectRow["status"], { text: string; color: string }> = {
   in_progress: { text: "В работе", color: "bg-accent/20 text-accent" },
   done: { text: "Завершён", color: "bg-emerald-500/20 text-emerald-400" },
   paused: { text: "На паузе", color: "bg-amber-500/20 text-amber-400" },
 };
 
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tgId, setTgId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+
+  useEffect(() => {
+    const id = getTgId();
+    setTgId(id);
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    load(id);
+  }, []);
+
+  const load = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "load failed");
+      setProjects(d.projects ?? []);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createProject = async () => {
+    if (!tgId || !newTitle.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const r = await tgFetch("/api/projects", {
+        method: "POST",
+        body: JSON.stringify({ title: newTitle.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "create failed");
+      setNewTitle("");
+      setProjects((p) => [d.project, ...p]);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <>
-      <Header title="Проекты" subtitle={`${PROJECTS.length} активных`} />
-      <div className="px-4 space-y-3">
-        {PROJECTS.map((p) => {
-          const s = STATUS_LABEL[p.status];
+      <Header title="Проекты" subtitle={`${projects.length} активных`} />
+      <div className="px-4 pb-24 space-y-3">
+
+        {tgId && (
+          <div className="glass rounded-2xl p-3 flex gap-2">
+            <input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Название проекта"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+              onKeyDown={(e) => e.key === "Enter" && createProject()}
+            />
+            <button
+              onClick={createProject}
+              disabled={!newTitle.trim() || creating}
+              className="text-sm px-3 py-1 rounded-md bg-accent/20 text-accent disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+        )}
+
+        {!tgId && !loading && (
+          <p className="text-sm text-muted py-8 text-center">
+            открой через Telegram, чтобы видеть свои проекты
+          </p>
+        )}
+
+        {loading && <p className="text-sm text-muted py-8 text-center">загрузка…</p>}
+
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
+
+        {!loading && tgId && projects.length === 0 && !error && (
+          <p className="text-sm text-muted py-8 text-center">
+            пока пусто — создай первый проект
+          </p>
+        )}
+
+        {projects.map((p) => {
+          const s = STATUS_LABEL[p.status] ?? STATUS_LABEL.in_progress;
           return (
             <div key={p.id} className="glass rounded-2xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -22,7 +119,7 @@ export default function ProjectsPage() {
               </div>
               <div className="flex items-center gap-1 mb-3">
                 {p.agents.map((id) => {
-                  const a = getAgent(id);
+                  const a = getAgent(id as any);
                   return a ? (
                     <div key={id} title={a.name} className="w-7 h-7 rounded-full overflow-hidden border border-white/10 -ml-1 first:ml-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -35,8 +132,7 @@ export default function ProjectsPage() {
                 <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${p.progress}%` }} />
               </div>
               <div className="flex items-center justify-between text-xs text-muted">
-                <span>{p.progress}% • с {p.createdAt}</span>
-                <button className="text-accent font-medium">Открыть →</button>
+                <span>{p.progress}% • {new Date(p.created_at).toLocaleDateString("ru-RU")}</span>
               </div>
             </div>
           );

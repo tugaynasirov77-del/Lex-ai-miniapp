@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AGENT_DEFS, type AgentKey } from "../lib/agents";
 import { getAgent } from "../lib/mockData";
+import { pushRecent } from "../lib/recentTasks";
 
 type Stage = "received" | "routing" | "working" | "done" | "error";
 
@@ -133,6 +134,15 @@ export default function LiveActivityAmber({
         setState((s) => s && { ...s, progress: 100 });
         await new Promise((r) => setTimeout(r, 300));
         setState((s) => s && { ...s, stage: "done", reply: data.reply, progress: 100 });
+        try {
+          const def = AGENT_DEFS[agentId];
+          pushRecent({
+            title: task,
+            agentId,
+            agentName: def?.name ?? agentId,
+            reply: data.reply ?? "",
+          });
+        } catch {}
       } catch (e: any) {
         if (progressTimer.current) window.clearInterval(progressTimer.current);
         setState((s) => s && { ...s, stage: "error", error: e.message || "Ошибка агента" });
