@@ -28,8 +28,8 @@ export default function HistoryPage() {
 
   return (
     <>
-      <Header title="История задач" subtitle={`${list.length} записей`} />
-      <div className="px-4 space-y-2 pb-24">
+      <Header title="История" accent="задач" subtitle={`${list.length} записей`} />
+      <div className="px-5 space-y-2 pb-24">
         {list.length === 0 && (
           <p className="text-sm text-muted py-8 text-center">
             пока пусто — отправь первую задачу на главной
@@ -38,7 +38,7 @@ export default function HistoryPage() {
         {list.map((t) => {
           const a = getAgent(t.agentId);
           return (
-            <div key={t.id} className="glass rounded-2xl p-3 flex items-start gap-3">
+            <div key={t.id} className="glass rounded-xl p-3 flex items-start gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-bg border border-white/10">
                 {a ? (
                   // eslint-disable-next-line @next/next/no-img-element

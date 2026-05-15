@@ -7,9 +7,9 @@ import { getTgId, tgFetch, hapticImpact, hapticNotify } from "../../lib/telegram
 import type { ProjectRow } from "../../lib/supabase";
 
 const STATUS_LABEL: Record<ProjectRow["status"], { text: string; color: string }> = {
-  in_progress: { text: "В работе", color: "bg-accent/20 text-accent" },
-  done: { text: "Завершён", color: "bg-emerald-500/20 text-emerald-400" },
-  paused: { text: "На паузе", color: "bg-amber-500/20 text-amber-400" },
+  in_progress: { text: "В работе", color: "bg-amber/15 text-amber" },
+  done: { text: "Завершён", color: "bg-emerald-500/15 text-emerald-400" },
+  paused: { text: "На паузе", color: "bg-white/5 text-faint" },
 };
 
 export default function ProjectsPage() {
@@ -70,22 +70,24 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <Header title="Проекты" subtitle={`${projects.length} активных`} />
-      <div className="px-4 pb-24 space-y-3">
+      <Header title="Проекты" accent={`${projects.length}`} subtitle="активных" />
+      <div className="px-5 pb-24 space-y-3">
 
         {tgId && (
-          <div className="glass rounded-2xl p-3 flex gap-2">
+          <div className="glass rounded-xl p-2.5 flex gap-2 items-center">
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Название проекта"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted px-2"
+              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, caretColor: "#F0A020" }}
               onKeyDown={(e) => e.key === "Enter" && createProject()}
             />
             <button
               onClick={createProject}
               disabled={!newTitle.trim() || creating}
-              className="text-sm px-3 py-1 rounded-md bg-accent/20 text-accent disabled:opacity-40"
+              className="text-sm px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
             >
               +
             </button>
@@ -115,7 +117,7 @@ export default function ProjectsPage() {
         {projects.map((p) => {
           const s = STATUS_LABEL[p.status] ?? STATUS_LABEL.in_progress;
           return (
-            <div key={p.id} className="glass rounded-2xl p-4">
+            <div key={p.id} className="glass rounded-xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h3 className="font-semibold flex-1">{p.title}</h3>
                 <span className={`text-[11px] px-2 py-1 rounded-full ${s.color} shrink-0`}>{s.text}</span>
@@ -131,8 +133,8 @@ export default function ProjectsPage() {
                   ) : null;
                 })}
               </div>
-              <div className="h-1.5 bg-bg rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${p.progress}%` }} />
+              <div className="h-1 bg-white/5 rounded-full overflow-hidden mb-2">
+                <div className="h-full rounded-full transition-all" style={{ width: `${p.progress}%`, background: "linear-gradient(90deg, #F0A020, #D05020)" }} />
               </div>
               <div className="flex items-center justify-between text-xs text-muted">
                 <span>{p.progress}% • {new Date(p.created_at).toLocaleDateString("ru-RU")}</span>

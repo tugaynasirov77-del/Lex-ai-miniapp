@@ -27,10 +27,10 @@ function fmtTok(n: number): string {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="glass rounded-2xl p-4">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-      {hint && <p className="text-[11px] text-muted mt-0.5">{hint}</p>}
+    <div className="glass rounded-xl p-4">
+      <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>{label}</p>
+      <p className="text-2xl mt-1" style={{ fontWeight: 200, color: "rgba(240,232,218,0.92)" }}>{value}</p>
+      {hint && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{hint}</p>}
     </div>
   );
 }
@@ -74,8 +74,8 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <Header title="Аналитика" subtitle="Метрики команды" />
-      <div className="px-4 pb-24">
+      <Header title="Аналитика" accent="данных" subtitle="метрики команды" />
+      <div className="px-5 pb-24">
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Всего задач" value={String(stats.total)} />
           <Stat label="Сегодня" value={String(stats.today)} hint="за 24 часа" />
@@ -117,8 +117,8 @@ export default function AnalyticsPage() {
                       )}
                     </div>
                     <span className="text-xs text-muted w-16 shrink-0">{a?.name ?? id}</span>
-                    <div className="flex-1 h-1.5 bg-bg rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
+                    <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, #F0A020, #D05020)" }} />
                     </div>
                     <span className="text-xs text-muted w-6 text-right tabular-nums">{count}</span>
                   </div>

@@ -58,11 +58,22 @@ export default function BottomNav() {
           return (
             <Link key={t.href} href={t.href}
               onClick={() => hapticSelection()}
-              className="relative flex flex-col items-center pt-2.5 pb-2 text-[10px] font-medium"
-              style={{ color: active ? "#F0A020" : "#475569" }}>
-              <span className="mb-0.5">{t.icon}</span>
-              <span>{t.label}</span>
-              {active && <span className="absolute bottom-0 w-8 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #F0A020, #D05020)" }} />}
+              className="relative flex flex-col items-center pt-3 pb-2"
+              style={{
+                color: active ? "rgba(240,160,40,0.95)" : "rgba(255,255,255,0.25)",
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 300,
+                fontSize: 10,
+                letterSpacing: "0.04em",
+              }}>
+              <span className="mb-1">{t.icon}</span>
+              <span style={active ? {
+                background: "linear-gradient(135deg, #F0A020, #D05020)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              } : undefined}>{t.label}</span>
+              {active && <span className="absolute bottom-0 w-3.5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #F0A020, #D05020)" }} />}
             </Link>
           );
         })}

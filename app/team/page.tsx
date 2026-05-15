@@ -15,13 +15,13 @@ export default function TeamPage() {
 
   return (
     <>
-      <Header title="Команда" subtitle={`${AGENTS.length} агентов в сети`} />
-      <div className="px-4 grid grid-cols-2 gap-3 pb-24">
+      <Header title="Команда" accent={`${AGENTS.length}`} subtitle="агентов в сети" />
+      <div className="px-5 grid grid-cols-2 gap-3 pb-24">
         {AGENTS.map((a) => (
           <button
             key={a.id}
             onClick={() => onOpenBot(a.botUsername)}
-            className="glass rounded-2xl p-3 text-left flex flex-col gap-2 active:scale-[0.98] transition"
+            className="glass rounded-xl p-3 text-left flex flex-col gap-2 active:scale-[0.98] transition"
           >
             <div className="flex items-start justify-between">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-bg border border-white/10">
@@ -29,8 +29,8 @@ export default function TeamPage() {
                 <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
               </div>
               <span className="relative flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${a.status === "online" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
-                <span className="text-[10px] text-muted">{a.status === "online" ? "онлайн" : "офлайн"}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${a.status === "online" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>{a.status === "online" ? "онлайн" : "офлайн"}</span>
               </span>
             </div>
             <div>

@@ -5,18 +5,19 @@
 :root { color-scheme: dark; }
 
 html, body {
-  background: #0F1117;
-  color: #F1F5F9;
+  background: #0A0705;
+  color: rgba(240,232,218,0.92);
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "cv11", "ss01", "ss03";
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body {
   min-height: 100vh;
   background:
-    radial-gradient(720px 480px at 100% 0%, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0) 70%),
-    radial-gradient(900px 600px at 0% 30%, rgba(99,102,241,0.07) 0%, rgba(99,102,241,0) 70%),
-    linear-gradient(180deg, #0F1117 0%, #131B2E 100%);
+    radial-gradient(ellipse 600px 400px at 50% -100px, rgba(240,155,35,0.14) 0%, transparent 62%),
+    radial-gradient(ellipse 360px 260px at 90% 100%, rgba(195,65,25,0.07) 0%, transparent 55%),
+    #0A0705;
   background-attachment: fixed;
 }
 
@@ -33,13 +34,13 @@ button, a, [role="button"] {
 button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 
 .glass {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
-.card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; }
+.card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; }
 
 .caption {
   text-transform: uppercase;
@@ -60,12 +61,19 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; color: #F1F5F9; }
-.h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; color: #F1F5F9; }
+.h1 { font-size: 26px; font-weight: 200; letter-spacing: -0.4px; line-height: 1.2; color: rgba(240,232,218,0.92); }
+.h2 { font-size: 18px; font-weight: 300; letter-spacing: -0.2px; color: rgba(240,232,218,0.92); }
+
+.grad-amber {
+  background: linear-gradient(135deg, #F0A020 0%, #E06020 55%, #C04020 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 .divider-grad {
   height: 1px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(59,130,246,0.08), rgba(255,255,255,0.04));
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(240,160,40,0.10), rgba(255,255,255,0.04));
 }
 
 @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
