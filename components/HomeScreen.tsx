@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import LiveActivityAmber from "./LiveActivityAmber";
+import AtomLogo from "./AtomLogo";
 import { loadRecent, formatAgo, type RecentTaskEntry } from "../lib/recentTasks";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
@@ -22,30 +23,6 @@ function SendIcon() {
       stroke="#0A0705" strokeWidth="2.4"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-// ─── Логотип-сигил ───────────────────────────────────────────────────────────
-
-function Sigil() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="sigilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#F0A020" />
-          <stop offset="100%" stopColor="#C04020" />
-        </linearGradient>
-      </defs>
-      <polygon
-        points="15,3 27,10 27,20 15,27 3,20 3,10"
-        fill="none" stroke="rgba(220,120,40,0.18)" strokeWidth="1"
-      />
-      <polygon
-        points="15,7 23,12 23,18 15,23 7,18 7,12"
-        fill="rgba(220,100,30,0.07)" stroke="rgba(220,100,30,0.30)" strokeWidth="0.8"
-      />
-      <circle cx="15" cy="15" r="2.3" fill="url(#sigilGrad)" />
     </svg>
   );
 }
@@ -116,7 +93,7 @@ export default function HomeScreen() {
       {/* ── Хедер ── */}
       <header style={styles.header}>
         <div style={styles.logoRow}>
-          <Sigil />
+          <AtomLogo size={26} uid="hs" />
           <span style={styles.wordmark}>LEX AI</span>
         </div>
         <div style={styles.avatar}>Д</div>
