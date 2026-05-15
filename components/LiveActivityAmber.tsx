@@ -127,20 +127,57 @@ export default function LiveActivityAmber({
       }, 200) as unknown as number;
       try {
         const res = await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId, task }) });
-        if (!res.ok) throw new Error((await res.json()).error || "agent failed");
-        const data = await res.json();
-        if (cancelled) return;
+        if (!res.ok || !res.body) {
+          let msg = "agent failed";
+          try { msg = (await res.json()).error || msg; } catch {}
+          throw new Error(msg);
+        }
+        // Стримим: переходим в done сразу при первой дельте, чтобы текст рос на глазах
         if (progressTimer.current) window.clearInterval(progressTimer.current);
-        setState((s) => s && { ...s, progress: 100 });
-        await new Promise((r) => setTimeout(r, 300));
-        setState((s) => s && { ...s, stage: "done", reply: data.reply, progress: 100 });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let full = "";
+        let switched = false;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (cancelled) { reader.cancel().catch(() => {}); return; }
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() ?? "";
+          for (const chunk of lines) {
+            const line = chunk.trim();
+            if (!line.startsWith("data:")) continue;
+            const payload = line.slice(5).trim();
+            if (!payload) continue;
+            let evt: any;
+            try { evt = JSON.parse(payload); } catch { continue; }
+            if (evt.type === "delta") {
+              full += evt.text;
+              if (!switched) {
+                switched = true;
+                setState((s) => s && { ...s, stage: "done", reply: full, progress: 100 });
+              } else {
+                setState((s) => s && { ...s, reply: full });
+              }
+            } else if (evt.type === "done") {
+              setState((s) => s && { ...s, stage: "done", reply: evt.reply ?? full, progress: 100 });
+              full = evt.reply ?? full;
+            } else if (evt.type === "error") {
+              throw new Error(evt.error || "agent failed");
+            }
+          }
+        }
         try {
           const def = AGENT_DEFS[agentId];
           pushRecent({
             title: task,
             agentId,
             agentName: def?.name ?? agentId,
-            reply: data.reply ?? "",
+            reply: full,
           });
         } catch {}
       } catch (e: any) {

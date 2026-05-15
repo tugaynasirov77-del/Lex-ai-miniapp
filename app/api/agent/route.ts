@@ -20,43 +20,56 @@ export async function POST(req: NextRequest) {
 
   const def = AGENT_DEFS[agentId];
   const client = new Anthropic({ apiKey });
+  const encoder = new TextEncoder();
 
-  try {
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: [
-        {
-          type: "text",
-          text: LEX_TEAM_RULES,
-          cache_control: { type: "ephemeral" },
-        },
-        {
-          type: "text",
-          text: def.system,
-        },
-      ],
-      messages: [{ role: "user", content: task }],
-    });
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      };
+      try {
+        const streamResp = client.messages.stream({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1024,
+          system: [
+            { type: "text", text: LEX_TEAM_RULES, cache_control: { type: "ephemeral" } },
+            { type: "text", text: def.system },
+          ],
+          messages: [{ role: "user", content: task }],
+        });
 
-    const reply = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
+        let full = "";
+        streamResp.on("text", (delta) => {
+          full += delta;
+          send({ type: "delta", text: delta });
+        });
 
-    return NextResponse.json({
-      reply,
-      agentId,
-      agentName: def.name,
-      usage: {
-        input_tokens: response.usage?.input_tokens,
-        output_tokens: response.usage?.output_tokens,
-        cache_creation_input_tokens: response.usage?.cache_creation_input_tokens || 0,
-        cache_read_input_tokens: response.usage?.cache_read_input_tokens || 0,
-      },
-    });
-  } catch (e: any) {
-    return NextResponse.json({ error: "Anthropic API error", details: e?.message ?? String(e) }, { status: 502 });
-  }
+        const final = await streamResp.finalMessage();
+        send({
+          type: "done",
+          reply: full.trim(),
+          agentId,
+          agentName: def.name,
+          usage: {
+            input_tokens: final.usage?.input_tokens,
+            output_tokens: final.usage?.output_tokens,
+            cache_creation_input_tokens: final.usage?.cache_creation_input_tokens || 0,
+            cache_read_input_tokens: final.usage?.cache_read_input_tokens || 0,
+          },
+        });
+        controller.close();
+      } catch (e: any) {
+        send({ type: "error", error: e?.message ?? String(e) });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }
