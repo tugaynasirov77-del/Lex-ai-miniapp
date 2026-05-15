@@ -20,14 +20,48 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     .single();
   if (error || !project) return Response.json({ error: "not found" }, { status: 404 });
 
-  const [{ data: budget }, { data: agents }] = await Promise.all([
+  const fourteenAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [
+    { data: budget },
+    { data: agents },
+    { data: snapshots },
+    { data: topPosts },
+  ] = await Promise.all([
     sb.from("project_budget").select("*").eq("project_id", id).maybeSingle(),
     sb.from("project_agents").select("*").eq("project_id", id).order("role"),
+    sb
+      .from("channel_snapshots")
+      .select("subscribers,snapshot_at")
+      .eq("project_id", id)
+      .gte("snapshot_at", fourteenAgo)
+      .order("snapshot_at", { ascending: true }),
+    sb
+      .from("channel_posts")
+      .select("message_id,text,views,published_at")
+      .eq("project_id", id)
+      .gte("published_at", weekAgo)
+      .order("views", { ascending: false, nullsFirst: false })
+      .limit(3),
   ]);
+
+  const snaps = snapshots ?? [];
+  const latest = snaps.length > 0 ? snaps[snaps.length - 1] : null;
+  const weekFirst = snaps.find((s) => s.snapshot_at >= weekAgo) ?? null;
+  const growthAbs = latest && weekFirst ? latest.subscribers - weekFirst.subscribers : 0;
+  const growthPct = weekFirst && weekFirst.subscribers > 0 ? (growthAbs / weekFirst.subscribers) * 100 : 0;
 
   return Response.json({
     project,
     budget: budget ?? { monthly_cap_usd: 1.0, spent_usd_current_month: 0, auto_pause_on_exceed: true },
     agents: agents ?? [],
+    analytics: {
+      snapshots: snaps,
+      latest_subscribers: latest?.subscribers ?? project.channel_subscribers ?? 0,
+      growth_abs: growthAbs,
+      growth_pct: growthPct,
+      top_posts: topPosts ?? [],
+    },
   });
 }

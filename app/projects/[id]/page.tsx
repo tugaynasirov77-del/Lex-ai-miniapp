@@ -6,6 +6,14 @@ import Header from "../../../components/Header";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
 
+type AnalyticsBlock = {
+  snapshots: { subscribers: number; snapshot_at: string }[];
+  latest_subscribers: number;
+  growth_abs: number;
+  growth_pct: number;
+  top_posts: { message_id: number; text: string | null; views: number | null; published_at: string | null }[];
+};
+
 const ROLE_LABEL: Record<ProjectAgentRole, { name: string; emoji: string; desc: string }> = {
   analyst: { name: "Аналитик", emoji: "📊", desc: "Статистика и рост канала, отчёты" },
   scout: { name: "Разведчик", emoji: "🔍", desc: "Конкуренты, тренды, темы" },
@@ -34,6 +42,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [project, setProject] = useState<ProjectRow | null>(null);
   const [budget, setBudget] = useState<ProjectBudgetRow | null>(null);
   const [agents, setAgents] = useState<ProjectAgentRow[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsBlock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +60,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setProject(d.project);
       setBudget(d.budget);
       setAgents(d.agents ?? []);
+      setAnalytics(d.analytics ?? null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -224,6 +234,88 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 Автостоп при превышении. Резерв на 45 постов, ежедневную разведку, недельный AI-отчёт, A/B заголовки.
               </p>
             </div>
+
+            {analytics && (
+              <div className="glass rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">📊 Аналитика</h4>
+                  <span className="text-[10px] text-muted uppercase tracking-wider">за 7 дней</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Подписчики</div>
+                    <div className="text-xl font-semibold">{analytics.latest_subscribers.toLocaleString("ru-RU")}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Прирост</div>
+                    <div
+                      className="text-xl font-semibold"
+                      style={{ color: analytics.growth_abs >= 0 ? "#22d3a5" : "#ef4444" }}
+                    >
+                      {analytics.growth_abs >= 0 ? "+" : ""}
+                      {analytics.growth_abs.toLocaleString("ru-RU")}
+                      <span className="text-xs text-muted ml-1">
+                        ({analytics.growth_pct >= 0 ? "+" : ""}
+                        {analytics.growth_pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {analytics.snapshots.length > 1 && (
+                  <div className="flex items-end gap-0.5 h-8 mt-1">
+                    {(() => {
+                      const xs = analytics.snapshots.map((s) => s.subscribers);
+                      const min = Math.min(...xs);
+                      const max = Math.max(...xs);
+                      const range = Math.max(1, max - min);
+                      return xs.map((v, i) => {
+                        const h = ((v - min) / range) * 100;
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              flex: 1,
+                              height: `${Math.max(8, h)}%`,
+                              background: "linear-gradient(180deg, #F0A020, #D05020)",
+                              borderRadius: 2,
+                              opacity: 0.6 + (i / xs.length) * 0.4,
+                            }}
+                          />
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+
+                {analytics.top_posts.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="text-[10px] text-muted uppercase tracking-wider">Топ постов</div>
+                    {analytics.top_posts.map((post) => {
+                      const preview = (post.text || "(без текста)").replace(/\n+/g, " ").slice(0, 70);
+                      return (
+                        <a
+                          key={post.message_id}
+                          href={`https://t.me/${project!.channel_username}/${post.message_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between gap-3 text-xs py-1.5 px-2 -mx-2 rounded-md hover:bg-white/5 active:bg-white/10"
+                        >
+                          <span className="truncate flex-1 text-ink/90">{preview}</span>
+                          <span className="text-amber shrink-0 text-[11px]">👁 {(post.views ?? 0).toLocaleString("ru-RU")}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {analytics.snapshots.length === 0 && (
+                  <p className="text-xs text-muted leading-relaxed">
+                    Аналитик подключён, первая сводка появится в течение суток (cron в 7:00 МСК).
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <h4 className="font-semibold text-sm px-1">Команда на канале</h4>

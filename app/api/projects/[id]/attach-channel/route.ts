@@ -111,7 +111,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   );
 
   await sb.from("project_agents").upsert(
-    AGENT_ROLES.map((role) => ({ project_id: projectId, role, status: "pending" as const })),
+    AGENT_ROLES.map((role) => ({
+      project_id: projectId,
+      role,
+      status: role === "analyst" ? ("active" as const) : ("pending" as const),
+    })),
     { onConflict: "project_id,role", ignoreDuplicates: true }
   );
 
