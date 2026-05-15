@@ -30,14 +30,14 @@ export default function TeamPage() {
               </div>
               <span className="relative flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${a.status === "online" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
-                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.6)" }}>{a.status === "online" ? "онлайн" : "офлайн"}</span>
+                <span className="text-[16px]" style={{ color: "rgba(255,255,255,0.6)" }}>{a.status === "online" ? "онлайн" : "офлайн"}</span>
               </span>
             </div>
             <div>
               <p className="text-sm font-medium leading-tight">{a.name}</p>
-              <p className="text-[11px] text-muted mt-0.5 line-clamp-2">{a.role}</p>
+              <p className="text-[15px] text-muted mt-0.5 line-clamp-2">{a.role}</p>
             </div>
-            <p className="text-[10px] text-muted/70 mt-auto">{a.lastActive}</p>
+            <p className="text-[16px] text-muted/70 mt-auto">{a.lastActive}</p>
           </button>
         ))}
       </div>

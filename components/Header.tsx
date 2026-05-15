@@ -13,7 +13,7 @@ export default function Header({ title, subtitle, accent }: { title: string; sub
       <h1
         style={{
           fontWeight: 200,
-          fontSize: 28,
+          fontSize: 30,
           color: "#F8F0DC",
           lineHeight: 1.2,
           letterSpacing: "-0.4px",
@@ -39,7 +39,7 @@ export default function Header({ title, subtitle, accent }: { title: string; sub
         <p
           style={{
             fontWeight: 300,
-            fontSize: 13,
+            fontSize: 15,
             color: "rgba(255,255,255,0.45)",
             letterSpacing: "0.04em",
           }}

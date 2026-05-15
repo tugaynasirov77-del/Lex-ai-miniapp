@@ -4,6 +4,7 @@ import { AGENT_DEFS, type AgentKey } from "../lib/agents";
 import { getAgent } from "../lib/mockData";
 import { pushRecent } from "../lib/recentTasks";
 import { getInitData, hapticImpact, hapticNotify } from "../lib/telegram";
+import { cleanReply } from "../lib/cleanReply";
 
 type Stage = "received" | "routing" | "working" | "done" | "error";
 type Msg = { role: "user" | "assistant"; content: string; critique?: boolean };
@@ -132,16 +133,16 @@ async function streamAgent(
       try { evt = JSON.parse(payload); } catch { continue; }
       if (evt.type === "delta") {
         full += evt.text;
-        onDelta(full);
+        onDelta(cleanReply(full));
       } else if (evt.type === "done") {
         full = evt.reply ?? full;
-        onDelta(full);
+        onDelta(cleanReply(full));
       } else if (evt.type === "error") {
         throw new Error(evt.error || "agent failed");
       }
     }
   }
-  return full;
+  return cleanReply(full);
 }
 
 export default function LiveActivityAmber({
@@ -293,7 +294,7 @@ export default function LiveActivityAmber({
     border: "1px solid rgba(255,255,255,0.05)",
     borderRadius: 10,
     padding: "12px 14px",
-    fontWeight: 300, fontSize: 13, lineHeight: 1.55,
+    fontWeight: 300, fontSize: 15, lineHeight: 1.55,
     color: "#EDDCB4",
     whiteSpace: "pre-wrap", wordBreak: "break-word",
     fontFamily: "'DM Sans', sans-serif",
@@ -319,13 +320,13 @@ export default function LiveActivityAmber({
             <Avatar src={ANDREY?.avatar} alt="Андрей" active={!step1Done} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontWeight: 400, fontSize: 13, color: "#F1E3C4" }}>Андрей</span>
-                <span style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.55)" }}>· оркестратор</span>
+                <span style={{ fontWeight: 400, fontSize: 15, color: "#F1E3C4" }}>Андрей</span>
+                <span style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>· оркестратор</span>
                 <Check done={step1Done} />
               </div>
-              <p style={{ fontWeight: 300, fontSize: 12, color: "rgba(240,228,208,0.55)", marginTop: 4, lineHeight: 1.4 }}>«{state.task}»</p>
+              <p style={{ fontWeight: 300, fontSize: 14, color: "rgba(240,228,208,0.55)", marginTop: 4, lineHeight: 1.4 }}>«{state.task}»</p>
               {!step1Done && (
-                <p style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,180,70,0.92)", marginTop: 4, display: "flex", alignItems: "center" }}>
+                <p style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,180,70,0.92)", marginTop: 4, display: "flex", alignItems: "center" }}>
                   анализирую<Dots />
                 </p>
               )}
@@ -340,12 +341,12 @@ export default function LiveActivityAmber({
               <Avatar src={agentMeta?.avatar} alt={agent.name} active={stage === "routing" || stage === "working"} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 400, fontSize: 13, color: "#F1E3C4" }}>{agent.name}</span>
-                  <span style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.55)" }}>· {agent.role.toLowerCase()}</span>
+                  <span style={{ fontWeight: 400, fontSize: 15, color: "#F1E3C4" }}>{agent.name}</span>
+                  <span style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>· {agent.role.toLowerCase()}</span>
                   <Check done={stage === "done"} />
                 </div>
                 {reasoning && (
-                  <p style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.55)", marginTop: 4, lineHeight: 1.4 }}>{reasoning}</p>
+                  <p style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 4, lineHeight: 1.4 }}>{reasoning}</p>
                 )}
                 {stage === "working" && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
@@ -372,8 +373,8 @@ export default function LiveActivityAmber({
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <Check done />
-                  <span style={{ fontWeight: 400, fontSize: 13, color: "#F1E3C4" }}>диалог</span>
-                  {agent && <span style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.55)" }}>· {agent.name.toLowerCase()}</span>}
+                  <span style={{ fontWeight: 400, fontSize: 15, color: "#F1E3C4" }}>диалог</span>
+                  {agent && <span style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>· {agent.name.toLowerCase()}</span>}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -414,7 +415,7 @@ export default function LiveActivityAmber({
                       borderRadius: 10,
                       padding: "10px 50px 10px 12px",
                       fontFamily: "'DM Sans', sans-serif",
-                      fontWeight: 300, fontSize: 13,
+                      fontWeight: 300, fontSize: 15,
                       color: "#EDDCB4",
                       caretColor: "#F0A020",
                       resize: "none", outline: "none",
@@ -433,7 +434,7 @@ export default function LiveActivityAmber({
                       color: "#0A0705",
                       cursor: "pointer",
                       opacity: followUp.trim() && !followBusy ? 1 : 0.4,
-                      fontSize: 14, fontWeight: 700,
+                      fontSize: 16, fontWeight: 700,
                     }}
                     aria-label="отправить"
                   >→</button>
@@ -448,11 +449,11 @@ export default function LiveActivityAmber({
                     padding: "10px 12px",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                      <span style={{ fontWeight: 400, fontSize: 11, color: "rgba(255,180,190,0.95)" }}>Аркадий · критик</span>
+                      <span style={{ fontWeight: 400, fontSize: 13, color: "rgba(255,180,190,0.95)" }}>Аркадий · критик</span>
                       {critiqueBusy && <Dots />}
                     </div>
                     <div style={{
-                      fontWeight: 300, fontSize: 12, lineHeight: 1.5,
+                      fontWeight: 300, fontSize: 14, lineHeight: 1.5,
                       color: "#F5DCDC",
                       whiteSpace: "pre-wrap", wordBreak: "break-word",
                       fontFamily: "'DM Sans', sans-serif",
@@ -465,7 +466,7 @@ export default function LiveActivityAmber({
                     onClick={() => navigator.clipboard.writeText(lastAssistant).catch(() => {})}
                     style={{
                       padding: "10px 8px", borderRadius: 8, cursor: "pointer",
-                      fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 11,
+                      fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 13,
                       background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
                       color: "#E2D0A6",
                     }}
@@ -475,7 +476,7 @@ export default function LiveActivityAmber({
                     disabled={critiqueBusy}
                     style={{
                       padding: "10px 8px", borderRadius: 8, cursor: "pointer",
-                      fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 11,
+                      fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 13,
                       background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.25)",
                       color: "rgba(255,180,190,0.98)",
                       opacity: critiqueBusy ? 0.5 : 1,
@@ -485,7 +486,7 @@ export default function LiveActivityAmber({
                     onClick={onReset}
                     style={{
                       padding: "10px 8px", borderRadius: 8, cursor: "pointer",
-                      fontFamily: "'DM Sans', sans-serif", fontWeight: 400, fontSize: 11,
+                      fontFamily: "'DM Sans', sans-serif", fontWeight: 400, fontSize: 13,
                       background: "linear-gradient(135deg, #F0A020, #D05020)",
                       border: "none", color: "#0A0705",
                     }}
@@ -494,11 +495,11 @@ export default function LiveActivityAmber({
               </>
             ) : (
               <>
-                <p style={{ fontWeight: 400, fontSize: 13, color: "rgba(255,180,70,0.95)" }}>что-то пошло не так</p>
-                <p style={{ fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 4 }}>{error}</p>
+                <p style={{ fontWeight: 400, fontSize: 15, color: "rgba(255,180,70,0.95)" }}>что-то пошло не так</p>
+                <p style={{ fontWeight: 300, fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 }}>{error}</p>
                 <button onClick={onReset} style={{
                   marginTop: 10, padding: "8px 12px", borderRadius: 8, cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 11,
+                  fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 13,
                   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
                   color: "rgba(255,180,70,0.92)",
                 }}>попробовать ещё</button>

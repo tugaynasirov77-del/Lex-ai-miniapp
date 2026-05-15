@@ -28,9 +28,9 @@ function fmtTok(n: number): string {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="glass rounded-xl p-4">
-      <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.04em" }}>{label}</p>
+      <p className="text-[15px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.04em" }}>{label}</p>
       <p className="text-2xl mt-1" style={{ fontWeight: 200, color: "#F8F0DC" }}>{value}</p>
-      {hint && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{hint}</p>}
+      {hint && <p className="text-[16px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{hint}</p>}
     </div>
   );
 }
@@ -133,28 +133,28 @@ export default function AnalyticsPage() {
             <p className="text-xs text-muted mb-3">Расход токенов</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-[11px] text-muted">Стоимость</p>
+                <p className="text-[15px] text-muted">Стоимость</p>
                 <p className="text-xl font-bold mt-0.5">${usage.total.cost_usd.toFixed(4)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted">Запросов</p>
+                <p className="text-[15px] text-muted">Запросов</p>
                 <p className="text-xl font-bold mt-0.5">{usage.total.calls}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted">Input / Output</p>
+                <p className="text-[15px] text-muted">Input / Output</p>
                 <p className="text-sm mt-0.5">{fmtTok(usage.total.input_tokens)} / {fmtTok(usage.total.output_tokens)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted">Cache hit</p>
+                <p className="text-[15px] text-muted">Cache hit</p>
                 <p className="text-sm mt-0.5">{Math.round(usage.total.cache_hit_rate * 100)}%</p>
-                <p className="text-[10px] text-muted/70">read {fmtTok(usage.total.cache_read_tokens)}</p>
+                <p className="text-[16px] text-muted/70">read {fmtTok(usage.total.cache_read_tokens)}</p>
               </div>
             </div>
           </div>
         )}
 
         {usageErr && (
-          <p className="text-[11px] text-rose-400/70 mt-2 text-center">usage: {usageErr}</p>
+          <p className="text-[15px] text-rose-400/70 mt-2 text-center">usage: {usageErr}</p>
         )}
 
         {list.length === 0 && (

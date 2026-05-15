@@ -61,8 +61,8 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.4px; line-height: 1.2; color: #F8F0DC; }
-.h2 { font-size: 18px; font-weight: 400; letter-spacing: -0.2px; color: #F8F0DC; }
+.h1 { font-size: 30px; font-weight: 300; letter-spacing: -0.4px; line-height: 1.2; color: #F8F0DC; }
+.h2 { font-size: 20px; font-weight: 400; letter-spacing: -0.2px; color: #F8F0DC; }
 
 .grad-amber {
   background: linear-gradient(135deg, #F0A020 0%, #E06020 55%, #C04020 100%);

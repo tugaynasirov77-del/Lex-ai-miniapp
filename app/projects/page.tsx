@@ -120,7 +120,7 @@ export default function ProjectsPage() {
             <div key={p.id} className="glass rounded-xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h3 className="font-semibold flex-1">{p.title}</h3>
-                <span className={`text-[11px] px-2 py-1 rounded-full ${s.color} shrink-0`}>{s.text}</span>
+                <span className={`text-[15px] px-2 py-1 rounded-full ${s.color} shrink-0`}>{s.text}</span>
               </div>
               <div className="flex items-center gap-1 mb-3">
                 {p.agents.map((id) => {

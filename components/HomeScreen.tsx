@@ -245,7 +245,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   wordmark: {
     fontWeight: 300,
-    fontSize: 14,
+    fontSize: 16,
     color: "#F1E3C4",
     letterSpacing: "0.26em",
   },
@@ -272,7 +272,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   h1: {
     fontWeight: 200,
-    fontSize: 28,
+    fontSize: 30,
     color: "#F8F0DC",
     lineHeight: 1.2,
     marginBottom: 10,
@@ -291,7 +291,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   sub: {
     fontWeight: 300,
-    fontSize: 13,
+    fontSize: 15,
     color: "rgba(255,255,255,0.45)",
     letterSpacing: "0.04em",
   },
@@ -311,7 +311,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px 60px 16px 18px",
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 300,
-    fontSize: 14,
+    fontSize: 16,
     color: "#EDDCB4",
     caretColor: "#F0A020",
     resize: "none",
@@ -355,7 +355,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 400,
-    fontSize: 12,
+    fontSize: 14,
     letterSpacing: "0.03em",
     background: "rgba(240,140,40,0.08)",
     border: "1px solid rgba(240,140,40,0.28)",
@@ -382,7 +382,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentLabel: {
     fontWeight: 300,
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: "0.1em",
     color: "rgba(255,255,255,0.45)",
     marginBottom: 12,
@@ -410,7 +410,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentTitle: {
     fontWeight: 500,
-    fontSize: 14,
+    fontSize: 16,
     color: "#F5EBD7",
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -420,13 +420,13 @@ const styles: Record<string, React.CSSProperties> = {
 
   recentMeta: {
     fontWeight: 400,
-    fontSize: 11,
+    fontSize: 13,
     color: "rgba(255,190,80,0.95)",
     marginTop: 3,
   },
 
   recentArrow: {
-    fontSize: 12,
+    fontSize: 14,
     color: "rgba(255,255,255,0.1)",
   },
 
