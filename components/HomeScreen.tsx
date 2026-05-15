@@ -406,7 +406,7 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.6,
   },
 
-  recentText: { flex: 1 },
+  recentText: { flex: 1, minWidth: 0, overflow: "hidden" },
 
   recentTitle: {
     fontWeight: 500,
