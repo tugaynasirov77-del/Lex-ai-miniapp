@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AGENT_DEFS, type AgentKey } from "../lib/agents";
 import { getAgent } from "../lib/mockData";
 import { pushRecent } from "../lib/recentTasks";
-import { getInitData } from "../lib/telegram";
+import { getInitData, hapticImpact, hapticNotify } from "../lib/telegram";
 
 type Stage = "received" | "routing" | "working" | "done" | "error";
 type Msg = { role: "user" | "assistant"; content: string; critique?: boolean };
@@ -203,6 +203,7 @@ export default function LiveActivityAmber({
           streaming: "",
           progress: 100,
         });
+        hapticNotify("success");
 
         try {
           const def = AGENT_DEFS[agentId];
@@ -211,6 +212,7 @@ export default function LiveActivityAmber({
       } catch (e: any) {
         if (progressTimer.current) window.clearInterval(progressTimer.current);
         setState((s) => s && { ...s, stage: "error", error: e.message || "Ошибка агента" });
+        hapticNotify("error");
       } finally {
         onBusy(false);
       }
@@ -223,6 +225,7 @@ export default function LiveActivityAmber({
     if (!state || critiqueBusy) return;
     const lastA = [...state.messages].reverse().find((m) => m.role === "assistant");
     if (!lastA) return;
+    hapticImpact("medium");
     setCritique("");
     setCritiqueBusy(true);
     onBusy(true);
@@ -246,6 +249,7 @@ export default function LiveActivityAmber({
   const sendFollowUp = async () => {
     const t = followUp.trim();
     if (!t || !state || !state.agentId || followBusy) return;
+    hapticImpact("medium");
     const agentId = state.agentId;
     const next: Msg[] = [...state.messages, { role: "user", content: t }];
     setFollowUp("");

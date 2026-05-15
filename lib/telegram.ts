@@ -21,6 +21,34 @@ export function getInitData(): string {
   return (window as any).Telegram?.WebApp?.initData ?? "";
 }
 
+function tg(): any {
+  if (typeof window === "undefined") return null;
+  return (window as any).Telegram?.WebApp ?? null;
+}
+
+export function hapticImpact(style: "light" | "medium" | "heavy" | "rigid" | "soft" = "light") {
+  try { tg()?.HapticFeedback?.impactOccurred(style); } catch {}
+}
+
+export function hapticNotify(type: "success" | "warning" | "error") {
+  try { tg()?.HapticFeedback?.notificationOccurred(type); } catch {}
+}
+
+export function hapticSelection() {
+  try { tg()?.HapticFeedback?.selectionChanged(); } catch {}
+}
+
+export function showBackButton(onClick: () => void): () => void {
+  const w = tg();
+  if (!w?.BackButton) return () => {};
+  const handler = () => onClick();
+  w.BackButton.onClick(handler);
+  w.BackButton.show();
+  return () => {
+    try { w.BackButton.offClick(handler); w.BackButton.hide(); } catch {}
+  };
+}
+
 export function tgFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("x-telegram-init-data", getInitData());

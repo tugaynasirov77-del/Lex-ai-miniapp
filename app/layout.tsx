@@ -7,6 +7,7 @@ import "./globals.css";
 import Script from "next/script";
 import TelegramInit from "../components/TelegramInit";
 import BottomNav from "../components/BottomNav";
+import TgBackButton from "../components/TgBackButton";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-bg text-ink min-h-screen">
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <TelegramInit />
+        <TgBackButton />
         {children}
         <BottomNav />
       </body>

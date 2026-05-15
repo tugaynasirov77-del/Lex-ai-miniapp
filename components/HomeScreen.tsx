@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LiveActivityAmber from "./LiveActivityAmber";
 import { loadRecent, formatAgo, type RecentTaskEntry } from "../lib/recentTasks";
+import { hapticImpact, hapticSelection } from "../lib/telegram";
 
 const TAG_PREFIX: Record<string, string> = {
   "написать": "Напиши пост для канала про ",
@@ -156,6 +157,7 @@ export default function HomeScreen() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const handleTagClick = (tag: string) => {
+    hapticSelection();
     setActiveTag(tag);
     setTask(TAG_PREFIX[tag] ?? (tag + " "));
   };
@@ -163,6 +165,7 @@ export default function HomeScreen() {
   const handleSubmit = () => {
     const t = task.trim();
     if (!t || busy) return;
+    hapticImpact("medium");
     setActiveTask(t);
     setTask("");
     setActiveTag(null);
@@ -284,6 +287,7 @@ export default function HomeScreen() {
                 key={id}
                 style={styles.navItem}
                 onClick={() => {
+                  hapticSelection();
                   setActiveNav(id);
                   if (id !== "home") router.push(href);
                 }}

@@ -2,9 +2,11 @@
 
 import Header from "../../components/Header";
 import { AGENTS } from "../../lib/mockData";
+import { hapticImpact } from "../../lib/telegram";
 
 export default function TeamPage() {
   const onOpenBot = (username: string) => {
+    hapticImpact("light");
     const url = `https://t.me/${username}`;
     const tg = (window as any).Telegram?.WebApp;
     if (tg?.openTelegramLink) tg.openTelegramLink(url);

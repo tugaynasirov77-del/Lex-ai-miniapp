@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { hapticSelection } from "../lib/telegram";
 
 const TABS = [
   { href: "/", label: "Главная",
@@ -56,6 +57,7 @@ export default function BottomNav() {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
           return (
             <Link key={t.href} href={t.href}
+              onClick={() => hapticSelection()}
               className="relative flex flex-col items-center pt-2.5 pb-2 text-[10px] font-medium"
               style={{ color: active ? "#F0A020" : "#475569" }}>
               <span className="mb-0.5">{t.icon}</span>

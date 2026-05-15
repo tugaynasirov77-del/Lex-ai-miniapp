@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import { getAgent } from "../../lib/mockData";
-import { getTgId, tgFetch } from "../../lib/telegram";
+import { getTgId, tgFetch, hapticImpact, hapticNotify } from "../../lib/telegram";
 import type { ProjectRow } from "../../lib/supabase";
 
 const STATUS_LABEL: Record<ProjectRow["status"], { text: string; color: string }> = {
@@ -47,6 +47,7 @@ export default function ProjectsPage() {
 
   const createProject = async () => {
     if (!tgId || !newTitle.trim()) return;
+    hapticImpact("medium");
     setCreating(true);
     setError(null);
     try {
@@ -58,8 +59,10 @@ export default function ProjectsPage() {
       if (!r.ok) throw new Error(d.error || "create failed");
       setNewTitle("");
       setProjects((p) => [d.project, ...p]);
+      hapticNotify("success");
     } catch (e: any) {
       setError(e.message);
+      hapticNotify("error");
     } finally {
       setCreating(false);
     }

@@ -10,6 +10,7 @@ import {
   type Feedback,
 } from "../../lib/recentTasks";
 import { getAgent } from "../../lib/mockData";
+import { hapticSelection } from "../../lib/telegram";
 
 export default function HistoryPage() {
   const [list, setList] = useState<RecentTaskEntry[]>([]);
@@ -19,6 +20,7 @@ export default function HistoryPage() {
   }, []);
 
   const onFeedback = (id: string, fb: Feedback) => {
+    hapticSelection();
     const current = list.find((t) => t.id === id)?.feedback ?? null;
     const next = current === fb ? null : fb;
     setList(setFeedback(id, next));
