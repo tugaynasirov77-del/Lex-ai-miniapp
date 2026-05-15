@@ -32,7 +32,12 @@ export async function searchNicheChannels(opts: {
   channelDescription: string | null;
   recentPostSamples: string[];
   excludeUsernames: Set<string>;
-}): Promise<{ candidates: { username: string; title: string | null; subscribers: number | null; description: string | null }[]; cost: number }> {
+}): Promise<{
+  candidates: { username: string; title: string | null; subscribers: number | null; description: string | null }[];
+  cost: number;
+  raw_returned: string[];
+  validated_dead: string[];
+}> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
 
@@ -80,20 +85,26 @@ export async function searchNicheChannels(opts: {
 
   const dedup = [...new Set(cleaned)];
 
-  const metas = await Promise.all(
+  const validatedResults = await Promise.all(
     dedup.map(async (u) => {
       try {
         const m = await fetchChannelMeta(u);
-        if (!m.title && !m.subscribers) return null;
-        return { username: u, title: m.title, subscribers: m.subscribers, description: m.description };
+        if (!m.title && !m.subscribers) return { username: u, dead: true, candidate: null };
+        return {
+          username: u,
+          dead: false,
+          candidate: { username: u, title: m.title, subscribers: m.subscribers, description: m.description },
+        };
       } catch {
-        return null;
+        return { username: u, dead: true, candidate: null };
       }
     })
   );
 
   return {
-    candidates: metas.filter((x): x is NonNullable<typeof x> => !!x),
+    candidates: validatedResults.flatMap((v) => (v.candidate ? [v.candidate] : [])),
     cost,
+    raw_returned: dedup,
+    validated_dead: validatedResults.filter((v) => v.dead).map((v) => v.username),
   };
 }

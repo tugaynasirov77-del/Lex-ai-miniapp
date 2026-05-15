@@ -264,20 +264,35 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     hapticImpact("medium");
     setScouting(true);
     setError(null);
+    setCompError(null);
     try {
       const url = niche ? `/api/projects/${id}/suggestions?niche=1` : `/api/projects/${id}/suggestions`;
       const r = await tgFetch(url, { method: "POST" });
       const d = await r.json();
       if (!r.ok || d.skipped) {
         hapticNotify("warning");
-        if (d.skipped) setError(d.skipped);
-        else setError(d.error || "не удалось");
+        const msg = d.skipped || d.error || "не удалось";
+        setCompError(msg);
+        return;
+      }
+      if (d.found === 0) {
+        hapticNotify("warning");
+        const dx = d.diagnostics;
+        if (dx && niche) {
+          const parts: string[] = [];
+          if (dx.niche_raw?.length) parts.push(`Sonnet нашёл: ${dx.niche_raw.length}`);
+          if (dx.niche_dead?.length) parts.push(`мёртвых: ${dx.niche_dead.length}`);
+          if (dx.low_score_rejected?.length) parts.push(`низкий балл: ${dx.low_score_rejected.length}`);
+          setCompError(`Ничего релевантного. ${parts.join(" · ") || "Канал слишком закрытый."}`);
+        } else {
+          setCompError("Ничего не найдено в постах канала и конкурентов.");
+        }
         return;
       }
       hapticNotify("success");
       await load();
     } catch (e: any) {
-      setError(e.message);
+      setCompError(e.message);
       hapticNotify("error");
     } finally {
       setScouting(false);

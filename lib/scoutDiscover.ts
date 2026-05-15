@@ -51,7 +51,10 @@ function safeJson<T>(s: string): T | null {
 export async function discoverCompetitorsForProject(
   projectId: string,
   opts: { useNicheSearch?: boolean } = {}
-): Promise<{ found: number; cost: number; suggestions: any[] } | { skipped: string }> {
+): Promise<
+  | { found: number; cost: number; suggestions: any[]; diagnostics?: any }
+  | { skipped: string }
+> {
   const sb = getSupabase();
   const { data: project } = await sb
     .from("projects")
@@ -96,6 +99,7 @@ export async function discoverCompetitorsForProject(
 
   let nicheCandidates: Awaited<ReturnType<typeof searchNicheChannels>>["candidates"] = [];
   let nicheCost = 0;
+  let nicheDiag: { raw: string[]; dead: string[] } | null = null;
   if (opts.useNicheSearch) {
     try {
       const r = await searchNicheChannels({
@@ -107,6 +111,7 @@ export async function discoverCompetitorsForProject(
       });
       nicheCandidates = r.candidates;
       nicheCost = r.cost;
+      nicheDiag = { raw: r.raw_returned, dead: r.validated_dead };
     } catch {}
   }
 
@@ -207,5 +212,15 @@ export async function discoverCompetitorsForProject(
     .eq("project_id", projectId)
     .eq("role", "scout");
 
-  return { found: upserts.length, cost, suggestions: upserts };
+  const diagnostics = {
+    candidates_total: candidates.length,
+    candidates_alive: liveCandidates.length,
+    haiku_scored: results.length,
+    saved_pending: upserts.length,
+    niche_raw: nicheDiag?.raw ?? [],
+    niche_dead: nicheDiag?.dead ?? [],
+    low_score_rejected: results.filter((r) => typeof r.score === "number" && r.score < 6).map((r) => ({ username: r.username, score: r.score })),
+  };
+
+  return { found: upserts.length, cost: cost + nicheCost, suggestions: upserts, diagnostics };
 }
