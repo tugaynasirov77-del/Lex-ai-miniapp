@@ -67,6 +67,7 @@ async function processProject(p: ProjectRow) {
         views: post.views,
         has_media: post.has_media,
         published_at: post.published_at,
+        forwarded_from: post.forwarded_from,
         fetched_at: new Date().toISOString(),
       })),
       { onConflict: "project_id,message_id" }
