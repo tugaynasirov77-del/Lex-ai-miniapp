@@ -48,7 +48,10 @@ function weekStartUTC(d: Date = new Date()): string {
   return dt.toISOString().slice(0, 10);
 }
 
-export async function generatePlanForProject(projectId: string): Promise<{ planId: string; cost: number } | { skipped: string }> {
+export async function generatePlanForProject(
+  projectId: string,
+  opts: { force?: boolean } = {}
+): Promise<{ planId: string; cost: number } | { skipped: string }> {
   const sb = getSupabase();
   const { data: project } = await sb
     .from("projects")
@@ -58,13 +61,17 @@ export async function generatePlanForProject(projectId: string): Promise<{ planI
   if (!project || !project.channel_username) return { skipped: "no channel" };
 
   const wk = weekStartUTC();
-  const { data: existing } = await sb
-    .from("content_plans")
-    .select("id")
-    .eq("project_id", projectId)
-    .eq("week_start", wk)
-    .maybeSingle();
-  if (existing) return { skipped: "plan already exists for this week" };
+  if (!opts.force) {
+    const { data: existing } = await sb
+      .from("content_plans")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("week_start", wk)
+      .maybeSingle();
+    if (existing) return { skipped: "plan already exists for this week" };
+  } else {
+    await sb.from("content_plans").delete().eq("project_id", projectId).eq("week_start", wk);
+  }
 
   const budget = await canSpend(projectId);
   if (!budget.ok) return { skipped: budget.reason || "budget" };
