@@ -1,0 +1,10 @@
+name: niche-strategy-weekly
+on:
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" https://lex-ai-miniapp.vercel.app/api/cron/niche-strategy || true
