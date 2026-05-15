@@ -4,6 +4,26 @@ import { useEffect, useMemo, useState } from "react";
 import Header from "../../components/Header";
 import { loadRecent, type RecentTaskEntry } from "../../lib/recentTasks";
 import { getAgent } from "../../lib/mockData";
+import { tgFetch, getTgId } from "../../lib/telegram";
+
+interface UsageStats {
+  total: {
+    calls: number;
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_tokens: number;
+    cache_read_tokens: number;
+    cost_usd: number;
+    cache_hit_rate: number;
+  };
+  by_agent: Record<string, { input: number; output: number; calls: number }>;
+}
+
+function fmtTok(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -17,9 +37,19 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 
 export default function AnalyticsPage() {
   const [list, setList] = useState<RecentTaskEntry[]>([]);
+  const [usage, setUsage] = useState<UsageStats | null>(null);
+  const [usageErr, setUsageErr] = useState<string | null>(null);
 
   useEffect(() => {
     setList(loadRecent());
+    if (!getTgId()) return;
+    tgFetch("/api/usage")
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "failed");
+        setUsage(d);
+      })
+      .catch((e) => setUsageErr(e.message));
   }, []);
 
   const stats = useMemo(() => {
@@ -96,6 +126,35 @@ export default function AnalyticsPage() {
               })}
             </div>
           </div>
+        )}
+
+        {usage && usage.total.calls > 0 && (
+          <div className="glass rounded-2xl p-4 mt-4">
+            <p className="text-xs text-muted mb-3">Расход токенов</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[11px] text-muted">Стоимость</p>
+                <p className="text-xl font-bold mt-0.5">${usage.total.cost_usd.toFixed(4)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-muted">Запросов</p>
+                <p className="text-xl font-bold mt-0.5">{usage.total.calls}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-muted">Input / Output</p>
+                <p className="text-sm mt-0.5">{fmtTok(usage.total.input_tokens)} / {fmtTok(usage.total.output_tokens)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-muted">Cache hit</p>
+                <p className="text-sm mt-0.5">{Math.round(usage.total.cache_hit_rate * 100)}%</p>
+                <p className="text-[10px] text-muted/70">read {fmtTok(usage.total.cache_read_tokens)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {usageErr && (
+          <p className="text-[11px] text-rose-400/70 mt-2 text-center">usage: {usageErr}</p>
         )}
 
         {list.length === 0 && (

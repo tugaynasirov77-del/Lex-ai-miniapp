@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { ORCHESTRATOR_SYSTEM, AGENT_DEFS, LEX_TEAM_RULES, type AgentKey } from "@/lib/agents";
+import { logUsage, tgIdFromHeader } from "@/lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -76,6 +77,19 @@ export async function POST(req: NextRequest) {
 
     if (!parsed) {
       parsed = { agentId: "alina", reasoning: "По умолчанию направил копирайтеру" };
+    }
+
+    const tgId = tgIdFromHeader(req.headers.get("x-telegram-init-data"));
+    if (tgId) {
+      await logUsage({
+        tgId,
+        agentId: "andrey",
+        endpoint: "orchestrate",
+        input_tokens: response.usage?.input_tokens,
+        output_tokens: response.usage?.output_tokens,
+        cache_creation_tokens: response.usage?.cache_creation_input_tokens || 0,
+        cache_read_tokens: response.usage?.cache_read_input_tokens || 0,
+      });
     }
 
     return NextResponse.json({

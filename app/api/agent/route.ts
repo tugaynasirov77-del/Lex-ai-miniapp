@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENT_DEFS, LEX_TEAM_RULES, type AgentKey } from "@/lib/agents";
+import { logUsage, tgIdFromHeader } from "@/lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
   const def = AGENT_DEFS[agentId];
   const client = new Anthropic({ apiKey });
   const encoder = new TextEncoder();
+  const tgId = tgIdFromHeader(req.headers.get("x-telegram-init-data"));
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -74,6 +76,17 @@ export async function POST(req: NextRequest) {
           },
         });
         controller.close();
+        if (tgId) {
+          await logUsage({
+            tgId,
+            agentId,
+            endpoint: "agent",
+            input_tokens: final.usage?.input_tokens,
+            output_tokens: final.usage?.output_tokens,
+            cache_creation_tokens: final.usage?.cache_creation_input_tokens || 0,
+            cache_read_tokens: final.usage?.cache_read_input_tokens || 0,
+          });
+        }
       } catch (e: any) {
         send({ type: "error", error: e?.message ?? String(e) });
         controller.close();

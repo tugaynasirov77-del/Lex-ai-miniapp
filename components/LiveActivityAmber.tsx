@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AGENT_DEFS, type AgentKey } from "../lib/agents";
 import { getAgent } from "../lib/mockData";
 import { pushRecent } from "../lib/recentTasks";
+import { getInitData } from "../lib/telegram";
 
 type Stage = "received" | "routing" | "working" | "done" | "error";
 type Msg = { role: "user" | "assistant"; content: string; critique?: boolean };
@@ -103,7 +104,7 @@ async function streamAgent(
 ): Promise<string> {
   const res = await fetch("/api/agent", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-telegram-init-data": getInitData() },
     body: JSON.stringify({ agentId, messages }),
   });
   if (!res.ok || !res.body) {
@@ -165,7 +166,7 @@ export default function LiveActivityAmber({
 
       let agentId: AgentKey; let reasoning: string;
       try {
-        const res = await fetch("/api/orchestrate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ task }) });
+        const res = await fetch("/api/orchestrate", { method: "POST", headers: { "content-type": "application/json", "x-telegram-init-data": getInitData() }, body: JSON.stringify({ task }) });
         if (!res.ok) throw new Error((await res.json()).error || "orchestrate failed");
         const data = await res.json();
         agentId = data.agentId; reasoning = data.reasoning;
