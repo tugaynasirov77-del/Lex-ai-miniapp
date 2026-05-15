@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { fetchChannelMeta } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
+import { buildStrategyHint } from "./strategyAnalyzer";
 
 const WRITER_MODEL = "claude-sonnet-4-6";
 const EDITOR_MODEL = "claude-haiku-4-5-20251001";
@@ -87,10 +88,11 @@ export async function generateDraftForProject(projectId: string): Promise<{ draf
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY missing");
 
-  const [{ data: myPosts }, { data: competitors }, meta] = await Promise.all([
+  const [{ data: myPosts }, { data: competitors }, meta, { data: niche }] = await Promise.all([
     sb.from("channel_posts").select("text,views").eq("project_id", projectId).order("views", { ascending: false, nullsFirst: false }).limit(3),
     sb.from("competitor_channels").select("username,top_post_text,top_post_views").eq("project_id", projectId).limit(3),
     fetchChannelMeta(project.channel_username).catch(() => ({ title: null, description: null, subscribers: null })),
+    sb.from("niche_strategy").select("patterns,summary").eq("project_id", projectId).maybeSingle(),
   ]);
 
   const userContext = buildUserContext({
@@ -102,13 +104,16 @@ export async function generateDraftForProject(projectId: string): Promise<{ draf
       .map((c) => ({ text: c.top_post_text as string, views: c.top_post_views, channel: c.username })),
   });
 
+  const strategyHint = buildStrategyHint(niche?.patterns, niche?.summary ?? null);
+  const finalContext = strategyHint ? `${strategyHint}\n\n${userContext}` : userContext;
+
   const client = new Anthropic({ apiKey });
 
   const writerRes = await client.messages.create({
     model: WRITER_MODEL,
     max_tokens: 1024,
     system: [{ type: "text", text: WRITER_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: userContext }],
+    messages: [{ role: "user", content: finalContext }],
   });
 
   const writerCost = await recordSpend({

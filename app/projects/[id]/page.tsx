@@ -17,6 +17,23 @@ type AnalyticsBlock = {
 type PlanItem = { day: string; topic: string; hook: string; why: string; type: string };
 type Plan = { id: string; week_start: string; items: PlanItem[]; summary: string | null; created_at: string; cost_usd: number };
 
+type NicheStrategy = {
+  patterns: {
+    optimal_length_chars?: [number, number];
+    posts_per_week?: number;
+    top_types?: string[];
+    hook_patterns?: string[];
+    emoji_usage?: string;
+    caps_subheaders?: string;
+    winning_topics?: string[];
+  };
+  summary: string | null;
+  based_on_competitors: string[];
+  posts_analyzed: number;
+  generated_at: string;
+  cost_usd: number;
+};
+
 type Draft = {
   id: string;
   title_variants: string[];
@@ -84,6 +101,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [planGenerating, setPlanGenerating] = useState(false);
+  const [nicheStrategy, setNicheStrategy] = useState<NicheStrategy | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [competitorInput, setCompetitorInput] = useState("");
   const [addingComp, setAddingComp] = useState(false);
   const [compError, setCompError] = useState<string | null>(null);
@@ -109,6 +128,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setSuggestions(d.suggestions ?? []);
       setDrafts(d.drafts ?? []);
       setPlan(d.plan ?? null);
+      setNicheStrategy(d.niche_strategy ?? null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -156,6 +176,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const spent = budget?.spent_usd_current_month ?? 0;
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
+
+  const analyzeStrategy = async () => {
+    hapticImpact("medium");
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/niche-strategy`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok || d.skipped) {
+        hapticNotify("warning");
+        if (d.skipped) setError(d.skipped);
+        else setError(d.error || "не удалось");
+        return;
+      }
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const generatePlan = async () => {
     hapticImpact("medium");
@@ -727,6 +770,93 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 );
               })}
+            </div>
+
+            <div className="glass rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">🎯 Стратегия ниши</h4>
+                <button
+                  onClick={analyzeStrategy}
+                  disabled={analyzing}
+                  className="text-xs px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
+                  style={{ background: nicheStrategy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #F0A020, #D05020)", color: nicheStrategy ? "#F5EDD8" : "#0A0705" }}
+                >
+                  {analyzing ? "анализирую…" : nicheStrategy ? "пересобрать" : "+ выучить"}
+                </button>
+              </div>
+              {!nicheStrategy && (
+                <p className="text-xs text-muted leading-relaxed">
+                  Аналитик изучит топ-5 конкурентов, найдёт работающие паттерны и передаст их Стратегу и Контентщику. Нужно минимум 2 конкурента в списке.
+                </p>
+              )}
+              {nicheStrategy && (
+                <>
+                  {nicheStrategy.summary && (
+                    <div className="text-xs text-ink/85 leading-relaxed bg-white/[0.03] rounded-md p-2.5 border-l-2 border-amber/50">
+                      {nicheStrategy.summary}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                    {nicheStrategy.patterns.optimal_length_chars && (
+                      <div>
+                        <div className="text-[9px] text-muted uppercase tracking-wider">длина</div>
+                        <div className="text-ink/90">{nicheStrategy.patterns.optimal_length_chars[0]}–{nicheStrategy.patterns.optimal_length_chars[1]} зн.</div>
+                      </div>
+                    )}
+                    {nicheStrategy.patterns.posts_per_week != null && (
+                      <div>
+                        <div className="text-[9px] text-muted uppercase tracking-wider">частота</div>
+                        <div className="text-ink/90">{nicheStrategy.patterns.posts_per_week} пост/нед</div>
+                      </div>
+                    )}
+                    {nicheStrategy.patterns.emoji_usage && (
+                      <div>
+                        <div className="text-[9px] text-muted uppercase tracking-wider">эмодзи</div>
+                        <div className="text-ink/90">{nicheStrategy.patterns.emoji_usage}</div>
+                      </div>
+                    )}
+                    {nicheStrategy.patterns.caps_subheaders && (
+                      <div>
+                        <div className="text-[9px] text-muted uppercase tracking-wider">ЗАГЛАВНЫЕ</div>
+                        <div className="text-ink/90">{nicheStrategy.patterns.caps_subheaders}</div>
+                      </div>
+                    )}
+                  </div>
+                  {nicheStrategy.patterns.top_types && nicheStrategy.patterns.top_types.length > 0 && (
+                    <div>
+                      <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Топ-типы</div>
+                      <div className="flex flex-wrap gap-1">
+                        {nicheStrategy.patterns.top_types.map((t, i) => (
+                          <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-amber/15 text-amber">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {nicheStrategy.patterns.hook_patterns && nicheStrategy.patterns.hook_patterns.length > 0 && (
+                    <div>
+                      <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Hooks-паттерны</div>
+                      <ul className="space-y-0.5">
+                        {nicheStrategy.patterns.hook_patterns.map((h, i) => (
+                          <li key={i} className="text-[11px] text-ink/85">• {h}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {nicheStrategy.patterns.winning_topics && nicheStrategy.patterns.winning_topics.length > 0 && (
+                    <div>
+                      <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Темы что выстреливают</div>
+                      <div className="flex flex-wrap gap-1">
+                        {nicheStrategy.patterns.winning_topics.map((t, i) => (
+                          <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-ink/80">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[10px] text-muted">
+                    проанализировано {nicheStrategy.posts_analyzed} постов из {nicheStrategy.based_on_competitors.join(", ")} • $ {Number(nicheStrategy.cost_usd).toFixed(4)}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="glass rounded-xl p-4 space-y-3">
