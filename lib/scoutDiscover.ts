@@ -78,7 +78,18 @@ export async function discoverCompetitorsForProject(
   const liveForwards = livePosts.map((p) => p.forwarded_from).filter((x): x is string => !!x);
   const liveMentions = extractMentions(livePosts.map((p) => p.text || ""));
 
-  const allCandidates = [...new Set([...mentions, ...dbForwards, ...liveForwards, ...liveMentions].map((s) => s.toLowerCase()))];
+  const competitorUsernames = (existingComp ?? []).map((c) => c.username);
+  const competitorPosts = (
+    await Promise.all(
+      competitorUsernames.map((u) => fetchChannelPreview(u).catch(() => []))
+    )
+  ).flat();
+  const compForwards = competitorPosts.map((p) => p.forwarded_from).filter((x): x is string => !!x);
+  const compMentions = extractMentions(competitorPosts.map((p) => p.text || ""));
+
+  const allCandidates = [...new Set(
+    [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions].map((s) => s.toLowerCase())
+  )];
 
   const ownUsername = project.channel_username.toLowerCase();
   const blocked = new Set<string>([ownUsername]);
