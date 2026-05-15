@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "../../components/Header";
 import { getAgent } from "../../lib/mockData";
-import { getTgId, tgFetch, hapticImpact, hapticNotify } from "../../lib/telegram";
+import { getTgId, tgFetch, hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 import type { ProjectRow } from "../../lib/supabase";
 
 const STATUS_LABEL: Record<ProjectRow["status"], { text: string; color: string }> = {
@@ -13,6 +14,7 @@ const STATUS_LABEL: Record<ProjectRow["status"], { text: string; color: string }
 };
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,10 +118,23 @@ export default function ProjectsPage() {
 
         {projects.map((p) => {
           const s = STATUS_LABEL[p.status] ?? STATUS_LABEL.in_progress;
+          const openProject = () => {
+            hapticSelection();
+            router.push(`/projects/${p.id}`);
+          };
           return (
-            <div key={p.id} className="glass rounded-xl p-4">
+            <button
+              key={p.id}
+              onClick={openProject}
+              className="glass rounded-xl p-4 w-full text-left active:scale-[0.99] transition-transform"
+            >
               <div className="flex items-start justify-between gap-3 mb-2">
-                <h3 className="font-semibold flex-1">{p.title}</h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{p.title}</h3>
+                  {p.channel_username && (
+                    <span className="text-xs text-amber">@{p.channel_username}</span>
+                  )}
+                </div>
                 <span className={`text-[15px] px-2 py-1 rounded-full ${s.color} shrink-0`}>{s.text}</span>
               </div>
               <div className="flex items-center gap-1 mb-3">
@@ -137,9 +152,10 @@ export default function ProjectsPage() {
                 <div className="h-full rounded-full transition-all" style={{ width: `${p.progress}%`, background: "linear-gradient(90deg, #F0A020, #D05020)" }} />
               </div>
               <div className="flex items-center justify-between text-xs text-muted">
-                <span>{p.progress}% • {new Date(p.created_at).toLocaleDateString("ru-RU")}</span>
+                <span>{p.channel_subscribers != null ? `${p.channel_subscribers.toLocaleString("ru-RU")} подписчиков` : `${p.progress}%`} • {new Date(p.created_at).toLocaleDateString("ru-RU")}</span>
+                <span className="text-amber">открыть →</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
