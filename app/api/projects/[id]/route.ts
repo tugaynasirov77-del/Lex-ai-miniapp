@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     { data: competitors },
     { data: drafts },
     { data: latestPlan },
+    { data: suggestions },
   ] = await Promise.all([
     sb.from("project_budget").select("*").eq("project_id", id).maybeSingle(),
     sb.from("project_agents").select("*").eq("project_id", id).order("role"),
@@ -65,6 +66,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .order("week_start", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    sb
+      .from("scout_suggestions")
+      .select("username,title,description,subscribers,relevance_score,reason")
+      .eq("project_id", id)
+      .eq("status", "pending")
+      .order("relevance_score", { ascending: false })
+      .limit(5),
   ]);
 
   const snaps = snapshots ?? [];
@@ -87,5 +95,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     competitors: competitors ?? [],
     drafts: drafts ?? [],
     plan: latestPlan ?? null,
+    suggestions: suggestions ?? [],
   });
 }

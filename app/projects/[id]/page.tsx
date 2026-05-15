@@ -26,6 +26,15 @@ type Draft = {
   cost_usd: number;
 };
 
+type ScoutSuggestion = {
+  username: string;
+  title: string | null;
+  description: string | null;
+  subscribers: number | null;
+  relevance_score: number;
+  reason: string | null;
+};
+
 type Competitor = {
   id: string;
   username: string;
@@ -68,6 +77,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [agents, setAgents] = useState<ProjectAgentRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsBlock | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [suggestions, setSuggestions] = useState<ScoutSuggestion[]>([]);
+  const [scouting, setScouting] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [generating, setGenerating] = useState(false);
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
@@ -95,6 +106,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setAgents(d.agents ?? []);
       setAnalytics(d.analytics ?? null);
       setCompetitors(d.competitors ?? []);
+      setSuggestions(d.suggestions ?? []);
       setDrafts(d.drafts ?? []);
       setPlan(d.plan ?? null);
     } catch (e: any) {
@@ -201,6 +213,65 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       hapticNotify("success");
     } catch {
       hapticNotify("error");
+      await load();
+    }
+  };
+
+  const runScout = async () => {
+    hapticImpact("medium");
+    setScouting(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok || d.skipped) {
+        hapticNotify("warning");
+        if (d.skipped) setError(d.skipped);
+        else setError(d.error || "не удалось");
+        return;
+      }
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setScouting(false);
+    }
+  };
+
+  const acceptSuggestion = async (username: string) => {
+    hapticImpact("medium");
+    setSuggestions((arr) => arr.filter((s) => s.username !== username));
+    try {
+      const r = await tgFetch(`/api/projects/${id}/suggestions`, {
+        method: "PATCH",
+        body: JSON.stringify({ username, action: "add" }),
+      });
+      const d = await r.json();
+      if (r.ok && d.competitor) {
+        setCompetitors((arr) =>
+          [d.competitor, ...arr.filter((c) => c.username !== d.competitor.username)].sort(
+            (a, b) => (b.subscribers ?? 0) - (a.subscribers ?? 0)
+          )
+        );
+        hapticNotify("success");
+      }
+    } catch {
+      hapticNotify("error");
+      await load();
+    }
+  };
+
+  const dismissSuggestion = async (username: string) => {
+    hapticImpact("light");
+    setSuggestions((arr) => arr.filter((s) => s.username !== username));
+    try {
+      await tgFetch(`/api/projects/${id}/suggestions`, {
+        method: "PATCH",
+        body: JSON.stringify({ username, action: "dismiss" }),
+      });
+    } catch {
       await load();
     }
   };
@@ -453,8 +524,58 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">🔍 Конкуренты</h4>
-                <span className="text-[10px] text-muted uppercase tracking-wider">{competitors.length} канал{competitors.length === 1 ? "" : competitors.length > 1 && competitors.length < 5 ? "а" : "ов"}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={runScout}
+                    disabled={scouting}
+                    className="text-[11px] px-2 py-1 rounded-md font-medium disabled:opacity-40"
+                    style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}
+                  >
+                    {scouting ? "ищу…" : "🤖 разведка"}
+                  </button>
+                  <span className="text-[10px] text-muted uppercase tracking-wider">{competitors.length}</span>
+                </div>
               </div>
+
+              {suggestions.length > 0 && (
+                <div className="rounded-lg border border-amber/30 bg-amber/5 p-3 space-y-2">
+                  <div className="text-[11px] text-amber font-medium">Скаут нашёл {suggestions.length} канал{suggestions.length === 1 ? "" : "ов"} по теме:</div>
+                  {suggestions.map((s) => (
+                    <div key={s.username} className="space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <a
+                            href={`https://t.me/${s.username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-ink hover:text-amber"
+                          >
+                            {s.title || `@${s.username}`}
+                          </a>
+                          <div className="text-[10px] text-muted">@{s.username} • {(s.subscribers ?? 0).toLocaleString("ru-RU")} подп. • балл {s.relevance_score}/10</div>
+                        </div>
+                      </div>
+                      {s.reason && <div className="text-[11px] text-muted/80 italic leading-snug">{s.reason}</div>}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => acceptSuggestion(s.username)}
+                          className="flex-1 text-[11px] py-1 rounded-md font-medium"
+                          style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}
+                        >
+                          + добавить
+                        </button>
+                        <button
+                          onClick={() => dismissSuggestion(s.username)}
+                          className="text-[11px] py-1 px-3 rounded-md font-medium"
+                          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   value={competitorInput}
