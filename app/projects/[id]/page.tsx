@@ -99,8 +99,46 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
 
+  const remove = async () => {
+    if (!project) return;
+    const ok = typeof window !== "undefined" && window.confirm(`Удалить проект «${project.title}»? Это действие не вернуть.`);
+    if (!ok) return;
+    hapticImpact("heavy");
+    try {
+      const r = await tgFetch(`/api/projects?id=${project.id}`, { method: "DELETE" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "не удалось удалить");
+      hapticNotify("success");
+      router.push("/projects");
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    }
+  };
+
   return (
     <>
+      <div style={{ paddingTop: 16, paddingLeft: 22, paddingRight: 22, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button
+          onClick={() => { hapticImpact("light"); router.back(); }}
+          className="flex items-center gap-1 text-sm text-amber"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          назад
+        </button>
+        {project && (
+          <button
+            onClick={remove}
+            className="flex items-center gap-1 text-sm text-rose-400"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}
+            aria-label="Удалить проект"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
+            удалить
+          </button>
+        )}
+      </div>
       <Header title={project?.title ?? "Проект"} subtitle={channelAttached ? `@${channelAttached}` : "без канала"} />
       <div className="pb-24 space-y-4" style={{ paddingLeft: 22, paddingRight: 22 }}>
         {loading && <p className="text-sm text-muted py-8 text-center">загрузка…</p>}
@@ -211,12 +249,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </>
         )}
 
-        <button
-          onClick={() => router.back()}
-          className="w-full text-xs text-muted py-3"
-        >
-          ← назад
-        </button>
       </div>
     </>
   );
