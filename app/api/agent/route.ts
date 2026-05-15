@@ -10,12 +10,28 @@ export async function POST(req: NextRequest) {
   if (!apiKey) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY is not set" }, { status: 500 });
   }
-  const { agentId, task } = (await req.json()) as { agentId?: AgentKey; task?: string };
+  const body = (await req.json()) as {
+    agentId?: AgentKey;
+    task?: string;
+    messages?: { role: "user" | "assistant"; content: string }[];
+  };
+  const { agentId } = body;
   if (!agentId || !AGENT_DEFS[agentId]) {
     return NextResponse.json({ error: "invalid agentId" }, { status: 400 });
   }
-  if (!task || !task.trim()) {
-    return NextResponse.json({ error: "task is required" }, { status: 400 });
+  const history: { role: "user" | "assistant"; content: string }[] =
+    Array.isArray(body.messages) && body.messages.length > 0
+      ? body.messages
+          .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+          .map((m) => ({ role: m.role, content: m.content }))
+      : body.task && body.task.trim()
+      ? [{ role: "user" as const, content: body.task }]
+      : [];
+  if (history.length === 0) {
+    return NextResponse.json({ error: "messages or task required" }, { status: 400 });
+  }
+  if (history[history.length - 1].role !== "user") {
+    return NextResponse.json({ error: "last message must be user" }, { status: 400 });
   }
 
   const def = AGENT_DEFS[agentId];
@@ -35,7 +51,7 @@ export async function POST(req: NextRequest) {
             { type: "text", text: LEX_TEAM_RULES, cache_control: { type: "ephemeral" } },
             { type: "text", text: def.system },
           ],
-          messages: [{ role: "user", content: task }],
+          messages: history,
         });
 
         let full = "";
