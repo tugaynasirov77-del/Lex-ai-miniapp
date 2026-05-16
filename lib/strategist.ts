@@ -70,9 +70,9 @@ export async function generatePlanForProject(
       .eq("week_start", wk)
       .maybeSingle();
     if (existing) return { skipped: "plan already exists for this week" };
-  } else {
-    await sb.from("content_plans").delete().eq("project_id", projectId).eq("week_start", wk);
   }
+  // При force=true НЕ удаляем — будем upsert по (project_id, week_start),
+  // чтобы id плана не менялся и привязанные черновики не теряли ссылку.
 
   const budget = await canSpend(projectId);
   if (!budget.ok) return { skipped: budget.reason || "budget" };
@@ -145,17 +145,20 @@ export async function generatePlanForProject(
 
   const { data: inserted, error } = await sb
     .from("content_plans")
-    .insert({
-      project_id: projectId,
-      week_start: wk,
-      items: plan.items,
-      summary: plan.summary,
-      cost_usd: cost,
-      model: STRATEGIST_MODEL,
-    })
+    .upsert(
+      {
+        project_id: projectId,
+        week_start: wk,
+        items: plan.items,
+        summary: plan.summary,
+        cost_usd: cost,
+        model: STRATEGIST_MODEL,
+      },
+      { onConflict: "project_id,week_start" }
+    )
     .select("id")
     .single();
-  if (error || !inserted) throw new Error(error?.message || "insert plan failed");
+  if (error || !inserted) throw new Error(error?.message || "upsert plan failed");
 
   await sb
     .from("project_agents")
