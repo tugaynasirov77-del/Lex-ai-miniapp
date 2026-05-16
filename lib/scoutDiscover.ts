@@ -2,7 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { fetchChannelMeta, fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
-import { searchNicheChannels } from "./nicheSearch";
 
 const SCOUT_MODEL = "claude-haiku-4-5-20251001";
 
@@ -49,8 +48,7 @@ function safeJson<T>(s: string): T | null {
 }
 
 export async function discoverCompetitorsForProject(
-  projectId: string,
-  opts: { useNicheSearch?: boolean } = {}
+  projectId: string
 ): Promise<
   | { found: number; cost: number; suggestions: any[]; diagnostics?: any }
   | { skipped: string }
@@ -97,26 +95,12 @@ export async function discoverCompetitorsForProject(
   for (const c of existingComp ?? []) excludeForNiche.add(c.username.toLowerCase());
   for (const s of existingSug ?? []) excludeForNiche.add(s.username.toLowerCase());
 
-  let nicheCandidates: Awaited<ReturnType<typeof searchNicheChannels>>["candidates"] = [];
-  let nicheCost = 0;
-  let nicheDiag: { raw: string[]; dead: string[] } | null = null;
-  if (opts.useNicheSearch) {
-    try {
-      const r = await searchNicheChannels({
-        projectId,
-        channelTitle: meta.title || project.channel_title || project.title,
-        channelDescription: meta.description,
-        recentPostSamples: livePosts.slice(0, 5).map((p) => p.text || "").filter(Boolean),
-        excludeUsernames: excludeForNiche,
-      });
-      nicheCandidates = r.candidates;
-      nicheCost = r.cost;
-      nicheDiag = { raw: r.raw_returned, dead: r.validated_dead };
-    } catch {}
-  }
+  // Niche search через web_search убран: $0.10/клик и нестабильно.
+  // Источники: mentions/forwards твоих постов + viral expansion через постов добавленных конкурентов.
+  void excludeForNiche;
 
   const allCandidates = [...new Set(
-    [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions, ...nicheCandidates.map((c) => c.username)].map((s) => s.toLowerCase())
+    [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions].map((s) => s.toLowerCase())
   )];
 
   const ownUsername = project.channel_username.toLowerCase();
@@ -217,10 +201,8 @@ export async function discoverCompetitorsForProject(
     candidates_alive: liveCandidates.length,
     haiku_scored: results.length,
     saved_pending: upserts.length,
-    niche_raw: nicheDiag?.raw ?? [],
-    niche_dead: nicheDiag?.dead ?? [],
     low_score_rejected: results.filter((r) => typeof r.score === "number" && r.score < 6).map((r) => ({ username: r.username, score: r.score })),
   };
 
-  return { found: upserts.length, cost: cost + nicheCost, suggestions: upserts, diagnostics };
+  return { found: upserts.length, cost, suggestions: upserts, diagnostics };
 }

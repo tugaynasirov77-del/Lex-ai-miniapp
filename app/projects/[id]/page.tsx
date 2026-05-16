@@ -260,33 +260,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const runScout = async (niche = false) => {
+  const runScout = async () => {
     hapticImpact("medium");
     setScouting(true);
     setError(null);
     setCompError(null);
     try {
-      const url = niche ? `/api/projects/${id}/suggestions?niche=1` : `/api/projects/${id}/suggestions`;
-      const r = await tgFetch(url, { method: "POST" });
+      const r = await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
       const d = await r.json();
       if (!r.ok || d.skipped) {
         hapticNotify("warning");
-        const msg = d.skipped || d.error || "не удалось";
-        setCompError(msg);
+        setCompError(d.skipped || d.error || "не удалось");
         return;
       }
       if (d.found === 0) {
         hapticNotify("warning");
-        const dx = d.diagnostics;
-        if (dx && niche) {
-          const parts: string[] = [];
-          if (dx.niche_raw?.length) parts.push(`Sonnet нашёл: ${dx.niche_raw.length}`);
-          if (dx.niche_dead?.length) parts.push(`мёртвых: ${dx.niche_dead.length}`);
-          if (dx.low_score_rejected?.length) parts.push(`низкий балл: ${dx.low_score_rejected.length}`);
-          setCompError(`Ничего релевантного. ${parts.join(" · ") || "Канал слишком закрытый."}`);
-        } else {
-          setCompError("Ничего не найдено в постах канала и конкурентов.");
-        }
+        setCompError("Скаут не нашёл новых каналов в твоих постах и постах конкурентов. Добавь 1–2 конкурентов вручную — дальше сеть будет расти автоматически.");
         return;
       }
       hapticNotify("success");
@@ -585,21 +574,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <h4 className="font-semibold text-sm">🔍 Конкуренты</h4>
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => runScout(false)}
+                    onClick={runScout}
                     disabled={scouting}
                     className="text-[11px] px-2 py-1 rounded-md font-medium disabled:opacity-40"
                     style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}
                   >
                     {scouting ? "…" : "🤖 разведка"}
-                  </button>
-                  <button
-                    onClick={() => runScout(true)}
-                    disabled={scouting}
-                    className="text-[11px] px-2 py-1 rounded-md font-medium disabled:opacity-40"
-                    style={{ background: "rgba(240, 160, 32, 0.08)", color: "#F0A020", border: "1px solid rgba(240, 160, 32, 0.3)" }}
-                    title="Поиск в интернете (~$0.14)"
-                  >
-                    🌐
                   </button>
                   <span className="text-[10px] text-muted uppercase tracking-wider ml-1">{competitors.length}</span>
                 </div>
