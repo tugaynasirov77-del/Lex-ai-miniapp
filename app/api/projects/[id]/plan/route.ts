@@ -37,8 +37,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
+  const force = new URL(req.url).searchParams.get("force") === "1";
   try {
-    const r = await generatePlanForProject(id);
+    const r = await generatePlanForProject(id, { force });
     if ("planId" in r) return Response.json({ ok: true, plan_id: r.planId, cost: r.cost });
     return Response.json({ ok: false, skipped: r.skipped });
   } catch (e: any) {

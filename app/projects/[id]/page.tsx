@@ -103,6 +103,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [planGenerating, setPlanGenerating] = useState(false);
   const [nicheStrategy, setNicheStrategy] = useState<NicheStrategy | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [pipeline, setPipeline] = useState<{ step: string; running: boolean } | null>(null);
   const [competitorInput, setCompetitorInput] = useState("");
   const [addingComp, setAddingComp] = useState(false);
   const [compError, setCompError] = useState<string | null>(null);
@@ -177,6 +178,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
 
+  const runPipeline = async () => {
+    hapticImpact("heavy");
+    setError(null);
+    setCompError(null);
+    try {
+      setPipeline({ step: "1/4 разведка конкурентов", running: true });
+      await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
+
+      setPipeline({ step: "2/4 анализ стратегии ниши", running: true });
+      await tgFetch(`/api/projects/${id}/niche-strategy`, { method: "POST" });
+
+      setPipeline({ step: "3/4 план на неделю", running: true });
+      await tgFetch(`/api/projects/${id}/plan?force=1`, { method: "POST" });
+
+      setPipeline({ step: "4/4 черновик поста", running: true });
+      await tgFetch(`/api/projects/${id}/drafts`, { method: "POST" });
+
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setPipeline(null);
+    }
+  };
+
   const analyzeStrategy = async () => {
     hapticImpact("medium");
     setAnalyzing(true);
@@ -200,11 +228,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const generatePlan = async () => {
+  const generatePlan = async (force = false) => {
     hapticImpact("medium");
     setPlanGenerating(true);
     try {
-      const r = await tgFetch(`/api/projects/${id}/plan`, { method: "POST" });
+      const r = await tgFetch(`/api/projects/${id}/plan${force ? "?force=1" : ""}`, { method: "POST" });
       const d = await r.json();
       if (!r.ok || d.skipped) {
         hapticNotify("warning");
@@ -444,6 +472,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         {!loading && channelAttached && (
           <>
+            <button
+              onClick={runPipeline}
+              disabled={!!pipeline}
+              className="w-full text-sm px-4 py-3 rounded-xl font-medium disabled:opacity-60 active:scale-[0.99] transition-transform"
+              style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+            >
+              {pipeline ? `⏳ ${pipeline.step}…` : "🚀 Прогнать весь цикл"}
+            </button>
+            <p className="text-[10px] text-muted text-center -mt-2 leading-tight">
+              разведка → стратегия ниши → план недели → черновик поста
+            </p>
+
             <div className="glass rounded-xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
@@ -490,7 +530,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {analytics && (
               <div className="glass rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">📊 Аналитика</h4>
+                  <h4 className="font-semibold text-sm">1️⃣ 📊 Аналитика</h4>
                   <span className="text-[10px] text-muted uppercase tracking-wider">за 7 дней</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -571,7 +611,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">🔍 Конкуренты</h4>
+                <h4 className="font-semibold text-sm">2️⃣ 🔍 Конкуренты</h4>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={runScout}
@@ -706,7 +746,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">✍️ Черновики</h4>
+                <h4 className="font-semibold text-sm">5️⃣ ✍️ Черновики</h4>
                 <button
                   onClick={generateDraft}
                   disabled={generating}
@@ -779,7 +819,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">🎯 Стратегия ниши</h4>
+                <h4 className="font-semibold text-sm">3️⃣ 🎯 Стратегия ниши</h4>
                 <button
                   onClick={analyzeStrategy}
                   disabled={analyzing}
@@ -866,9 +906,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">🧭 План на неделю</h4>
+                <h4 className="font-semibold text-sm">4️⃣ 🧭 План на неделю</h4>
                 <button
-                  onClick={generatePlan}
+                  onClick={() => generatePlan(!!plan)}
                   disabled={planGenerating}
                   className="text-xs px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
                   style={{ background: plan ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #F0A020, #D05020)", color: plan ? "#F5EDD8" : "#0A0705" }}
@@ -909,7 +949,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">💬 Комьюнити</h4>
+                <h4 className="font-semibold text-sm">6️⃣ 💬 Комьюнити</h4>
                 <span className="text-[10px] text-muted">ожидает чат</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">
