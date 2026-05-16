@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .order("subscribers", { ascending: false, nullsFirst: false }),
     sb
       .from("content_drafts")
-      .select("id,title_variants,body,status,created_at,cost_usd,published_message_id,published_at,chosen_title")
+      .select("id,title_variants,body,status,created_at,cost_usd,published_message_id,published_at,chosen_title,plan_id,plan_day")
       .eq("project_id", id)
       .in("status", ["pending", "approved"])
       .order("created_at", { ascending: false })
