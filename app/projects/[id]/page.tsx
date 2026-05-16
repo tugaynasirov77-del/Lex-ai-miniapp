@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/Header";
 import SectionIcon from "../../../components/SectionIcon";
+import { TelegramPostPreview } from "../../../components/TelegramPostPreview";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
 
@@ -1057,7 +1058,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <>
                                   <div>
                                     <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
-                                    <div className="text-xs whitespace-pre-wrap text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5">{dayDraft.body}</div>
+                                    <TelegramPostPreview body={dayDraft.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
                                   </div>
                                   {!isApproved && !isPublished && (
                                     <>
