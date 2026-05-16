@@ -49,15 +49,26 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return Response.json({ error: "TELEGRAM_BOT_TOKEN missing" }, { status: 500 });
 
-  const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  // Если есть фото — шлём sendPhoto с текстом в caption (одним постом),
+  // иначе обычное текстовое сообщение
+  const hasPhoto = !!draft.photo_url;
+  const apiPath = hasPhoto ? "sendPhoto" : "sendMessage";
+  const tgPayload: Record<string, any> = {
+    chat_id: a.project.channel_id,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+  if (hasPhoto) {
+    tgPayload.photo = draft.photo_url;
+    tgPayload.caption = text.slice(0, 1024); // Telegram caption limit
+  } else {
+    tgPayload.text = text;
+  }
+
+  const tgRes = await fetch(`https://api.telegram.org/bot${token}/${apiPath}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: a.project.channel_id,
-      text,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
+    body: JSON.stringify(tgPayload),
   });
   const tgJson = await tgRes.json();
   if (!tgJson.ok) {

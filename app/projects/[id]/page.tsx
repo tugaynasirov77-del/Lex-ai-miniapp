@@ -1167,14 +1167,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   {isApproved && !isPublished && (
                                     <div className="space-y-1.5">
                                       {dayDraft.scheduled_at && (
-                                        <div className="text-[11px] px-2.5 py-2 rounded-md" style={{ background: "rgba(34, 211, 165, 0.08)", color: "#22d3a5" }}>
+                                        <div className="text-[11px] px-2.5 py-2 rounded-md text-center" style={{ background: "rgba(34, 211, 165, 0.08)", color: "#22d3a5" }}>
                                           опубликуется {formatScheduledLabel(new Date(dayDraft.scheduled_at), project?.publish_timezone || "Europe/Moscow")}
                                         </div>
                                       )}
-                                      <button onClick={() => publishDraft(dayDraft, 0)} className="w-full text-center text-xs py-2 rounded-md font-medium" style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}>
-                                        опубликовать сейчас
-                                      </button>
-                                      <div className="text-[10px] text-muted">заголовок: {dayDraft.title_variants?.[0] ?? ""}</div>
+                                      <div className="flex gap-2">
+                                        <button onClick={() => publishDraft(dayDraft, 0)} className="flex-1 text-xs py-2 rounded-md font-medium" style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}>
+                                          опубликовать сейчас
+                                        </button>
+                                        <button onClick={() => decideDraft(dayDraft.id, "rejected")} className="text-xs py-2 px-3 rounded-md font-medium" style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}>
+                                          удалить
+                                        </button>
+                                      </div>
+                                      <div className="text-[10px] text-muted text-center">заголовок: {dayDraft.title_variants?.[0] ?? ""}</div>
                                     </div>
                                   )}
                                   {isPublished && project?.channel_username && (
