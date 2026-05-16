@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/Header";
+import SectionIcon from "../../../components/SectionIcon";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
 
@@ -104,6 +105,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [nicheStrategy, setNicheStrategy] = useState<NicheStrategy | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [pipeline, setPipeline] = useState<{ step: string; running: boolean } | null>(null);
+  const [pipelineResult, setPipelineResult] = useState<{
+    scout: { found: number; skipped?: string } | null;
+    strategy: { ok: boolean; posts?: number; skipped?: string } | null;
+    plan: { ok: boolean; skipped?: string } | null;
+    draft: { ok: boolean; skipped?: string; cost?: number } | null;
+  } | null>(null);
   const [competitorInput, setCompetitorInput] = useState("");
   const [addingComp, setAddingComp] = useState(false);
   const [compError, setCompError] = useState<string | null>(null);
@@ -182,20 +189,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     hapticImpact("heavy");
     setError(null);
     setCompError(null);
+    setPipelineResult(null);
+    const result: NonNullable<typeof pipelineResult> = { scout: null, strategy: null, plan: null, draft: null };
     try {
       setPipeline({ step: "1/4 разведка конкурентов", running: true });
-      await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
+      const r1 = await tgFetch(`/api/projects/${id}/suggestions`, { method: "POST" });
+      const d1 = await r1.json();
+      result.scout = { found: d1.found ?? 0, skipped: d1.skipped };
 
-      setPipeline({ step: "2/4 анализ стратегии ниши", running: true });
-      await tgFetch(`/api/projects/${id}/niche-strategy`, { method: "POST" });
+      setPipeline({ step: "2/4 стратегия ниши", running: true });
+      const r2 = await tgFetch(`/api/projects/${id}/niche-strategy`, { method: "POST" });
+      const d2 = await r2.json();
+      result.strategy = { ok: !!d2.ok, posts: d2.posts, skipped: d2.skipped };
 
       setPipeline({ step: "3/4 план на неделю", running: true });
-      await tgFetch(`/api/projects/${id}/plan?force=1`, { method: "POST" });
+      const r3 = await tgFetch(`/api/projects/${id}/plan?force=1`, { method: "POST" });
+      const d3 = await r3.json();
+      result.plan = { ok: !!d3.ok, skipped: d3.skipped };
 
       setPipeline({ step: "4/4 черновик поста", running: true });
-      await tgFetch(`/api/projects/${id}/drafts`, { method: "POST" });
+      const r4 = await tgFetch(`/api/projects/${id}/drafts`, { method: "POST" });
+      const d4 = await r4.json();
+      result.draft = { ok: !!d4.ok, skipped: d4.skipped, cost: d4.cost };
 
       hapticNotify("success");
+      setPipelineResult(result);
       await load();
     } catch (e: any) {
       setError(e.message);
@@ -478,11 +496,62 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               className="w-full text-sm px-4 py-3 rounded-xl font-medium disabled:opacity-60 active:scale-[0.99] transition-transform"
               style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
             >
-              {pipeline ? `⏳ ${pipeline.step}…` : "🚀 Прогнать весь цикл"}
+              {pipeline ? `${pipeline.step}…` : "Прогнать весь цикл"}
             </button>
             <p className="text-[10px] text-muted text-center -mt-2 leading-tight">
               разведка → стратегия ниши → план недели → черновик поста
             </p>
+
+            {pipelineResult && (
+              <div className="glass rounded-xl p-4 space-y-2 border border-amber/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm text-amber">Цикл завершён</h4>
+                  <button onClick={() => setPipelineResult(null)} className="text-xs text-muted">✕</button>
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber font-medium shrink-0">01</span>
+                    <span className="text-ink/85">
+                      {pipelineResult.scout?.skipped
+                        ? `разведка: ${pipelineResult.scout.skipped}`
+                        : (pipelineResult.scout?.found ?? 0) > 0
+                        ? `разведка: нашёл ${pipelineResult.scout?.found} новых каналов`
+                        : "разведка: новых каналов не появилось"}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber font-medium shrink-0">02</span>
+                    <span className="text-ink/85">
+                      {pipelineResult.strategy?.skipped
+                        ? `стратегия: ${pipelineResult.strategy.skipped}`
+                        : pipelineResult.strategy?.ok
+                        ? `стратегия пересобрана из ${pipelineResult.strategy.posts ?? "?"} постов конкурентов`
+                        : "стратегия: пропущено"}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber font-medium shrink-0">03</span>
+                    <span className="text-ink/85">
+                      {pipelineResult.plan?.skipped
+                        ? `план: ${pipelineResult.plan.skipped}`
+                        : pipelineResult.plan?.ok
+                        ? "план на неделю обновлён под стратегию"
+                        : "план: пропущено"}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber font-medium shrink-0">04</span>
+                    <span className="text-ink/85">
+                      {pipelineResult.draft?.skipped
+                        ? `черновик: ${pipelineResult.draft.skipped}`
+                        : pipelineResult.draft?.ok
+                        ? `новый черновик готов ($ ${(pipelineResult.draft.cost ?? 0).toFixed(4)})`
+                        : "черновик: пропущено"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="glass rounded-xl p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -530,7 +599,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {analytics && (
               <div className="glass rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">1️⃣ 📊 Аналитика</h4>
+                  <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">01</span><SectionIcon name="analytics" /><span>Аналитика</span></h4>
                   <span className="text-[10px] text-muted uppercase tracking-wider">за 7 дней</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -611,7 +680,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">2️⃣ 🔍 Конкуренты</h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">02</span><SectionIcon name="scout" /><span>Конкуренты</span></h4>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={runScout}
@@ -746,7 +815,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">5️⃣ ✍️ Черновики</h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">05</span><SectionIcon name="drafts" /><span>Черновики</span></h4>
                 <button
                   onClick={generateDraft}
                   disabled={generating}
@@ -819,7 +888,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">3️⃣ 🎯 Стратегия ниши</h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">03</span><SectionIcon name="strategy" /><span>Стратегия ниши</span></h4>
                 <button
                   onClick={analyzeStrategy}
                   disabled={analyzing}
@@ -906,7 +975,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">4️⃣ 🧭 План на неделю</h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">04</span><SectionIcon name="plan" /><span>План на неделю</span></h4>
                 <button
                   onClick={() => generatePlan(!!plan)}
                   disabled={planGenerating}
@@ -949,7 +1018,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">6️⃣ 💬 Комьюнити</h4>
+                <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">06</span><SectionIcon name="community" /><span>Комьюнити</span></h4>
                 <span className="text-[10px] text-muted">ожидает чат</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">
