@@ -2,10 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { fetchChannelMeta, fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
+import { buildAgentSystem } from "./agents";
 
+// Scout = Милена (маркетолог из команды 7 агентов — ниши и аудитории её зона)
 const SCOUT_MODEL = "claude-haiku-4-5-20251001";
 
-const SCOUT_SYSTEM = `Ты — Разведчик в команде LEX AI. Анализируешь каналы-кандидаты на роль конкурентов.
+const SCOUT_TASK = `ЗАДАЧА: оценить каналы-кандидаты на роль конкурентов для канала пользователя.
 
 Тебе дают:
 1. Контекст моего канала (название, описание, темы)
@@ -152,7 +154,7 @@ export async function discoverCompetitorsForProject(
   const res = await client.messages.create({
     model: SCOUT_MODEL,
     max_tokens: 1024,
-    system: [{ type: "text", text: SCOUT_SYSTEM, cache_control: { type: "ephemeral" } }],
+    system: buildAgentSystem("milena", SCOUT_TASK),
     messages: [{ role: "user", content: ctxLines.join("\n") }],
   });
 
