@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "./Header";
+import { TelegramPostPreview } from "./TelegramPostPreview";
 import { tgFetch, hapticSelection, hapticImpact, hapticNotify } from "../lib/telegram";
 
 type EventKind =
@@ -30,6 +31,16 @@ type InboxEvent = {
     message_id?: number;
     count?: number;
     attempts?: number;
+    body?: string;
+    photo_url?: string | null;
+    poll_data?: {
+      question: string;
+      options: string[];
+      type: "poll" | "quiz";
+      correct_option_id?: number | null;
+      explanation?: string | null;
+    } | null;
+    title?: string | null;
   };
 };
 
@@ -74,6 +85,7 @@ export default function InboxScreen() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventKind | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // id события в работе
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -106,6 +118,41 @@ export default function InboxScreen() {
         method: "PATCH",
         body: JSON.stringify({ draft_id: ev.payload.draft_id, status }),
       });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const uploadPhoto = async (ev: InboxEvent, file: File) => {
+    if (!ev.payload?.draft_id) return;
+    hapticImpact("light");
+    setBusy(ev.id);
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      await tgFetch(`/api/projects/${ev.project_id}/drafts/${ev.payload.draft_id}/photo`, {
+        method: "POST",
+        body: fd,
+      });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removePhoto = async (ev: InboxEvent) => {
+    if (!ev.payload?.draft_id) return;
+    hapticImpact("light");
+    setBusy(ev.id);
+    try {
+      await tgFetch(`/api/projects/${ev.project_id}/drafts/${ev.payload.draft_id}/photo`, { method: "DELETE" });
       hapticNotify("success");
       await load();
     } catch {
@@ -167,9 +214,13 @@ export default function InboxScreen() {
             key={ev.id}
             ev={ev}
             busy={busy === ev.id}
+            expanded={expandedId === ev.id}
+            onToggle={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
             onApprove={() => decideDraft(ev, "approved")}
             onDelete={() => decideDraft(ev, "rejected")}
             onPublishNow={() => publishNow(ev)}
+            onUploadPhoto={(file) => uploadPhoto(ev, file)}
+            onRemovePhoto={() => removePhoto(ev)}
           />
         ))}
       </div>
@@ -199,24 +250,38 @@ function Chip({ label, count, active, color, onClick }: { label: string; count: 
 function EventCard({
   ev,
   busy,
+  expanded,
+  onToggle,
   onApprove,
   onDelete,
   onPublishNow,
+  onUploadPhoto,
+  onRemovePhoto,
 }: {
   ev: InboxEvent;
   busy: boolean;
+  expanded: boolean;
+  onToggle: () => void;
   onApprove: () => void;
   onDelete: () => void;
   onPublishNow: () => void;
+  onUploadPhoto: (f: File) => void;
+  onRemovePhoto: () => void;
 }) {
   const router = useRouter();
   const style = TYPE_STYLE[ev.type];
   const planDay = ev.payload?.plan_day;
-  const showActions = (ev.type === "pending_draft" || ev.type === "approved_soon") && ev.payload?.draft_id;
+  const isDraftEvent = (ev.type === "pending_draft" || ev.type === "approved_soon") && !!ev.payload?.draft_id;
+  const isPoll = !!ev.payload?.poll_data;
 
-  const goToProject = () => {
-    hapticSelection();
-    router.push(`/projects/${ev.project_id}`);
+  const handleBodyClick = () => {
+    if (isDraftEvent) {
+      hapticSelection();
+      onToggle();
+    } else {
+      hapticSelection();
+      router.push(`/projects/${ev.project_id}`);
+    }
   };
 
   return (
@@ -225,7 +290,7 @@ function EventCard({
       style={{ borderLeft: `3px solid ${style.color}` }}
     >
       <button
-        onClick={goToProject}
+        onClick={handleBodyClick}
         className="w-full text-left flex items-start gap-2.5 active:opacity-80"
       >
         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0" style={{ background: style.bg }}>
@@ -245,11 +310,92 @@ function EventCard({
             <span className="truncate">{ev.channel_username ? `@${ev.channel_username}` : ev.project_title}</span>
             <span>·</span>
             <span>{timeAgo(ev.at)}</span>
+            {isDraftEvent && <span className="ml-auto text-[10px]">{expanded ? "▴" : "▾"}</span>}
           </div>
         </div>
       </button>
 
-      {showActions && ev.type === "pending_draft" && (
+      {/* Развёрнутое превью: текст поста + фото upload */}
+      {expanded && isDraftEvent && (
+        <div className="space-y-2 pt-1 border-t border-white/5">
+          {isPoll && ev.payload?.poll_data ? (
+            <div className="space-y-1.5">
+              <div className="text-[10px] text-muted uppercase tracking-wider">{ev.payload.poll_data.type === "quiz" ? "Викторина" : "Опрос"}</div>
+              <div className="bg-white/[0.03] rounded-md p-2.5 space-y-2">
+                <div className="text-xs font-medium text-ink/95">{ev.payload.poll_data.question}</div>
+                <div className="space-y-1">
+                  {ev.payload.poll_data.options.map((opt, k) => {
+                    const isCorrect = ev.payload?.poll_data?.type === "quiz" && ev.payload?.poll_data?.correct_option_id === k;
+                    return (
+                      <div
+                        key={k}
+                        className="text-[11px] px-2 py-1.5 rounded flex items-center gap-2"
+                        style={{
+                          background: isCorrect ? "rgba(34, 211, 165, 0.10)" : "rgba(255,255,255,0.03)",
+                          color: isCorrect ? "#22d3a5" : "#F5EDD8",
+                        }}
+                      >
+                        <span className="opacity-50">{k + 1}.</span>
+                        <span className="flex-1">{opt}</span>
+                        {isCorrect && <span className="text-[10px]">✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {ev.payload.poll_data.type === "quiz" && ev.payload.poll_data.explanation && (
+                  <div className="text-[10px] text-muted italic pt-1 border-t border-white/5">{ev.payload.poll_data.explanation}</div>
+                )}
+              </div>
+            </div>
+          ) : ev.payload?.body ? (
+            <div>
+              <div className="text-[10px] text-muted uppercase tracking-wider mb-1">текст поста</div>
+              <TelegramPostPreview body={ev.payload.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
+            </div>
+          ) : null}
+
+          {/* Фото — только для текстовых постов */}
+          {!isPoll && (
+            ev.payload?.photo_url ? (
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ev.payload.photo_url} alt="" className="w-full max-h-40 object-cover rounded-md" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemovePhoto(); }}
+                  disabled={busy}
+                  className="absolute top-1.5 right-1.5 text-[10px] px-2 py-1 rounded bg-black/60 text-white"
+                >
+                  убрать фото
+                </button>
+              </div>
+            ) : (
+              <label
+                className="block w-full text-center text-xs py-2 rounded-md font-medium cursor-pointer"
+                style={{ background: "rgba(124, 92, 252, 0.12)", color: "#a98cff" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                прикрепить фото
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onUploadPhoto(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )
+          )}
+
+          {ev.payload?.title && !isPoll && (
+            <div className="text-[10px] text-muted text-center">заголовок: {ev.payload.title}</div>
+          )}
+        </div>
+      )}
+
+      {ev.type === "pending_draft" && isDraftEvent && (
         <div className="flex gap-2">
           <ActionButton
             label={busy ? "…" : "одобрить"}
@@ -270,7 +416,7 @@ function EventCard({
         </div>
       )}
 
-      {showActions && ev.type === "approved_soon" && (
+      {ev.type === "approved_soon" && isDraftEvent && (
         <div className="flex gap-2">
           <ActionButton
             label={busy ? "…" : "опубликовать сейчас"}
