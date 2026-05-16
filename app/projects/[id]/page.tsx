@@ -130,7 +130,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [attaching, setAttaching] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
 
-  const load = async (silent = false) => {
+  // ВАЖНО: по умолчанию обновление silent (не перерисовывает контент через
+  // loading=true), чтобы при действиях пользователя страница не сбрасывалась
+  // в начало. Только первая загрузка из useEffect показывает «загрузка…».
+  const load = async (silent = true) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
@@ -154,7 +157,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   };
 
   useEffect(() => {
-    load();
+    load(false);
   }, [id]);
 
   const attach = async () => {
