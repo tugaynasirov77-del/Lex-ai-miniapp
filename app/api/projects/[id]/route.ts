@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .order("subscribers", { ascending: false, nullsFirst: false }),
     sb
       .from("content_drafts")
-      .select("id,title_variants,body,status,created_at,cost_usd,published_message_id,published_at,chosen_title,plan_id,plan_day")
+      .select("id,title_variants,body,status,created_at,cost_usd,published_message_id,published_at,chosen_title,plan_id,plan_day,scheduled_at,photo_url")
       .eq("project_id", id)
       .in("status", ["pending", "approved"])
       .order("created_at", { ascending: false })
@@ -100,4 +100,31 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     suggestions: suggestions ?? [],
     niche_strategy: nicheStrategy ?? null,
   });
+}
+
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const v = verifyInitData(req.headers.get("x-telegram-init-data"));
+  if (!v.ok || !v.user) return Response.json({ error: v.error ?? "unauthorized" }, { status: 401 });
+  const tgId = v.user.id;
+  const { id } = await ctx.params;
+
+  const body = await req.json().catch(() => ({}));
+  const update: Record<string, any> = {};
+  if (typeof body.publish_time === "string" && /^\d{1,2}:\d{2}$/.test(body.publish_time)) {
+    const [h, m] = body.publish_time.split(":").map((x: string) => parseInt(x, 10));
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      update.publish_time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+  }
+  if (typeof body.publish_timezone === "string" && body.publish_timezone.length < 64) {
+    update.publish_timezone = body.publish_timezone;
+  }
+  if (Object.keys(update).length === 0) {
+    return Response.json({ error: "нет полей для обновления" }, { status: 400 });
+  }
+
+  const sb = getSupabase();
+  const { error } = await sb.from("projects").update(update).eq("id", id).eq("tg_id", tgId);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
 }

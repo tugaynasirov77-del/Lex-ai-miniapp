@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getSupabase } from "../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../lib/verifyTelegram";
 import { generateDraftForProject } from "../../../../../lib/contentWriter";
+import { computeScheduledAt } from "../../../../../lib/scheduling";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,17 +68,50 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if ("err" in a) return a.err;
 
   const body = await req.json().catch(() => ({}));
-  const { draft_id, status } = body as { draft_id?: string; status?: "approved" | "rejected" };
+  const { draft_id, status, publish_now } = body as {
+    draft_id?: string;
+    status?: "approved" | "rejected";
+    publish_now?: boolean;
+  };
   if (!draft_id || !["approved", "rejected"].includes(status ?? "")) {
     return Response.json({ error: "draft_id + status (approved|rejected) required" }, { status: 400 });
   }
 
   const sb = getSupabase();
+
+  // Если одобряем — вычисляем scheduled_at (или null если publish_now)
+  let scheduledAt: string | null = null;
+  if (status === "approved" && !publish_now) {
+    const { data: draft } = await sb
+      .from("content_drafts")
+      .select("plan_day")
+      .eq("id", draft_id)
+      .eq("project_id", id)
+      .maybeSingle();
+    const { data: project } = await sb
+      .from("projects")
+      .select("publish_time, publish_timezone")
+      .eq("id", id)
+      .maybeSingle();
+    if (draft && project) {
+      scheduledAt = computeScheduledAt(
+        project.publish_time || "10:00",
+        project.publish_timezone || "Europe/Moscow",
+        draft.plan_day
+      ).toISOString();
+    }
+  }
+
+  const update: Record<string, any> = { status, decided_at: new Date().toISOString() };
+  if (status === "approved") {
+    update.scheduled_at = scheduledAt; // null при publish_now — публикуем сразу
+  }
+
   const { error } = await sb
     .from("content_drafts")
-    .update({ status, decided_at: new Date().toISOString() })
+    .update(update)
     .eq("id", draft_id)
     .eq("project_id", id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, scheduled_at: scheduledAt });
 }

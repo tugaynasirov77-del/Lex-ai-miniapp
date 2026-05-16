@@ -30,6 +30,8 @@ export interface ProjectRow {
   channel_subscribers?: number | null;
   bot_admin_status?: string | null;
   channel_attached_at?: string | null;
+  publish_time?: string | null;
+  publish_timezone?: string | null;
 }
 
 export interface ProjectBudgetRow {

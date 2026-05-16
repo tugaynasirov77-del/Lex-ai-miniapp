@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Header from "../../../components/Header";
 import SectionIcon from "../../../components/SectionIcon";
 import { TelegramPostPreview } from "../../../components/TelegramPostPreview";
+import { formatScheduledLabel } from "../../../lib/scheduling";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
 
@@ -48,6 +49,8 @@ type Draft = {
   chosen_title?: string | null;
   plan_id?: string | null;
   plan_day?: string | null;
+  scheduled_at?: string | null;
+  photo_url?: string | null;
 };
 
 type ScoutSuggestion = {
@@ -368,13 +371,56 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const decideDraft = async (draftId: string, status: "approved" | "rejected") => {
+  const uploadDraftPhoto = async (draftId: string, file: File) => {
+    hapticImpact("light");
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      const r = await tgFetch(`/api/projects/${id}/drafts/${draftId}/photo`, {
+        method: "POST",
+        body: fd,
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "не удалось загрузить фото");
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    }
+  };
+
+  const removeDraftPhoto = async (draftId: string) => {
+    hapticImpact("light");
+    try {
+      await tgFetch(`/api/projects/${id}/drafts/${draftId}/photo`, { method: "DELETE" });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    }
+  };
+
+  const updatePublishTime = async (newTime: string) => {
+    try {
+      await tgFetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ publish_time: newTime }),
+      });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    }
+  };
+
+  const decideDraft = async (draftId: string, status: "approved" | "rejected", publishNow = false) => {
     hapticImpact(status === "approved" ? "medium" : "light");
     setExpandedDraft(null);
     try {
       await tgFetch(`/api/projects/${id}/drafts`, {
         method: "PATCH",
-        body: JSON.stringify({ draft_id: draftId, status }),
+        body: JSON.stringify({ draft_id: draftId, status, publish_now: publishNow }),
       });
       hapticNotify("success");
       if (status === "rejected") {
@@ -685,6 +731,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <p className="text-[11px] text-muted leading-relaxed">
                 Автостоп при превышении. Резерв на 45 постов, ежедневную разведку, недельный AI-отчёт, A/B заголовки.
+              </p>
+            </div>
+
+            <div className="glass rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">Время публикации</h4>
+                <span className="text-[10px] text-muted">{project?.publish_timezone || "Europe/Moscow"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  defaultValue={project?.publish_time || "10:00"}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== (project?.publish_time || "10:00")) {
+                      updatePublishTime(e.target.value);
+                    }
+                  }}
+                  className="bg-white/5 text-ink text-sm px-3 py-2 rounded-md outline-none flex-1"
+                />
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Одобренные посты из плана уходят в свой день недели в это время. Можно вручную «опубликовать сейчас» для любого черновика.
               </p>
             </div>
 
@@ -1060,6 +1128,32 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
                                     <TelegramPostPreview body={dayDraft.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
                                   </div>
+                                  {/* Фото-блок (для любого черновика до публикации) */}
+                                  {!isPublished && (
+                                    <div className="space-y-1.5">
+                                      {dayDraft.photo_url ? (
+                                        <div className="relative">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src={dayDraft.photo_url} alt="" className="w-full max-h-40 object-cover rounded-md" />
+                                          <button onClick={() => removeDraftPhoto(dayDraft.id)} className="absolute top-1.5 right-1.5 text-[10px] px-2 py-1 rounded bg-black/60 text-white">убрать фото</button>
+                                        </div>
+                                      ) : (
+                                        <label className="block w-full text-center text-xs py-2 rounded-md font-medium cursor-pointer" style={{ background: "rgba(124, 92, 252, 0.12)", color: "#a98cff" }}>
+                                          прикрепить фото
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const f = e.target.files?.[0];
+                                              if (f) uploadDraftPhoto(dayDraft.id, f);
+                                              e.target.value = "";
+                                            }}
+                                          />
+                                        </label>
+                                      )}
+                                    </div>
+                                  )}
                                   {!isApproved && !isPublished && (
                                     <>
                                       <div className="text-[10px] text-muted">3 варианта заголовка: {dayDraft.title_variants.map((t, j) => `${j + 1}) ${t}`).join(" · ")}</div>
@@ -1072,14 +1166,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   )}
                                   {isApproved && !isPublished && (
                                     <div className="space-y-1.5">
-                                      <div className="text-[10px] text-muted uppercase tracking-wider">опубликовать с заголовком</div>
-                                      {dayDraft.title_variants.map((t, j) => (
-                                        <button key={j} onClick={() => publishDraft(dayDraft, j)} className="w-full text-left text-xs p-2 rounded-md font-medium flex items-center gap-2" style={{ background: "rgba(240, 160, 32, 0.12)", color: "#F0A020" }}>
-                                          <span className="text-[10px] opacity-70">{j + 1}</span>
-                                          <span className="flex-1 truncate text-ink/90">{t}</span>
-                                          <span className="text-[10px]">→</span>
-                                        </button>
-                                      ))}
+                                      {dayDraft.scheduled_at && (
+                                        <div className="text-[11px] px-2.5 py-2 rounded-md" style={{ background: "rgba(34, 211, 165, 0.08)", color: "#22d3a5" }}>
+                                          опубликуется {formatScheduledLabel(new Date(dayDraft.scheduled_at), project?.publish_timezone || "Europe/Moscow")}
+                                        </div>
+                                      )}
+                                      <button onClick={() => publishDraft(dayDraft, 0)} className="w-full text-center text-xs py-2 rounded-md font-medium" style={{ background: "rgba(240, 160, 32, 0.15)", color: "#F0A020" }}>
+                                        опубликовать сейчас
+                                      </button>
+                                      <div className="text-[10px] text-muted">заголовок: {dayDraft.title_variants?.[0] ?? ""}</div>
                                     </div>
                                   )}
                                   {isPublished && project?.channel_username && (
