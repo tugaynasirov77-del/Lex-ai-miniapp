@@ -14,6 +14,9 @@ type AnalyticsBlock = {
   top_posts: { message_id: number; text: string | null; views: number | null; published_at: string | null }[];
 };
 
+type PlanItem = { day: string; topic: string; hook: string; why: string; type: string };
+type Plan = { id: string; week_start: string; items: PlanItem[]; summary: string | null; created_at: string; cost_usd: number };
+
 type Draft = {
   id: string;
   title_variants: string[];
@@ -68,6 +71,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [generating, setGenerating] = useState(false);
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [planGenerating, setPlanGenerating] = useState(false);
   const [competitorInput, setCompetitorInput] = useState("");
   const [addingComp, setAddingComp] = useState(false);
   const [compError, setCompError] = useState<string | null>(null);
@@ -91,6 +96,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       setAnalytics(d.analytics ?? null);
       setCompetitors(d.competitors ?? []);
       setDrafts(d.drafts ?? []);
+      setPlan(d.plan ?? null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -138,6 +144,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const spent = budget?.spent_usd_current_month ?? 0;
   const cap = budget?.monthly_cap_usd ?? 1;
   const spentPct = Math.min(100, (spent / cap) * 100);
+
+  const generatePlan = async () => {
+    hapticImpact("medium");
+    setPlanGenerating(true);
+    try {
+      const r = await tgFetch(`/api/projects/${id}/plan`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok || d.skipped) {
+        hapticNotify("warning");
+        if (d.skipped) setError(d.skipped);
+        else setError(d.error || "не удалось");
+        return;
+      }
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setPlanGenerating(false);
+    }
+  };
 
   const generateDraft = async () => {
     hapticImpact("medium");
@@ -578,6 +606,59 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 );
               })}
+            </div>
+
+            <div className="glass rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">🧭 План на неделю</h4>
+                <button
+                  onClick={generatePlan}
+                  disabled={planGenerating}
+                  className="text-xs px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
+                  style={{ background: plan ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #F0A020, #D05020)", color: plan ? "#F5EDD8" : "#0A0705" }}
+                >
+                  {planGenerating ? "думаю…" : plan ? "обновить" : "+ построить"}
+                </button>
+              </div>
+              {!plan && (
+                <p className="text-xs text-muted leading-relaxed">
+                  Стратег предложит 7 тем на следующую неделю, основываясь на твоих топ-постах и конкурентах. По воскресеньям обновляется автоматически.
+                </p>
+              )}
+              {plan && (
+                <>
+                  {plan.summary && (
+                    <div className="text-xs text-ink/80 leading-relaxed bg-white/[0.03] rounded-md p-2.5 border-l-2 border-amber/50">
+                      {plan.summary}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    {plan.items.map((it, i) => (
+                      <div key={i} className="flex gap-2 items-start text-xs">
+                        <span className="text-amber font-medium uppercase shrink-0 w-7 pt-0.5">{it.day}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-ink/90">{it.topic}</div>
+                          <div className="text-muted line-clamp-1">{it.hook}</div>
+                          {it.why && <div className="text-[10px] text-muted/70 italic mt-0.5">{it.why}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-muted">
+                    неделя с {new Date(plan.week_start).toLocaleDateString("ru-RU")} • $ {Number(plan.cost_usd).toFixed(4)}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="glass rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">💬 Комьюнити</h4>
+                <span className="text-[10px] text-muted">ожидает чат</span>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                Привяжи к каналу обсуждение (Settings → Discussion). Когда чат подключён и @Lex_app_bot в нём админ — Комьюнити начнёт готовить черновики ответов на комментарии.
+              </p>
             </div>
 
             <div className="space-y-2">
