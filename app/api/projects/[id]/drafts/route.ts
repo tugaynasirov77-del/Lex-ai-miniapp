@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
 
-  let seed: { planId?: string; planDay?: string; topic?: string; hook?: string } | undefined;
+  let seed: { planId?: string; planDay?: string; topic?: string; hook?: string; format?: "text" | "poll" | "quiz" } | undefined;
   try {
     const body = await req.json();
     if (body && typeof body === "object") {
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         planDay: body.plan_day || body.planDay,
         topic: body.topic,
         hook: body.hook,
+        format: body.format,
       };
     }
   } catch {}

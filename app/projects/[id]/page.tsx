@@ -37,6 +37,14 @@ type NicheStrategy = {
   cost_usd: number;
 };
 
+type PollData = {
+  question: string;
+  options: string[];
+  type: "poll" | "quiz";
+  correct_option_id?: number | null;
+  explanation?: string | null;
+};
+
 type Draft = {
   id: string;
   title_variants: string[];
@@ -51,6 +59,7 @@ type Draft = {
   plan_day?: string | null;
   scheduled_at?: string | null;
   photo_url?: string | null;
+  poll_data?: PollData | null;
 };
 
 type ScoutSuggestion = {
@@ -236,6 +245,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             plan_day: items[i].day,
             topic: items[i].topic,
             hook: items[i].hook,
+            format: (items[i] as any).format ?? "text",
           }),
         });
         const d4 = await r4.json();
@@ -315,6 +325,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           plan_day: planItem.day,
           topic: planItem.topic,
           hook: planItem.hook,
+          format: (planItem as any).format ?? "text",
         }),
       });
       const d = await r.json();
@@ -1127,12 +1138,47 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               )}
                               {dayDraft && (
                                 <>
-                                  <div>
-                                    <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
-                                    <TelegramPostPreview body={dayDraft.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
-                                  </div>
-                                  {/* Фото-блок (для любого черновика до публикации) */}
-                                  {!isPublished && (
+                                  {dayDraft.poll_data ? (
+                                    <div className="space-y-1.5">
+                                      <div className="text-[10px] text-muted uppercase tracking-wider">
+                                        {dayDraft.poll_data.type === "quiz" ? "Викторина" : "Опрос"}
+                                      </div>
+                                      <div className="bg-white/[0.03] rounded-md p-2.5 space-y-2">
+                                        <div className="text-xs font-medium text-ink/95">{dayDraft.poll_data.question}</div>
+                                        <div className="space-y-1">
+                                          {dayDraft.poll_data.options.map((opt, k) => {
+                                            const isCorrect = dayDraft.poll_data?.type === "quiz" && dayDraft.poll_data?.correct_option_id === k;
+                                            return (
+                                              <div
+                                                key={k}
+                                                className="text-[11px] px-2 py-1.5 rounded flex items-center gap-2"
+                                                style={{
+                                                  background: isCorrect ? "rgba(34, 211, 165, 0.10)" : "rgba(255,255,255,0.03)",
+                                                  color: isCorrect ? "#22d3a5" : "#F5EDD8",
+                                                }}
+                                              >
+                                                <span className="opacity-50">{k + 1}.</span>
+                                                <span className="flex-1">{opt}</span>
+                                                {isCorrect && <span className="text-[10px]">✓</span>}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                        {dayDraft.poll_data.type === "quiz" && dayDraft.poll_data.explanation && (
+                                          <div className="text-[10px] text-muted italic pt-1 border-t border-white/5">
+                                            {dayDraft.poll_data.explanation}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
+                                      <TelegramPostPreview body={dayDraft.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
+                                    </div>
+                                  )}
+                                  {/* Фото-блок (только для текстовых постов — у опросов нельзя фото) */}
+                                  {!isPublished && !dayDraft.poll_data && (
                                     <div className="space-y-1.5">
                                       {dayDraft.photo_url ? (
                                         <div className="relative">
@@ -1159,7 +1205,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   )}
                                   {!isApproved && !isPublished && (
                                     <>
-                                      <div className="text-[10px] text-muted">3 варианта заголовка: {dayDraft.title_variants.map((t, j) => `${j + 1}) ${t}`).join(" · ")}</div>
+                                      {!dayDraft.poll_data && dayDraft.title_variants.length > 0 && (
+                                        <div className="text-[10px] text-muted">3 варианта заголовка: {dayDraft.title_variants.map((t, j) => `${j + 1}) ${t}`).join(" · ")}</div>
+                                      )}
                                       <div className="flex gap-2">
                                         <button onClick={() => decideDraft(dayDraft.id, "approved")} className="flex-1 text-xs py-2 rounded-md font-medium" style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}>одобрить</button>
                                         <button onClick={() => decideDraft(dayDraft.id, "rejected")} className="flex-1 text-xs py-2 rounded-md font-medium" style={{ background: "rgba(239, 68, 68, 0.12)", color: "#ef4444" }}>отклонить</button>
@@ -1182,7 +1230,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                           удалить
                                         </button>
                                       </div>
-                                      <div className="text-[10px] text-muted text-center">заголовок: {dayDraft.title_variants?.[0] ?? ""}</div>
+                                      {!dayDraft.poll_data && dayDraft.title_variants?.[0] && (
+                                        <div className="text-[10px] text-muted text-center">заголовок: {dayDraft.title_variants[0]}</div>
+                                      )}
                                     </div>
                                   )}
                                   {isPublished && project?.channel_username && (
