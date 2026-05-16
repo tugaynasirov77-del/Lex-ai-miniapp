@@ -132,51 +132,12 @@ export default function HomeScreen() {
         </button>
       </div>
 
-      {/* ── Быстрые теги ── */}
-      <div style={styles.tagsRow}>
-        {QUICK_TAGS.map(tag => (
-          <button
-            key={tag}
-            style={{
-              ...styles.tag,
-              ...(activeTag === tag ? styles.tagActive : {}),
-            }}
-            onClick={() => handleTagClick(tag)}
-          >
-            {tag}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Разделитель ── */}
-      <div style={styles.divider} />
-
-      {/* ── Live Activity / Недавние ── */}
-      {activeTask ? (
-        <LiveActivityAmber task={activeTask} onReset={handleReset} onBusy={setBusy} />
-      ) : (
-        <section style={styles.recent}>
-          <p style={styles.recentLabel}>// недавние</p>
-
-          {recent.length === 0 ? (
-            <p style={{ ...styles.recentMeta, marginTop: 4 }}>пока пусто — отправь первую задачу</p>
-          ) : (
-            recent.map(item => (
-              <div
-                key={item.id}
-                style={styles.recentItem}
-                onClick={() => setTask(item.title)}
-              >
-                <div style={styles.recentDot} />
-                <div style={styles.recentText}>
-                  <p style={styles.recentTitle}>{item.title}</p>
-                  <p style={styles.recentMeta}>{item.agentName} · {formatAgo(item.createdAt)}</p>
-                </div>
-                <span style={styles.recentArrow}>›</span>
-              </div>
-            ))
-          )}
-        </section>
+      {/* ── Live Activity ── */}
+      {activeTask && (
+        <>
+          <div style={styles.divider} />
+          <LiveActivityAmber task={activeTask} onReset={handleReset} onBusy={setBusy} />
+        </>
       )}
 
     </div>
