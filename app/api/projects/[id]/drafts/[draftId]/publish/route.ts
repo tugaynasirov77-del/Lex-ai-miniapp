@@ -42,7 +42,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (draft.published_message_id) return Response.json({ error: "уже опубликован" }, { status: 400 });
 
   const chosenTitle = draft.title_variants?.[titleIndex] ?? draft.title_variants?.[0] ?? "";
-  const text = chosenTitle ? `${chosenTitle}\n\n${draft.body}` : draft.body;
+  // title — plain text, экранируем спецсимволы HTML; body уже содержит размеченный Telegram HTML
+  const escTitle = chosenTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const text = escTitle ? `<b>${escTitle}</b>\n\n${draft.body}` : draft.body;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return Response.json({ error: "TELEGRAM_BOT_TOKEN missing" }, { status: 500 });
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     body: JSON.stringify({
       chat_id: a.project.channel_id,
       text,
+      parse_mode: "HTML",
       disable_web_page_preview: true,
     }),
   });
