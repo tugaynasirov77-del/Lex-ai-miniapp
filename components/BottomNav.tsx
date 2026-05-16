@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { hapticSelection } from "../lib/telegram";
 
 function HomeIcon({ active }: { active?: boolean }) {
@@ -69,12 +70,26 @@ const TABS = [
 
 export default function BottomNav() {
   const path = usePathname();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      const delta = window.innerHeight - vv.height;
+      setKeyboardOpen(delta > 120);
+    };
+    vv.addEventListener("resize", onResize);
+    onResize();
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
   return (
     <nav
       style={{
         position: "fixed",
         left: "50%",
-        transform: "translateX(-50%)",
+        transform: keyboardOpen ? "translate(-50%, 100%)" : "translateX(-50%)",
         bottom: 0,
         width: "100%",
         maxWidth: 390,
@@ -86,6 +101,8 @@ export default function BottomNav() {
         background: "rgba(10,7,5,0.85)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
+        transition: "transform 180ms ease-out",
+        pointerEvents: keyboardOpen ? "none" : "auto",
       }}
     >
       {TABS.map(({ href, label, Icon }) => {
