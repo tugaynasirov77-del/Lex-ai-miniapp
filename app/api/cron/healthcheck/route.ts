@@ -1,4 +1,5 @@
 import { getSupabase } from "../../../../lib/supabase";
+import { publishDueDrafts } from "../../../../lib/publishScheduler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -134,5 +135,14 @@ export async function GET(req: Request) {
     await sendAlert(alerts.join("\n\n"));
   }
 
-  return Response.json({ ok: true, results, alerts_sent: alerts.length });
+  // Заодно публикуем все запланированные посты с scheduled_at <= now.
+  // Healthcheck бежит каждые 5 минут — это даёт точность ±2.5 минуты.
+  let publish: { processed: number; results: any[] } = { processed: 0, results: [] };
+  try {
+    publish = await publishDueDrafts();
+  } catch (e: any) {
+    publish.results.push({ error: e.message ?? "publish scheduler crashed" });
+  }
+
+  return Response.json({ ok: true, results, alerts_sent: alerts.length, publish });
 }

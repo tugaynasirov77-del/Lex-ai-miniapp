@@ -52,7 +52,8 @@ export function showBackButton(onClick: () => void): () => void {
 export function tgFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("x-telegram-init-data", getInitData());
-  if (init.body && !headers.has("content-type")) {
+  // FormData сама ставит правильный content-type с boundary — не перетираем
+  if (init.body && !headers.has("content-type") && !(init.body instanceof FormData)) {
     headers.set("content-type", "application/json");
   }
   return fetch(url, { ...init, headers });
