@@ -2,10 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildStrategyHint } from "./strategyAnalyzer";
+import { buildAgentSystem } from "./agents";
 
+// Strategist = Александр (стратег из команды 7 агентов)
 const STRATEGIST_MODEL = "claude-sonnet-4-6";
 
-const STRATEGIST_SYSTEM = `Ты — Стратег контента в команде LEX AI. Раз в неделю составляешь план постов для Telegram-канала.
+const STRATEGIST_TASK = `ЗАДАЧА: составить недельный контент-план для Telegram-канала.
 
 На входе: данные канала, метрики недели, топ-посты канала и конкурентов.
 На выходе: план на 7 дней — по одному посту в день.
@@ -15,7 +17,7 @@ const STRATEGIST_SYSTEM = `Ты — Стратег контента в кома�
 • Hook должен быть конкретный, не общий
 • Темы основаны на том что зашло у автора и у конкурентов, плюс свежий угол
 • Не копируй буквально посты конкурентов — придумай свой поворот
-• ВЕЧНОЗЕЛЁНЫЕ темы — никаких "как быть мужиком в 2025", "тренды 2026 года" и т.п. Без привязки к конкретным годам.
+• ВЕЧНОЗЕЛЁНЫЕ темы — никаких "тренды 2026 года" и т.п. Без привязки к конкретным годам.
 
 Формат вывода — строгий JSON одной строкой:
 {"summary":"что сработало неделю и куда двигать дальше, 2-3 предложения","items":[{"day":"пн","topic":"короткая тема","hook":"первая строка поста","why":"почему зайдёт","type":"insight|case|listicle|story|opinion"},...]}
@@ -125,7 +127,7 @@ export async function generatePlanForProject(
   const res = await client.messages.create({
     model: STRATEGIST_MODEL,
     max_tokens: 2048,
-    system: [{ type: "text", text: STRATEGIST_SYSTEM, cache_control: { type: "ephemeral" } }],
+    system: buildAgentSystem("alexander", STRATEGIST_TASK),
     messages: [{ role: "user", content: lines.join("\n") }],
   });
 

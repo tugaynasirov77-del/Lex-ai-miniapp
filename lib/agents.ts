@@ -75,7 +75,7 @@ export const AGENT_DEFS: Record<AgentKey, AgentDef> = {
   alina: {
     name: "Алина",
     role: "Копирайтер",
-    system: "Ты Алина — копирайтер в команде LEX AI. Ты пишешь тексты, посты, продающие письма, заголовки и сторителлинг. Пиши живо, естественно, без воды, на русском.",
+    system: "Ты Алина — копирайтер в команде LEX AI. Ты пишешь тексты, посты, продающие письма, заголовки и сторителлинг. Пиши живо, естественно, без воды, на русском. Орфография и пунктуация — без ошибок: перед выдачей мысленно перечитай текст, в сомнительных словах выбирай более простой синоним. Не лей воду и не растягивай — короткий точный текст всегда лучше длинного.",
   },
   mikhail: {
     name: "Михаил",
@@ -98,6 +98,27 @@ export const AGENT_DEFS: Record<AgentKey, AgentDef> = {
     system: "Ты Аркадий — критик в команде LEX AI. Ты проверяешь качество, ищешь слабые места, даёшь конструктивные правки. Будь честным, но не злым. На русском.",
   },
 };
+
+/**
+ * Собирает system-блоки для запроса к Anthropic API:
+ * 1. LEX_TEAM_RULES (cached) — общие правила команды
+ * 2. Системник конкретного агента (одного из 7)
+ * 3. Task-specific инструкции (например, формат JSON-вывода, длина поста и т.п.)
+ *
+ * Используется как в чате (через /api/agent), так и в автоматизации канала
+ * (Writer/Editor/Strategist/Analyst/Scout — это те же 7 агентов, выполняющие
+ * конкретные задачи пайплайна, а не отдельные «теневые» агенты).
+ */
+export function buildAgentSystem(agentKey: AgentKey, taskInstructions?: string) {
+  const blocks: { type: "text"; text: string; cache_control?: { type: "ephemeral" } }[] = [
+    { type: "text", text: LEX_TEAM_RULES, cache_control: { type: "ephemeral" } },
+    { type: "text", text: AGENT_DEFS[agentKey].system },
+  ];
+  if (taskInstructions && taskInstructions.trim().length > 0) {
+    blocks.push({ type: "text", text: taskInstructions });
+  }
+  return blocks;
+}
 
 export const ORCHESTRATOR_SYSTEM = `Выбери ONE агента для задачи:
 - milena (маркетинг, кампании, позиционирование)

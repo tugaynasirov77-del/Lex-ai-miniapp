@@ -2,12 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
+import { buildAgentSystem } from "./agents";
 
+// Strategy Analyzer = Николай (аналитик из команды 7 агентов)
 const ANALYZER_MODEL = "claude-sonnet-4-6";
 
-const ANALYZER_SYSTEM = `Ты — Стратегический аналитик в команде LEX AI. Получаешь корпус постов топ-5 каналов одной ниши с количеством просмотров.
-
-Твоя задача — найти ВЫИГРЫШНЫЕ паттерны: что общего у постов с большими просмотрами, что отличает их от обычных.
+const ANALYZER_TASK = `ЗАДАЧА: проанализировать корпус постов топ-5 каналов одной ниши с количеством просмотров и найти ВЫИГРЫШНЫЕ паттерны — что общего у постов с большими просмотрами, что отличает их от обычных.
 
 Анализируй:
 • Оптимальная длина body (в символах)
@@ -104,7 +104,7 @@ export async function analyzeNicheStrategy(projectId: string): Promise<{ cost: n
   const res = await client.messages.create({
     model: ANALYZER_MODEL,
     max_tokens: 2048,
-    system: [{ type: "text", text: ANALYZER_SYSTEM, cache_control: { type: "ephemeral" } }],
+    system: buildAgentSystem("nikolay", ANALYZER_TASK),
     messages: [{ role: "user", content: lines.join("\n") }],
   });
 

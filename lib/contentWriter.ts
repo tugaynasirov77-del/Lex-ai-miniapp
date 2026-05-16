@@ -3,38 +3,44 @@ import { getSupabase } from "./supabase";
 import { fetchChannelMeta } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildStrategyHint } from "./strategyAnalyzer";
+import { buildAgentSystem } from "./agents";
 
+// Writer = Алина (копирайтер из команды 7 агентов)
+// Editor = Аркадий (критик из команды 7 агентов)
 const WRITER_MODEL = "claude-sonnet-4-6";
-const EDITOR_MODEL = "claude-haiku-4-5-20251001";
+const EDITOR_MODEL = "claude-sonnet-4-6";
 
-const WRITER_SYSTEM = `Ты — Контентщик в команде LEX AI. Пишешь посты для Telegram-каналов.
+const WRITER_TASK = `ЗАДАЧА: пост для Telegram-канала.
 
-Правила стиля (для ВСЕХ каналов LEX):
+Требования:
 • plain text без markdown (никаких **, __, #, ~, > и т.п.)
 • ЗАГЛАВНЫМИ — короткие подзаголовки (не более 5 слов)
-• Списки — через символ • (а не - или *)
-• Длина основного текста: 600-1200 символов
-• Без воды, без штампов "в современном мире", без LinkedIn-стиля
+• Списки — через символ •
+• Длина body: 500–800 символов. Жёсткий потолок 900. Лучше короче, чем длиннее.
 • Hook в первой строке: цифра, неожиданное утверждение или вопрос
-• ВЕЧНОЗЕЛЁНЫЙ контент: никаких конкретных годов (2023, 2024, 2025, 2026 и т.п.), никаких "в этом году", "сегодня в наши дни". Темы вне времени.
+• ВЕЧНОЗЕЛЁНЫЙ контент: никаких конкретных годов и фраз "в этом году", "сегодня в наши дни"
+• Орфография и пунктуация — без ошибок. В сомнительных словах выбирай простой синоним.
+• Без штампов, без воды, без LinkedIn-стиля
 
 Формат ответа — ВСЕГДА строгий JSON одной строкой:
 {"titles":["вариант 1","вариант 2","вариант 3"],"body":"текст поста"}
 
-titles — 3 разных A/B заголовка, длина 30-70 символов каждый, без эмодзи в начале.
+titles — 3 разных A/B заголовка, 30–70 символов каждый, без эмодзи в начале.
 body — готовый пост.
 Никакого текста до или после JSON.`;
 
-const EDITOR_SYSTEM = `Ты — Редактор. Получаешь черновик поста (JSON), возвращаешь его улучшенную версию.
-Что делаешь:
-• Исправляешь грамматику и пунктуацию
-• Убираешь канцеляризмы и штампы
-• Сохраняешь голос автора, не переписываешь радикально
-• Длина body не должна вырасти
-• Markdown оставляй очищенным (никаких ** или #)
-• УБИРАЕШЬ все упоминания конкретных годов (2023, 2024, 2025, 2026...) и фраз "в этом году", "сегодня в наши дни" — контент должен быть вечнозелёным
+const EDITOR_TASK = `ЗАДАЧА: отредактировать черновик поста (JSON) и вернуть улучшенную версию.
 
-Формат вывода — тот же JSON, что на входе: {"titles":[...],"body":"..."}`;
+Что делаешь:
+• Исправляешь все орфографические и пунктуационные ошибки — это приоритет №1
+• Убираешь канцеляризмы, штампы, водянистые обороты
+• Если body длиннее 800 символов — сокращаешь до 600–800, не теряя сути
+• Сохраняешь голос автора, не переписываешь радикально
+• Markdown оставляй очищенным (никаких ** или #)
+• УБИРАЕШЬ упоминания конкретных годов и фраз "в этом году", "сегодня"
+
+Формат вывода — тот же JSON, что на входе: {"titles":[...],"body":"..."}
+Никакого текста до или после JSON.`;
 
 type Draft = { titles: string[]; body: string };
 
@@ -121,8 +127,8 @@ export async function generateDraftForProject(
 
   const writerRes = await client.messages.create({
     model: WRITER_MODEL,
-    max_tokens: 1024,
-    system: [{ type: "text", text: WRITER_SYSTEM, cache_control: { type: "ephemeral" } }],
+    max_tokens: 700,
+    system: buildAgentSystem("alina", WRITER_TASK),
     messages: [{ role: "user", content: finalContext }],
   });
 
@@ -146,8 +152,8 @@ export async function generateDraftForProject(
 
   const editorRes = await client.messages.create({
     model: EDITOR_MODEL,
-    max_tokens: 1024,
-    system: [{ type: "text", text: EDITOR_SYSTEM, cache_control: { type: "ephemeral" } }],
+    max_tokens: 700,
+    system: buildAgentSystem("arkadiy", EDITOR_TASK),
     messages: [{ role: "user", content: JSON.stringify(draft) }],
   });
 
