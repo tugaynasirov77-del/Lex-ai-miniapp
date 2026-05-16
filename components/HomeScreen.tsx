@@ -66,13 +66,11 @@ export default function HomeScreen() {
 
   return (
     <>
-      <div style={{ paddingTop: 56 }}>
-        <Header
-          title="Консилиум"
-          accent={result ? String(result.responses.length) : "AI"}
-          subtitle="мнения команды на один вопрос"
-        />
-      </div>
+      <Header
+        title="Консилиум"
+        accent={result ? String(result.responses.length) : "AI"}
+        subtitle="мнения команды на один вопрос"
+      />
 
       <div className="px-5 pb-24 space-y-4">
         <div className="glass rounded-xl p-3 space-y-3">
@@ -88,7 +86,7 @@ export default function HomeScreen() {
           <button
             onClick={() => ask()}
             disabled={loading || question.trim().length < 5}
-            className="w-full py-3 rounded-xl font-bold text-[12px] tracking-[0.08em] uppercase disabled:opacity-40 active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-xl font-bold text-[12px] tracking-[0.08em] uppercase active:scale-[0.98] transition-transform"
             style={{
               background: "linear-gradient(135deg, #FFC830 0%, #F0A020 35%, #E06020 70%, #C04020 100%)",
               color: "#0A0705",
