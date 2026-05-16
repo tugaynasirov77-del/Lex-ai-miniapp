@@ -21,8 +21,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
+  const url = new URL(req.url);
+  const useNiche = url.searchParams.get("niche") === "1";
   try {
-    const r = await discoverCompetitorsForProject(id);
+    const r = await discoverCompetitorsForProject(id, { useNicheSearch: useNiche });
     if ("skipped" in r) return Response.json({ ok: false, skipped: r.skipped });
     return Response.json({ ok: true, found: r.found, cost: r.cost });
   } catch (e: any) {
