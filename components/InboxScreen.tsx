@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "./Header";
-import { tgFetch, hapticSelection } from "../lib/telegram";
+import { tgFetch, hapticSelection, hapticImpact, hapticNotify } from "../lib/telegram";
 
 type EventKind =
   | "pending_draft"
@@ -23,7 +24,13 @@ type InboxEvent = {
   subtitle: string;
   at: string;
   priority: number;
-  payload?: Record<string, any>;
+  payload?: {
+    draft_id?: string;
+    plan_day?: string;
+    message_id?: number;
+    count?: number;
+    attempts?: number;
+  };
 };
 
 const TYPE_STYLE: Record<EventKind, { color: string; bg: string; emoji: string }> = {
@@ -53,12 +60,20 @@ function timeAgo(iso: string): string {
   return `${Math.round(h / 24)} дн назад`;
 }
 
+function timeOfDay(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 export default function InboxScreen() {
   const [events, setEvents] = useState<InboxEvent[]>([]);
   const [projectsCount, setProjectsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventKind | null>(null);
+  const [busy, setBusy] = useState<string | null>(null); // id события в работе
 
   const load = async () => {
     try {
@@ -82,6 +97,42 @@ export default function InboxScreen() {
   for (const e of events) counts[e.type] = (counts[e.type] ?? 0) + 1;
   const visible = filter ? events.filter((e) => e.type === filter) : events;
 
+  const decideDraft = async (ev: InboxEvent, status: "approved" | "rejected") => {
+    if (!ev.payload?.draft_id) return;
+    hapticImpact(status === "approved" ? "medium" : "light");
+    setBusy(ev.id);
+    try {
+      await tgFetch(`/api/projects/${ev.project_id}/drafts`, {
+        method: "PATCH",
+        body: JSON.stringify({ draft_id: ev.payload.draft_id, status }),
+      });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const publishNow = async (ev: InboxEvent) => {
+    if (!ev.payload?.draft_id) return;
+    hapticImpact("heavy");
+    setBusy(ev.id);
+    try {
+      await tgFetch(`/api/projects/${ev.project_id}/drafts/${ev.payload.draft_id}/publish`, {
+        method: "POST",
+        body: JSON.stringify({ titleIndex: 0 }),
+      });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <>
       <Header
@@ -90,7 +141,7 @@ export default function InboxScreen() {
         subtitle={projectsCount === 0 ? "пока нет проектов" : `событий по проектам`}
       />
 
-      <div className="px-5 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="px-5 pb-3 flex flex-wrap gap-2">
         <Chip label="всё" count={events.length} active={filter === null} onClick={() => setFilter(null)} />
         {counts.pending_draft ? <Chip label="на одобрение" count={counts.pending_draft} color="#F0A020" active={filter === "pending_draft"} onClick={() => setFilter(filter === "pending_draft" ? null : "pending_draft")} /> : null}
         {counts.publish_failed ? <Chip label="ошибки" count={counts.publish_failed} color="#ef4444" active={filter === "publish_failed"} onClick={() => setFilter(filter === "publish_failed" ? null : "publish_failed")} /> : null}
@@ -111,7 +162,16 @@ export default function InboxScreen() {
             </Link>
           </div>
         )}
-        {!loading && visible.map((ev) => <EventCard key={ev.id} ev={ev} />)}
+        {!loading && visible.map((ev) => (
+          <EventCard
+            key={ev.id}
+            ev={ev}
+            busy={busy === ev.id}
+            onApprove={() => decideDraft(ev, "approved")}
+            onDelete={() => decideDraft(ev, "rejected")}
+            onPublishNow={() => publishNow(ev)}
+          />
+        ))}
       </div>
     </>
   );
@@ -136,21 +196,50 @@ function Chip({ label, count, active, color, onClick }: { label: string; count: 
   );
 }
 
-function EventCard({ ev }: { ev: InboxEvent }) {
+function EventCard({
+  ev,
+  busy,
+  onApprove,
+  onDelete,
+  onPublishNow,
+}: {
+  ev: InboxEvent;
+  busy: boolean;
+  onApprove: () => void;
+  onDelete: () => void;
+  onPublishNow: () => void;
+}) {
+  const router = useRouter();
   const style = TYPE_STYLE[ev.type];
+  const planDay = ev.payload?.plan_day;
+  const showActions = (ev.type === "pending_draft" || ev.type === "approved_soon") && ev.payload?.draft_id;
+
+  const goToProject = () => {
+    hapticSelection();
+    router.push(`/projects/${ev.project_id}`);
+  };
+
   return (
-    <Link
-      href={`/projects/${ev.project_id}`}
-      onClick={() => hapticSelection()}
-      className="block glass rounded-xl p-3.5 active:scale-[0.99] transition-transform"
+    <div
+      className="glass rounded-xl p-3.5 space-y-2.5"
       style={{ borderLeft: `3px solid ${style.color}` }}
     >
-      <div className="flex items-start gap-2.5">
+      <button
+        onClick={goToProject}
+        className="w-full text-left flex items-start gap-2.5 active:opacity-80"
+      >
         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0" style={{ background: style.bg }}>
           {style.emoji}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-ink leading-tight">{ev.title}</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[13px] font-semibold text-ink leading-tight">{ev.title}</div>
+            {planDay && (
+              <span className="text-[10px] font-medium uppercase shrink-0 px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: style.color }}>
+                {planDay}{ev.type === "approved_soon" ? ` ${timeOfDay(ev.at)}` : ""}
+              </span>
+            )}
+          </div>
           <div className="text-[12px] text-ink/70 mt-0.5 leading-snug line-clamp-2">{ev.subtitle}</div>
           <div className="text-[10px] text-muted mt-1.5 flex items-center gap-1.5">
             <span className="truncate">{ev.channel_username ? `@${ev.channel_username}` : ev.project_title}</span>
@@ -158,7 +247,64 @@ function EventCard({ ev }: { ev: InboxEvent }) {
             <span>{timeAgo(ev.at)}</span>
           </div>
         </div>
-      </div>
-    </Link>
+      </button>
+
+      {showActions && ev.type === "pending_draft" && (
+        <div className="flex gap-2">
+          <ActionButton
+            label={busy ? "…" : "одобрить"}
+            onClick={onApprove}
+            disabled={busy}
+            color="#22d3a5"
+            bg="rgba(34, 211, 165, 0.15)"
+            flex
+          />
+          <ActionButton
+            label="удалить"
+            onClick={onDelete}
+            disabled={busy}
+            color="#ef4444"
+            bg="rgba(239, 68, 68, 0.12)"
+            flex
+          />
+        </div>
+      )}
+
+      {showActions && ev.type === "approved_soon" && (
+        <div className="flex gap-2">
+          <ActionButton
+            label={busy ? "…" : "опубликовать сейчас"}
+            onClick={onPublishNow}
+            disabled={busy}
+            color="#0A0705"
+            bg="linear-gradient(135deg, #F0A020, #D05020)"
+            flex
+          />
+          <ActionButton
+            label="удалить"
+            onClick={onDelete}
+            disabled={busy}
+            color="#ef4444"
+            bg="rgba(239, 68, 68, 0.12)"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionButton({ label, onClick, disabled, color, bg, flex }: { label: string; onClick: () => void; disabled?: boolean; color: string; bg: string; flex?: boolean }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      disabled={disabled}
+      className={`text-xs py-2 px-3 rounded-md font-medium active:scale-[0.97] transition-transform disabled:opacity-40 ${flex ? "flex-1" : ""}`}
+      style={{ background: bg, color }}
+    >
+      {label}
+    </button>
   );
 }
