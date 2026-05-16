@@ -727,49 +727,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
-            <div className="glass rounded-xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Бюджет на месяц</h4>
-                <span className="text-xs text-muted">
-                  ${spent.toFixed(4)} / ${cap.toFixed(2)}
-                </span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${spentPct}%`,
-                    background: spentPct >= 90 ? "#ef4444" : "linear-gradient(90deg, #F0A020, #D05020)",
-                  }}
-                />
-              </div>
-              <p className="text-[11px] text-muted leading-relaxed">
-                Автостоп при превышении. Резерв на 45 постов, ежедневную разведку, недельный AI-отчёт, A/B заголовки.
-              </p>
-            </div>
-
-            <div className="glass rounded-xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Время публикации</h4>
-                <span className="text-[10px] text-muted">{project?.publish_timezone || "Europe/Moscow"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  defaultValue={project?.publish_time || "10:00"}
-                  onBlur={(e) => {
-                    if (e.target.value && e.target.value !== (project?.publish_time || "10:00")) {
-                      updatePublishTime(e.target.value);
-                    }
-                  }}
-                  className="bg-white/5 text-ink text-sm px-3 py-2 rounded-md outline-none flex-1"
-                />
-              </div>
-              <p className="text-[11px] text-muted leading-relaxed">
-                Одобренные посты из плана уходят в свой день недели в это время. Можно вручную «опубликовать сейчас» для любого черновика.
-              </p>
-            </div>
-
             {analytics && (
               <div className="glass rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1075,6 +1032,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
 
+            <div className="glass rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">Время публикации</h4>
+                <span className="text-[10px] text-muted">{project?.publish_timezone || "Europe/Moscow"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  defaultValue={project?.publish_time || "10:00"}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== (project?.publish_time || "10:00")) {
+                      updatePublishTime(e.target.value);
+                    }
+                  }}
+                  className="bg-white/5 text-ink text-sm px-3 py-2 rounded-md outline-none flex-1"
+                />
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Одобренные посты из плана уходят в свой день недели в это время.
+              </p>
+            </div>
+
             <div className="glass rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm flex items-center gap-2"><span className="text-amber text-xs font-medium">04</span><SectionIcon name="plan" /><span>План на неделю</span></h4>
@@ -1245,27 +1224,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
             </div>
 
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm px-1">Команда на канале</h4>
-              {agents.map((a) => {
-                const meta = ROLE_LABEL[a.role];
-                return (
-                  <div key={a.id} className="glass rounded-xl p-3 flex items-center gap-3">
-                    <div className="text-2xl">{meta.emoji}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{meta.name}</span>
-                        <span className="flex items-center gap-1 text-[10px] text-muted">
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_DOT[a.status] }} />
-                          {STATUS_LABEL[a.status]}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted truncate">{meta.desc}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </>
         )}
 

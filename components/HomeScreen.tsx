@@ -88,15 +88,18 @@ export default function HomeScreen() {
           <button
             onClick={() => ask()}
             disabled={loading || question.trim().length < 5}
-            className="w-full py-3.5 rounded-xl font-bold text-[15px] tracking-wide disabled:opacity-40 active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-xl font-bold text-[12px] tracking-[0.08em] uppercase disabled:opacity-40 active:scale-[0.98] transition-transform"
             style={{
-              background: "linear-gradient(135deg, #FFB020 0%, #F0A020 40%, #D05020 100%)",
+              background: "linear-gradient(135deg, #FFC830 0%, #F0A020 35%, #E06020 70%, #C04020 100%)",
               color: "#0A0705",
-              boxShadow: loading || question.trim().length < 5 ? "none" : "0 4px 20px rgba(240,160,32,0.45), 0 0 0 1px rgba(255,180,32,0.2) inset",
-              textShadow: "0 1px 0 rgba(255,255,255,0.2)",
+              boxShadow:
+                loading || question.trim().length < 5
+                  ? "none"
+                  : "0 0 28px rgba(255,200,48,0.55), 0 6px 22px rgba(240,96,32,0.45), 0 0 0 1px rgba(255,210,80,0.35) inset, 0 1px 0 rgba(255,255,255,0.35) inset",
+              textShadow: "0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
-            {loading ? "собираю команду…" : "СОЗВАТЬ КОНСИЛИУМ"}
+            {loading ? "собираю команду…" : "созвать консилиум"}
           </button>
           {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
         </div>
