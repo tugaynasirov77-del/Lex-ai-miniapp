@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { canSpend, recordSpend } from "./projectBudget";
+import { buildStrategyHint } from "./strategyAnalyzer";
 
 const STRATEGIST_MODEL = "claude-sonnet-4-6";
 
@@ -74,10 +75,11 @@ export async function generatePlanForProject(projectId: string): Promise<{ planI
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const fourteenAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: myPosts }, { data: competitors }, { data: snapshots }] = await Promise.all([
+  const [{ data: myPosts }, { data: competitors }, { data: snapshots }, { data: niche }] = await Promise.all([
     sb.from("channel_posts").select("text,views").eq("project_id", projectId).gte("published_at", weekAgo).order("views", { ascending: false, nullsFirst: false }).limit(5),
     sb.from("competitor_channels").select("username,top_post_text,top_post_views").eq("project_id", projectId).limit(5),
     sb.from("channel_snapshots").select("subscribers,snapshot_at").eq("project_id", projectId).gte("snapshot_at", fourteenAgo).order("snapshot_at", { ascending: true }),
+    sb.from("niche_strategy").select("patterns,summary").eq("project_id", projectId).maybeSingle(),
   ]);
 
   const snaps = snapshots ?? [];
@@ -102,6 +104,11 @@ export async function generatePlanForProject(projectId: string): Promise<{ planI
     competitors.forEach((c) => {
       if (c.top_post_text) lines.push(`— @${c.username} [👁 ${c.top_post_views ?? 0}] ${c.top_post_text.replace(/\n+/g, " ").slice(0, 200)}`);
     });
+    lines.push("");
+  }
+  const strategyHint = buildStrategyHint(niche?.patterns, niche?.summary ?? null);
+  if (strategyHint) {
+    lines.push(strategyHint);
     lines.push("");
   }
   lines.push("Составь план на следующую неделю.");

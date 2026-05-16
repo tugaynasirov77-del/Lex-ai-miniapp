@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
 import { fetchChannelMeta, fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
+import { searchNicheChannels } from "./nicheSearch";
 
 const SCOUT_MODEL = "claude-haiku-4-5-20251001";
 
@@ -87,8 +88,27 @@ export async function discoverCompetitorsForProject(
   const compForwards = competitorPosts.map((p) => p.forwarded_from).filter((x): x is string => !!x);
   const compMentions = extractMentions(competitorPosts.map((p) => p.text || ""));
 
+  const ownUsernameLower = project.channel_username.toLowerCase();
+  const excludeForNiche = new Set<string>([ownUsernameLower]);
+  for (const c of existingComp ?? []) excludeForNiche.add(c.username.toLowerCase());
+  for (const s of existingSug ?? []) excludeForNiche.add(s.username.toLowerCase());
+
+  let nicheCandidates: Awaited<ReturnType<typeof searchNicheChannels>>["candidates"] = [];
+  let nicheCost = 0;
+  try {
+    const r = await searchNicheChannels({
+      projectId,
+      channelTitle: meta.title || project.channel_title || project.title,
+      channelDescription: meta.description,
+      recentPostSamples: livePosts.slice(0, 5).map((p) => p.text || "").filter(Boolean),
+      excludeUsernames: excludeForNiche,
+    });
+    nicheCandidates = r.candidates;
+    nicheCost = r.cost;
+  } catch {}
+
   const allCandidates = [...new Set(
-    [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions].map((s) => s.toLowerCase())
+    [...mentions, ...dbForwards, ...liveForwards, ...liveMentions, ...compForwards, ...compMentions, ...nicheCandidates.map((c) => c.username)].map((s) => s.toLowerCase())
   )];
 
   const ownUsername = project.channel_username.toLowerCase();
