@@ -14,14 +14,14 @@ type CouncilResponse = {
   error?: string;
 };
 
-const AGENT_META: Record<AgentKey, { color: string; bg: string; emoji: string }> = {
-  milena:    { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.10)",  emoji: "📣" },
-  alexander: { color: "#7dd3fc", bg: "rgba(125, 211, 252, 0.10)", emoji: "♟️" },
-  alina:     { color: "#f0a020", bg: "rgba(240, 160, 32, 0.10)",  emoji: "✍️" },
-  mikhail:   { color: "#22d3a5", bg: "rgba(34, 211, 165, 0.10)",  emoji: "💻" },
-  nikolay:   { color: "#a98cff", bg: "rgba(124, 92, 252, 0.12)",  emoji: "📊" },
-  viktor:    { color: "#ef4444", bg: "rgba(239, 68, 68, 0.10)",   emoji: "🤝" },
-  arkadiy:   { color: "#e5e5e5", bg: "rgba(255, 255, 255, 0.06)", emoji: "🔍" },
+const AGENT_META: Record<AgentKey, { color: string; avatar: string }> = {
+  milena:    { color: "#f59e0b", avatar: "/agents/milena.jpg" },
+  alexander: { color: "#7dd3fc", avatar: "/agents/alexander.jpg" },
+  alina:     { color: "#f0a020", avatar: "/agents/alina.jpg" },
+  mikhail:   { color: "#22d3a5", avatar: "/agents/mikhail.jpg" },
+  nikolay:   { color: "#a98cff", avatar: "/agents/nikolay.jpg" },
+  viktor:    { color: "#ef4444", avatar: "/agents/viktor.jpg" },
+  arkadiy:   { color: "#e5e5e5", avatar: "/agents/arkadiy.jpg" },
 };
 
 const EXAMPLES = [
@@ -93,9 +93,7 @@ export default function HomeScreen() {
               background: "linear-gradient(135deg, #FFC830 0%, #F0A020 35%, #E06020 70%, #C04020 100%)",
               color: "#0A0705",
               boxShadow:
-                loading || question.trim().length < 5
-                  ? "none"
-                  : "0 0 28px rgba(255,200,48,0.55), 0 6px 22px rgba(240,96,32,0.45), 0 0 0 1px rgba(255,210,80,0.35) inset, 0 1px 0 rgba(255,255,255,0.35) inset",
+                "0 0 32px rgba(255,200,48,0.6), 0 0 16px rgba(255,160,32,0.55), 0 6px 22px rgba(240,96,32,0.5), 0 0 0 1px rgba(255,210,80,0.4) inset, 0 1px 0 rgba(255,255,255,0.4) inset",
               textShadow: "0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
@@ -139,8 +137,9 @@ export default function HomeScreen() {
               return (
                 <div key={r.agent_id} className="glass rounded-xl p-3.5 space-y-2" style={{ borderLeft: `3px solid ${meta.color}` }}>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: meta.bg }}>
-                      {meta.emoji}
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/10" style={{ boxShadow: `0 0 0 2px ${meta.color}33` }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={meta.avatar} alt={r.agent_name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-ink">{r.agent_name}</div>
