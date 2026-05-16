@@ -39,8 +39,21 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
 
+  let seed: { planId?: string; planDay?: string; topic?: string; hook?: string } | undefined;
   try {
-    const r = await generateDraftForProject(id);
+    const body = await req.json();
+    if (body && typeof body === "object") {
+      seed = {
+        planId: body.plan_id || body.planId,
+        planDay: body.plan_day || body.planDay,
+        topic: body.topic,
+        hook: body.hook,
+      };
+    }
+  } catch {}
+
+  try {
+    const r = await generateDraftForProject(id, seed);
     if ("draftId" in r) return Response.json({ ok: true, draft_id: r.draftId, cost: r.cost });
     return Response.json({ ok: false, skipped: r.skipped }, { status: 200 });
   } catch (e: any) {
