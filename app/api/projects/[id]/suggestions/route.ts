@@ -6,7 +6,7 @@ import { syncCompetitor } from "../../../../../lib/scoutSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 async function authProject(req: NextRequest, projectId: string) {
   const v = verifyInitData(req.headers.get("x-telegram-init-data"));
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const r = await discoverCompetitorsForProject(id, { useNicheSearch: useNiche });
     if ("skipped" in r) return Response.json({ ok: false, skipped: r.skipped });
-    return Response.json({ ok: true, found: r.found, cost: r.cost });
+    return Response.json({ ok: true, found: r.found, cost: r.cost, diagnostics: r.diagnostics });
   } catch (e: any) {
     return Response.json({ error: e.message ?? "scout error" }, { status: 500 });
   }
