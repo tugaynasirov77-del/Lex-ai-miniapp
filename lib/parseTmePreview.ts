@@ -45,17 +45,21 @@ export async function fetchChannelPreview(username: string): Promise<ParsedPost[
   const html = await res.text();
 
   const posts: ParsedPost[] = [];
-  const wrapRe = /<div class="tgme_widget_message_wrap[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
-  let match: RegExpExecArray | null;
+  const startRe = /<div class="tgme_widget_message_wrap[^"]*"[^>]*>/g;
+  const starts: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = startRe.exec(html))) starts.push(m.index);
 
-  while ((match = wrapRe.exec(html))) {
-    const chunk = match[1];
+  for (let i = 0; i < starts.length; i++) {
+    const from = starts[i];
+    const to = i + 1 < starts.length ? starts[i + 1] : html.length;
+    const chunk = html.slice(from, to);
 
-    const idMatch = chunk.match(/data-post="[^/]+\/(\d+)"/);
+    const idMatch = chunk.match(/data-post="[^/"]+\/(\d+)"/);
     if (!idMatch) continue;
     const message_id = parseInt(idMatch[1], 10);
 
-    const textMatch = chunk.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+    const textMatch = chunk.match(/<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<div class="tgme_widget_message_(?:footer|reply|info)|<time)/);
     const text = textMatch ? stripHtml(textMatch[1]) : "";
 
     const viewsMatch = chunk.match(/<span class="tgme_widget_message_views">([^<]+)<\/span>/);

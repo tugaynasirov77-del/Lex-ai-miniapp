@@ -41,7 +41,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .from("channel_posts")
       .select("message_id,text,views,published_at")
       .eq("project_id", id)
-      .gte("published_at", weekAgo)
       .order("views", { ascending: false, nullsFirst: false })
       .limit(3),
   ]);
