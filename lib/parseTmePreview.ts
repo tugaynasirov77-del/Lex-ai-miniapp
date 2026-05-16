@@ -7,6 +7,7 @@ export type ParsedPost = {
   views: number | null;
   has_media: boolean;
   published_at: string | null;
+  forwarded_from: string | null;
 };
 
 function parseViews(s: string): number | null {
@@ -103,7 +104,10 @@ export async function fetchChannelPreview(username: string): Promise<ParsedPost[
     const has_media =
       /tgme_widget_message_photo_wrap|tgme_widget_message_video|tgme_widget_message_document/.test(chunk);
 
-    posts.push({ message_id, text: text.slice(0, 4000), views, has_media, published_at });
+    const fwdMatch = chunk.match(/tgme_widget_message_forwarded_from_name[^"]*"[^>]*href="https?:\/\/t\.me\/([^/"?#]+)/);
+    const forwarded_from = fwdMatch ? fwdMatch[1] : null;
+
+    posts.push({ message_id, text: text.slice(0, 4000), views, has_media, published_at, forwarded_from });
   }
 
   return posts;

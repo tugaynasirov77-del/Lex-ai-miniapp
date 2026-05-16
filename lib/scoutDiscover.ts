@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "./supabase";
-import { fetchChannelMeta } from "./parseTmePreview";
+import { fetchChannelMeta, fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
 
 const SCOUT_MODEL = "claude-haiku-4-5-20251001";
@@ -62,23 +62,33 @@ export async function discoverCompetitorsForProject(
   if (!budget.ok) return { skipped: budget.reason || "budget" };
 
   const [{ data: posts }, { data: existingComp }, { data: existingSug }, meta] = await Promise.all([
-    sb.from("channel_posts").select("text").eq("project_id", projectId).limit(100),
+    sb.from("channel_posts").select("text,forwarded_from").eq("project_id", projectId).limit(100),
     sb.from("competitor_channels").select("username").eq("project_id", projectId),
     sb.from("scout_suggestions").select("username,status").eq("project_id", projectId),
     fetchChannelMeta(project.channel_username).catch(() => ({ title: null, description: null, subscribers: null })),
   ]);
 
+  const dbForwards = (posts ?? []).map((p) => (p as any).forwarded_from).filter((x): x is string => !!x);
   const mentions = extractMentions((posts ?? []).map((p) => p.text || ""));
+
+  let livePosts: Awaited<ReturnType<typeof fetchChannelPreview>> = [];
+  try {
+    livePosts = await fetchChannelPreview(project.channel_username);
+  } catch {}
+  const liveForwards = livePosts.map((p) => p.forwarded_from).filter((x): x is string => !!x);
+  const liveMentions = extractMentions(livePosts.map((p) => p.text || ""));
+
+  const allCandidates = [...new Set([...mentions, ...dbForwards, ...liveForwards, ...liveMentions].map((s) => s.toLowerCase()))];
 
   const ownUsername = project.channel_username.toLowerCase();
   const blocked = new Set<string>([ownUsername]);
   for (const c of existingComp ?? []) blocked.add(c.username.toLowerCase());
   for (const s of existingSug ?? []) blocked.add(s.username.toLowerCase());
 
-  const candidates = mentions
+  const candidates = allCandidates
     .filter((u) => !blocked.has(u))
     .filter((u) => !u.endsWith("_bot") && !u.endsWith("bot"))
-    .filter((u) => u.length >= 4)
+    .filter((u) => u.length >= 4 && /^[a-z][a-z0-9_]{3,30}$/.test(u))
     .slice(0, 15);
 
   if (candidates.length === 0) {
