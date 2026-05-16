@@ -212,20 +212,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       const d3 = await r3.json();
       result.plan = { ok: !!d3.ok, skipped: d3.skipped };
 
-      const planJson = await r3.json();
-      const newPlanId = planJson.plan_id;
       const planRes = await tgFetch(`/api/projects/${id}/plan`);
       const planData = (await planRes.json()).plan;
       const items: PlanItem[] = planData?.items ?? [];
+      const planId: string | undefined = planData?.id;
 
       let totalCost = 0;
       let made = 0;
+      let lastError: string | undefined;
       for (let i = 0; i < items.length; i++) {
         setPipeline({ step: `4/4 пишу пост ${i + 1}/${items.length} (${items[i].day})`, running: true });
         const r4 = await tgFetch(`/api/projects/${id}/drafts`, {
           method: "POST",
           body: JSON.stringify({
-            plan_id: newPlanId ?? planData?.id,
+            plan_id: planId,
             plan_day: items[i].day,
             topic: items[i].topic,
             hook: items[i].hook,
@@ -233,10 +233,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         });
         const d4 = await r4.json();
         if (d4.ok) { made++; totalCost += d4.cost ?? 0; }
-        if (d4.skipped) break;
+        else if (d4.error) { lastError = d4.error; }
+        else if (d4.skipped) { lastError = d4.skipped; break; }
       }
       result.draft = { ok: made > 0, cost: totalCost };
-      if (made === 0) result.draft.skipped = "не удалось сгенерить ни одного поста";
+      if (made === 0) result.draft.skipped = lastError ?? "не удалось сгенерить ни одного поста";
 
       hapticNotify("success");
       setPipelineResult(result);
