@@ -71,8 +71,8 @@ export async function GET(req: NextRequest) {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: pending }, { data: approved }, { data: published }, { data: failed }, { data: scoutNew }, { data: snaps }] = await Promise.all([
-    sb.from("content_drafts").select("id,project_id,body,created_at,plan_day,poll_data").eq("status", "pending").in("project_id", ids).order("created_at", { ascending: false }).limit(30),
-    sb.from("content_drafts").select("id,project_id,body,scheduled_at,plan_day,poll_data,title_variants").eq("status", "approved").is("published_message_id", null).in("project_id", ids).order("scheduled_at", { ascending: true }).limit(20),
+    sb.from("content_drafts").select("id,project_id,body,created_at,plan_day,poll_data,photo_url,title_variants").eq("status", "pending").in("project_id", ids).order("created_at", { ascending: false }).limit(30),
+    sb.from("content_drafts").select("id,project_id,body,scheduled_at,plan_day,poll_data,photo_url,title_variants").eq("status", "approved").is("published_message_id", null).in("project_id", ids).order("scheduled_at", { ascending: true }).limit(20),
     sb.from("content_drafts").select("id,project_id,published_at,published_message_id,chosen_title,body,poll_data").not("published_message_id", "is", null).gte("published_at", dayAgo).in("project_id", ids).order("published_at", { ascending: false }).limit(15),
     sb.from("content_drafts").select("id,project_id,publish_error,publish_attempts,scheduled_at,body").gte("publish_attempts", 1).not("publish_error", "is", null).is("published_message_id", null).in("project_id", ids).limit(10),
     sb.from("scout_suggestions").select("project_id,username,title,relevance_score,fetched_at").eq("status", "pending").gte("fetched_at", weekAgo).in("project_id", ids).order("relevance_score", { ascending: false }).limit(15),
@@ -96,7 +96,14 @@ export async function GET(req: NextRequest) {
       subtitle: previewText(d.body, isPoll),
       at: d.created_at,
       priority: PRIORITY.pending_draft,
-      payload: { draft_id: d.id, plan_day: d.plan_day },
+      payload: {
+        draft_id: d.id,
+        plan_day: d.plan_day,
+        body: d.body,
+        photo_url: d.photo_url,
+        poll_data: d.poll_data,
+        title: (d.title_variants as string[] | null)?.[0] ?? null,
+      },
     });
   }
 
@@ -118,7 +125,14 @@ export async function GET(req: NextRequest) {
       subtitle: previewText(d.body, !!d.poll_data),
       at: d.scheduled_at,
       priority: PRIORITY.approved_soon,
-      payload: { draft_id: d.id, plan_day: d.plan_day },
+      payload: {
+        draft_id: d.id,
+        plan_day: d.plan_day,
+        body: d.body,
+        photo_url: d.photo_url,
+        poll_data: d.poll_data,
+        title: (d.title_variants as string[] | null)?.[0] ?? null,
+      },
     });
   }
 

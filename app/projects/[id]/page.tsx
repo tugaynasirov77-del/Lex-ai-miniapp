@@ -4,7 +4,6 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/Header";
 import SectionIcon from "../../../components/SectionIcon";
-import { TelegramPostPreview } from "../../../components/TelegramPostPreview";
 import { formatScheduledLabel } from "../../../lib/scheduling";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
@@ -117,7 +116,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [scouting, setScouting] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [expandedDraft, setExpandedDraft] = useState<string | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [planGenerating, setPlanGenerating] = useState(false);
   const [nicheStrategy, setNicheStrategy] = useState<NicheStrategy | null>(null);
@@ -316,7 +314,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     if (!plan) return;
     hapticImpact("medium");
     setGenerating(true);
-    setExpandedDraft(null);
     try {
       const r = await tgFetch(`/api/projects/${id}/drafts`, {
         method: "POST",
@@ -337,7 +334,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
       hapticNotify("success");
       await load();
-      if (d.draft_id) setExpandedDraft(d.draft_id);
     } catch (e: any) {
       setError(e.message);
       hapticNotify("error");
@@ -430,7 +426,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const decideDraft = async (draftId: string, status: "approved" | "rejected", publishNow = false) => {
     hapticImpact(status === "approved" ? "medium" : "light");
-    setExpandedDraft(null);
     try {
       await tgFetch(`/api/projects/${id}/drafts`, {
         method: "PATCH",
@@ -1081,127 +1076,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <div className="space-y-2">
                     {plan.items.map((it, i) => {
                       const dayDraft = drafts.find((d) => d.plan_id === plan.id && d.plan_day === it.day);
-                      const isExpanded = expandedDraft === (dayDraft?.id ?? `plan-${i}`);
                       const isPublished = !!dayDraft?.published_message_id;
                       const isApproved = dayDraft?.status === "approved";
                       const stateLabel = isPublished ? "опубликован" : isApproved ? "готов" : dayDraft ? "на проверке" : "нет поста";
                       const stateColor = isPublished ? "#22d3a5" : isApproved ? "#F0A020" : dayDraft ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)";
                       const stateBg = isPublished ? "rgba(34,211,165,0.15)" : isApproved ? "rgba(240,160,32,0.15)" : "rgba(255,255,255,0.05)";
+                      const showWrite = !dayDraft;
                       return (
                         <div key={i} className="border-t border-white/5 pt-2 first:border-t-0 first:pt-0">
-                          <button
-                            onClick={() => { hapticImpact("light"); setExpandedDraft(isExpanded ? null : (dayDraft?.id ?? `plan-${i}`)); }}
-                            className="w-full text-left"
-                          >
-                            <div className="flex items-start gap-2">
-                              <span className="text-amber font-medium uppercase shrink-0 w-7 text-xs pt-0.5">{it.day}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-ink/95">{it.topic}</div>
-                                <div className="text-[11px] text-muted line-clamp-1">{it.hook}</div>
-                              </div>
-                              <span className="text-[10px] shrink-0 px-1.5 py-0.5 rounded-full" style={{ background: stateBg, color: stateColor }}>{stateLabel}</span>
+                          <div className="flex items-start gap-2">
+                            <span className="text-amber font-medium uppercase shrink-0 w-7 text-xs pt-0.5">{it.day}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-ink/95">{it.topic}</div>
+                              <div className="text-[11px] text-muted line-clamp-1">{it.hook}</div>
                             </div>
-                          </button>
-                          {isExpanded && (
-                            <div className="mt-2 ml-9 space-y-2.5">
-                              {it.why && <div className="text-[11px] text-muted/80 italic leading-snug">{it.why}</div>}
-                              {!dayDraft && (
-                                <button
-                                  onClick={() => generateDraftForPlanItem(it)}
-                                  disabled={generating}
-                                  className="w-full text-xs py-2 rounded-md font-medium disabled:opacity-40"
-                                  style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
-                                >
-                                  {generating ? "пишу…" : "написать пост"}
-                                </button>
-                              )}
-                              {dayDraft && (
-                                <>
-                                  {dayDraft.poll_data ? (
-                                    <div className="space-y-1.5">
-                                      <div className="text-[10px] text-muted uppercase tracking-wider">
-                                        {dayDraft.poll_data.type === "quiz" ? "Викторина" : "Опрос"}
-                                      </div>
-                                      <div className="bg-white/[0.03] rounded-md p-2.5 space-y-2">
-                                        <div className="text-xs font-medium text-ink/95">{dayDraft.poll_data.question}</div>
-                                        <div className="space-y-1">
-                                          {dayDraft.poll_data.options.map((opt, k) => {
-                                            const isCorrect = dayDraft.poll_data?.type === "quiz" && dayDraft.poll_data?.correct_option_id === k;
-                                            return (
-                                              <div
-                                                key={k}
-                                                className="text-[11px] px-2 py-1.5 rounded flex items-center gap-2"
-                                                style={{
-                                                  background: isCorrect ? "rgba(34, 211, 165, 0.10)" : "rgba(255,255,255,0.03)",
-                                                  color: isCorrect ? "#22d3a5" : "#F5EDD8",
-                                                }}
-                                              >
-                                                <span className="opacity-50">{k + 1}.</span>
-                                                <span className="flex-1">{opt}</span>
-                                                {isCorrect && <span className="text-[10px]">✓</span>}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                        {dayDraft.poll_data.type === "quiz" && dayDraft.poll_data.explanation && (
-                                          <div className="text-[10px] text-muted italic pt-1 border-t border-white/5">
-                                            {dayDraft.poll_data.explanation}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      <div className="text-[10px] text-muted uppercase tracking-wider mb-1">Текст поста</div>
-                                      <TelegramPostPreview body={dayDraft.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
-                                    </div>
-                                  )}
-                                  {/* Фото-блок (только для текстовых постов — у опросов нельзя фото) */}
-                                  {!isPublished && !dayDraft.poll_data && (
-                                    <div className="space-y-1.5">
-                                      {dayDraft.photo_url ? (
-                                        <div className="relative">
-                                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                                          <img src={dayDraft.photo_url} alt="" className="w-full max-h-40 object-cover rounded-md" />
-                                          <button onClick={() => removeDraftPhoto(dayDraft.id)} className="absolute top-1.5 right-1.5 text-[10px] px-2 py-1 rounded bg-black/60 text-white">убрать фото</button>
-                                        </div>
-                                      ) : (
-                                        <label className="block w-full text-center text-xs py-2 rounded-md font-medium cursor-pointer" style={{ background: "rgba(124, 92, 252, 0.12)", color: "#a98cff" }}>
-                                          прикрепить фото
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                              const f = e.target.files?.[0];
-                                              if (f) uploadDraftPhoto(dayDraft.id, f);
-                                              e.target.value = "";
-                                            }}
-                                          />
-                                        </label>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Кнопки одобрить/удалить/опубликовать переехали во вкладку «История» */}
-                                  {!isApproved && !isPublished && (
-                                    <div className="space-y-1.5">
-                                      <div className="text-[11px] px-2.5 py-2 rounded-md text-center" style={{ background: "rgba(240, 160, 32, 0.08)", color: "#F0A020" }}>
-                                        ждёт твоего решения — открой вкладку «История»
-                                      </div>
-                                      <button onClick={() => generateDraftForPlanItem(it)} disabled={generating} className="w-full text-xs py-2 rounded-md font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "#F5EDD8" }}>переписать заново</button>
-                                    </div>
-                                  )}
-                                  {isApproved && !isPublished && dayDraft.scheduled_at && (
-                                    <div className="text-[11px] px-2.5 py-2 rounded-md text-center" style={{ background: "rgba(34, 211, 165, 0.08)", color: "#22d3a5" }}>
-                                      опубликуется {formatScheduledLabel(new Date(dayDraft.scheduled_at), project?.publish_timezone || "Europe/Moscow")}
-                                    </div>
-                                  )}
-                                  {isPublished && project?.channel_username && (
-                                    <a href={`https://t.me/${project.channel_username}/${dayDraft.published_message_id}`} target="_blank" rel="noopener noreferrer" className="block w-full text-center text-xs py-2 rounded-md font-medium" style={{ background: "rgba(34, 211, 165, 0.15)", color: "#22d3a5" }}>открыть пост в канале →</a>
-                                  )}
-                                </>
-                              )}
-                            </div>
+                            <span className="text-[10px] shrink-0 px-1.5 py-0.5 rounded-full" style={{ background: stateBg, color: stateColor }}>{stateLabel}</span>
+                          </div>
+                          {showWrite && (
+                            <button
+                              onClick={() => generateDraftForPlanItem(it)}
+                              disabled={generating}
+                              className="mt-2 ml-9 text-[11px] py-1.5 px-3 rounded-md font-medium disabled:opacity-40"
+                              style={{ background: "rgba(240, 160, 32, 0.12)", color: "#F0A020" }}
+                            >
+                              {generating ? "пишу…" : "написать пост"}
+                            </button>
                           )}
                         </div>
                       );
