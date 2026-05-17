@@ -192,7 +192,7 @@ export default function InboxScreen() {
         <Chip label="всё" count={events.length} active={filter === null} onClick={() => setFilter(null)} />
         {counts.pending_draft ? <Chip label="на одобрение" count={counts.pending_draft} color="#F0A020" active={filter === "pending_draft"} onClick={() => setFilter(filter === "pending_draft" ? null : "pending_draft")} /> : null}
         {counts.publish_failed ? <Chip label="ошибки" count={counts.publish_failed} color="#ef4444" active={filter === "publish_failed"} onClick={() => setFilter(filter === "publish_failed" ? null : "publish_failed")} /> : null}
-        {counts.approved_soon ? <Chip label="в очереди" count={counts.approved_soon} color="#7dd3fc" active={filter === "approved_soon"} onClick={() => setFilter(filter === "approved_soon" ? null : "approved_soon")} /> : null}
+        {counts.approved_soon ? <Chip label="в работе" count={counts.approved_soon} color="#7dd3fc" active={filter === "approved_soon"} onClick={() => setFilter(filter === "approved_soon" ? null : "approved_soon")} /> : null}
         {counts.new_competitors ? <Chip label="конкуренты" count={counts.new_competitors} color="#a98cff" active={filter === "new_competitors"} onClick={() => setFilter(filter === "new_competitors" ? null : "new_competitors")} /> : null}
         {counts.published ? <Chip label="вышло" count={counts.published} color="#22d3a5" active={filter === "published"} onClick={() => setFilter(filter === "published" ? null : "published")} /> : null}
       </div>

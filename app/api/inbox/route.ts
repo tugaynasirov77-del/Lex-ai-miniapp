@@ -107,23 +107,21 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // approved_soon (в ближайшие 72 часа)
-  const threeDays = Date.now() + 72 * 60 * 60 * 1000;
+  // approved_soon: ВСЕ одобренные, ещё не опубликованные (без 72-часового лимита).
+  // Раньше посты, запланированные дальше чем через 3 дня, "терялись" — теперь
+  // они остаются видны во вкладке История и их можно удалить.
   for (const d of approved ?? []) {
     const p = projectMap.get(d.project_id);
     if (!p) continue;
-    if (!d.scheduled_at) continue;
-    const t = new Date(d.scheduled_at).getTime();
-    if (t > threeDays) continue;
     events.push({
       id: `approved_${d.id}`,
       type: "approved_soon",
       project_id: d.project_id,
       project_title: p.channel_title || p.title,
       channel_username: p.channel_username,
-      title: d.poll_data ? "Опрос в очереди" : "Пост в очереди",
+      title: d.poll_data ? "Опрос в работе" : "Пост в работе",
       subtitle: previewText(d.body, !!d.poll_data),
-      at: d.scheduled_at,
+      at: d.scheduled_at ?? new Date().toISOString(),
       priority: PRIORITY.approved_soon,
       payload: {
         draft_id: d.id,
