@@ -15,7 +15,8 @@ const COUNCIL_TASK = `ЗАДАЧА: ответить на вопрос поль�
 Не пересказывай вопрос, не извиняйся, не пиши "как маркетолог скажу" — просто отвечай по существу из СВОЕЙ роли.
 
 Формат ответа:
-• 3-6 предложений или короткий нумерованный список
+• Полный, законченный ответ — НЕ обрывайся на полуслове
+• 4-8 предложений или короткий нумерованный список
 • Конкретика: цифры, шаги, имена инструментов
 • Без эмодзи и заголовков
 • Заканчивай одним практичным следующим шагом
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
       try {
         const res = await client.messages.create({
           model: COUNCIL_MODEL,
-          max_tokens: 400,
+          max_tokens: 1024,
           system: buildAgentSystem(agentKey, COUNCIL_TASK),
           messages: [{ role: "user", content: question }],
         });
