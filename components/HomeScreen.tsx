@@ -66,14 +66,16 @@ export default function HomeScreen() {
 
   return (
     <>
-      <Header
-        title="Консилиум"
-        accent={result ? String(result.responses.length) : "AI"}
-        subtitle="мнения команды на один вопрос"
-      />
+      <div style={{ paddingTop: 56 }}>
+        <Header
+          title="Консилиум"
+          accent={result ? String(result.responses.length) : "AI"}
+          subtitle="мнения команды на один вопрос"
+        />
+      </div>
 
       <div className="px-5 pb-24 space-y-4">
-        <div className="glass rounded-xl p-3 space-y-2.5">
+        <div className="glass rounded-xl p-3 space-y-3">
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -82,17 +84,20 @@ export default function HomeScreen() {
             className="w-full bg-white/5 text-ink text-sm px-3 py-2.5 rounded-md outline-none resize-none placeholder:text-muted/60"
             maxLength={1500}
           />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-muted">{question.length}/1500</span>
-            <button
-              onClick={() => ask()}
-              disabled={loading || question.trim().length < 5}
-              className="text-xs px-4 py-2 rounded-md font-medium disabled:opacity-40"
-              style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
-            >
-              {loading ? "собираю команду…" : "созвать консилиум"}
-            </button>
-          </div>
+          <div className="text-right text-[10px] text-muted -mt-1">{question.length}/1500</div>
+          <button
+            onClick={() => ask()}
+            disabled={loading || question.trim().length < 5}
+            className="w-full py-3.5 rounded-xl font-bold text-[15px] tracking-wide disabled:opacity-40 active:scale-[0.98] transition-transform"
+            style={{
+              background: "linear-gradient(135deg, #FFB020 0%, #F0A020 40%, #D05020 100%)",
+              color: "#0A0705",
+              boxShadow: loading || question.trim().length < 5 ? "none" : "0 4px 20px rgba(240,160,32,0.45), 0 0 0 1px rgba(255,180,32,0.2) inset",
+              textShadow: "0 1px 0 rgba(255,255,255,0.2)",
+            }}
+          >
+            {loading ? "собираю команду…" : "СОЗВАТЬ КОНСИЛИУМ"}
+          </button>
           {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
         </div>
 
