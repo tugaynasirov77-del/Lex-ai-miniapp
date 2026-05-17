@@ -1,177 +1,165 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { tgFetch, hapticSelection } from "../lib/telegram";
+import { useState } from "react";
+import Header from "./Header";
+import { tgFetch, hapticImpact, hapticNotify } from "../lib/telegram";
 
-type EventKind =
-  | "pending_draft"
-  | "approved_soon"
-  | "published"
-  | "publish_failed"
-  | "new_competitors"
-  | "channel_growth";
+type AgentKey = "milena" | "alexander" | "alina" | "mikhail" | "nikolay" | "viktor" | "arkadiy";
 
-type InboxEvent = {
-  id: string;
-  type: EventKind;
-  project_id: string;
-  project_title: string;
-  channel_username: string | null;
-  title: string;
-  subtitle: string;
-  at: string;
-  priority: number;
-  payload?: Record<string, any>;
+type CouncilResponse = {
+  agent_id: AgentKey;
+  agent_name: string;
+  agent_role: string;
+  answer: string;
+  error?: string;
 };
 
-const TYPE_STYLE: Record<EventKind, { color: string; bg: string; emoji: string }> = {
-  publish_failed: { color: "#ef4444", bg: "rgba(239, 68, 68, 0.10)", emoji: "⚠️" },
-  pending_draft: { color: "#F0A020", bg: "rgba(240, 160, 32, 0.10)", emoji: "📝" },
-  new_competitors: { color: "#a98cff", bg: "rgba(124, 92, 252, 0.10)", emoji: "🔍" },
-  channel_growth: { color: "#22d3a5", bg: "rgba(34, 211, 165, 0.10)", emoji: "📈" },
-  approved_soon: { color: "#7dd3fc", bg: "rgba(125, 211, 252, 0.08)", emoji: "⏰" },
-  published: { color: "#22d3a5", bg: "rgba(34, 211, 165, 0.06)", emoji: "✓" },
+const AGENT_META: Record<AgentKey, { color: string; bg: string; emoji: string }> = {
+  milena:    { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.10)",  emoji: "📣" },
+  alexander: { color: "#7dd3fc", bg: "rgba(125, 211, 252, 0.10)", emoji: "♟️" },
+  alina:     { color: "#f0a020", bg: "rgba(240, 160, 32, 0.10)",  emoji: "✍️" },
+  mikhail:   { color: "#22d3a5", bg: "rgba(34, 211, 165, 0.10)",  emoji: "💻" },
+  nikolay:   { color: "#a98cff", bg: "rgba(124, 92, 252, 0.12)",  emoji: "📊" },
+  viktor:    { color: "#ef4444", bg: "rgba(239, 68, 68, 0.10)",   emoji: "🤝" },
+  arkadiy:   { color: "#e5e5e5", bg: "rgba(255, 255, 255, 0.06)", emoji: "🔍" },
 };
 
-function timeAgo(iso: string): string {
-  const d = Date.now() - new Date(iso).getTime();
-  if (d < 0) {
-    const f = Math.abs(d);
-    const min = Math.round(f / 60_000);
-    if (min < 60) return `через ${min} мин`;
-    const h = Math.round(min / 60);
-    if (h < 24) return `через ${h} ч`;
-    return `через ${Math.round(h / 24)} дн`;
-  }
-  const min = Math.round(d / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `${h} ч назад`;
-  return `${Math.round(h / 24)} дн назад`;
-}
-
-function plural(n: number, one: string, few: string, many: string): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return one;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
-  return many;
-}
+const EXAMPLES = [
+  "Стоит ли запускать платную подписку через TG Stars?",
+  "Как раскачать канал на 10к подписчиков за 60 дней?",
+  "Нужно ли продавать рекламу или лучше свои продукты?",
+  "Что улучшить в моём контент-плане на следующий месяц?",
+];
 
 export default function HomeScreen() {
-  const [events, setEvents] = useState<InboxEvent[]>([]);
-  const [projectsCount, setProjectsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<EventKind | null>(null);
+  const [result, setResult] = useState<{ responses: CouncilResponse[]; selected: AgentKey[] } | null>(null);
 
-  const load = async () => {
+  const ask = async (q?: string) => {
+    const text = (q ?? question).trim();
+    if (text.length < 5) {
+      setError("Вопрос слишком короткий");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    setResult(null);
+    hapticImpact("medium");
     try {
-      const r = await tgFetch(`/api/inbox?t=${Date.now()}`, { cache: "no-store" } as any);
+      const r = await tgFetch(`/api/council`, {
+        method: "POST",
+        body: JSON.stringify({ question: text }),
+      });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "не удалось загрузить");
-      setEvents(d.events ?? []);
-      setProjectsCount(d.projects_count ?? 0);
+      if (!r.ok) throw new Error(d.error || "консилиум не отвечает");
+      setResult({ responses: d.responses ?? [], selected: d.selected_agents ?? [] });
+      hapticNotify("success");
     } catch (e: any) {
       setError(e.message);
+      hapticNotify("error");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  const counts: Partial<Record<EventKind, number>> = {};
-  for (const e of events) counts[e.type] = (counts[e.type] ?? 0) + 1;
-
-  const visible = filter ? events.filter((e) => e.type === filter) : events;
-
   return (
-    <main className="pb-24" style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
-      <header className="px-5 pb-4">
-        <h1 className="text-[26px] font-bold tracking-tight text-ink">Что происходит</h1>
-        <p className="text-[13px] text-muted mt-1">
-          {projectsCount === 0 ? "пока нет проектов" : `события по ${projectsCount} ${plural(projectsCount, "проекту", "проектам", "проектам")}`}
-        </p>
-      </header>
+    <>
+      <Header
+        title="Консилиум"
+        accent={result ? String(result.responses.length) : "AI"}
+        subtitle="мнения команды на один вопрос"
+      />
 
-      <div className="px-5 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-        <Chip label="всё" count={events.length} active={filter === null} onClick={() => setFilter(null)} />
-        {counts.pending_draft && <Chip label="на одобрение" count={counts.pending_draft} color="#F0A020" active={filter === "pending_draft"} onClick={() => setFilter(filter === "pending_draft" ? null : "pending_draft")} />}
-        {counts.publish_failed && <Chip label="ошибки" count={counts.publish_failed} color="#ef4444" active={filter === "publish_failed"} onClick={() => setFilter(filter === "publish_failed" ? null : "publish_failed")} />}
-        {counts.approved_soon && <Chip label="в очереди" count={counts.approved_soon} color="#7dd3fc" active={filter === "approved_soon"} onClick={() => setFilter(filter === "approved_soon" ? null : "approved_soon")} />}
-        {counts.new_competitors && <Chip label="конкуренты" count={counts.new_competitors} color="#a98cff" active={filter === "new_competitors"} onClick={() => setFilter(filter === "new_competitors" ? null : "new_competitors")} />}
-        {counts.published && <Chip label="вышло" count={counts.published} color="#22d3a5" active={filter === "published"} onClick={() => setFilter(filter === "published" ? null : "published")} />}
-      </div>
+      <div className="px-5 pb-24 space-y-4">
+        <div className="glass rounded-xl p-3 space-y-2.5">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Задай вопрос — команда соберётся и ответит с разных сторон. Например: «стоит ли закрыть канал и запустить новый»."
+            rows={4}
+            className="w-full bg-white/5 text-ink text-sm px-3 py-2.5 rounded-md outline-none resize-none placeholder:text-muted/60"
+            maxLength={1500}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted">{question.length}/1500</span>
+            <button
+              onClick={() => ask()}
+              disabled={loading || question.trim().length < 5}
+              className="text-xs px-4 py-2 rounded-md font-medium disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+            >
+              {loading ? "собираю команду…" : "созвать консилиум"}
+            </button>
+          </div>
+          {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
+        </div>
 
-      <div className="px-5 space-y-2">
-        {loading && <p className="text-sm text-muted py-8 text-center">загружаю…</p>}
-        {error && <p className="text-sm py-4 text-center" style={{ color: "#ef4444" }}>{error}</p>}
-        {!loading && events.length === 0 && (
-          <div className="py-12 text-center space-y-3">
-            <div className="text-5xl">🌱</div>
-            <p className="text-sm text-muted">Пока тихо. Зайди в проекты — там вся работа.</p>
-            <Link href="/projects" className="inline-block text-xs px-4 py-2 rounded-md font-medium" style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}>
-              открыть проекты
-            </Link>
+        {!result && !loading && (
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted uppercase tracking-wider px-1">примеры</p>
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                onClick={() => {
+                  setQuestion(ex);
+                  ask(ex);
+                }}
+                className="block w-full text-left text-[12px] text-ink/85 glass rounded-lg px-3 py-2.5 active:scale-[0.99] transition-transform"
+              >
+                {ex}
+              </button>
+            ))}
           </div>
         )}
-        {!loading && visible.map((ev) => <EventCard key={ev.id} ev={ev} />)}
-      </div>
-    </main>
-  );
-}
 
-function Chip({ label, count, active, color, onClick }: { label: string; count: number; active?: boolean; color?: string; onClick?: () => void }) {
-  return (
-    <button
-      onClick={() => {
-        hapticSelection();
-        onClick?.();
-      }}
-      className="px-3 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap shrink-0 flex items-center gap-1.5 active:scale-[0.97] transition-transform"
-      style={{
-        background: active ? "rgba(240, 160, 32, 0.15)" : "rgba(255,255,255,0.04)",
-        color: active ? "#F0A020" : color ?? "#8a8175",
-      }}
-    >
-      <span>{label}</span>
-      <span className="opacity-70 tnum">{count}</span>
-    </button>
-  );
-}
-
-function EventCard({ ev }: { ev: InboxEvent }) {
-  const style = TYPE_STYLE[ev.type];
-
-  return (
-    <Link
-      href={`/projects/${ev.project_id}`}
-      onClick={() => hapticSelection()}
-      className="block glass rounded-xl p-3.5 active:scale-[0.99] transition-transform"
-      style={{ borderLeft: `3px solid ${style.color}` }}
-    >
-      <div className="flex items-start gap-2.5">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
-          style={{ background: style.bg }}
-        >
-          {style.emoji}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-ink leading-tight">{ev.title}</div>
-          <div className="text-[12px] text-ink/70 mt-0.5 leading-snug line-clamp-2">{ev.subtitle}</div>
-          <div className="text-[10px] text-muted mt-1.5 flex items-center gap-1.5">
-            <span className="truncate">{ev.channel_username ? `@${ev.channel_username}` : ev.project_title}</span>
-            <span>·</span>
-            <span>{timeAgo(ev.at)}</span>
+        {loading && (
+          <div className="py-6 text-center text-sm text-muted space-y-2">
+            <div className="text-2xl animate-pulse">💭</div>
+            <p>команда совещается — 5–15 секунд</p>
           </div>
-        </div>
+        )}
+
+        {result && (
+          <div className="space-y-3">
+            <div className="text-[11px] text-muted px-1">
+              ответили: {result.responses.map((r) => r.agent_name).join(", ")}
+            </div>
+            {result.responses.map((r) => {
+              const meta = AGENT_META[r.agent_id];
+              return (
+                <div key={r.agent_id} className="glass rounded-xl p-3.5 space-y-2" style={{ borderLeft: `3px solid ${meta.color}` }}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: meta.bg }}>
+                      {meta.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-ink">{r.agent_name}</div>
+                      <div className="text-[11px] text-muted">{r.agent_role}</div>
+                    </div>
+                  </div>
+                  {r.error ? (
+                    <p className="text-[12px]" style={{ color: "#ef4444" }}>не ответил: {r.error}</p>
+                  ) : (
+                    <p className="text-[13px] text-ink/90 leading-relaxed whitespace-pre-wrap">{r.answer}</p>
+                  )}
+                </div>
+              );
+            })}
+            <button
+              onClick={() => {
+                setResult(null);
+                setQuestion("");
+              }}
+              className="w-full text-[11px] py-2 rounded-md font-medium text-muted active:opacity-70"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              задать новый вопрос
+            </button>
+          </div>
+        )}
       </div>
-    </Link>
+    </>
   );
 }

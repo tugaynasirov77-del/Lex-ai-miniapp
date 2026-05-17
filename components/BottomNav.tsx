@@ -62,7 +62,7 @@ function ChartIcon({ active }: { active?: boolean }) {
 
 const TABS = [
   { href: "/",          label: "главная",  Icon: HomeIcon    },
-  { href: "/team",      label: "команда",  Icon: UsersIcon   },
+  { href: "/team",      label: "история",  Icon: UsersIcon   },
   { href: "/projects",  label: "проекты",  Icon: FoldersIcon },
   { href: "/analytics", label: "статы",    Icon: ChartIcon   },
 ];
