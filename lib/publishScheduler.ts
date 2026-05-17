@@ -1,11 +1,20 @@
 import { getSupabase } from "./supabase";
 
+type PollData = {
+  question: string;
+  options: string[];
+  type: "poll" | "quiz";
+  correct_option_id?: number | null;
+  explanation?: string | null;
+};
+
 type DueDraft = {
   id: string;
   project_id: string;
   body: string;
   title_variants: string[] | null;
   photo_url: string | null;
+  poll_data: PollData | null;
   publish_attempts: number;
   projects: { channel_id: string | null; channel_username: string | null } | null;
 };
@@ -19,7 +28,7 @@ export async function publishDueDrafts(): Promise<{ processed: number; results: 
   const { data: due } = await sb
     .from("content_drafts")
     .select(
-      "id,project_id,body,title_variants,photo_url,publish_attempts,projects(channel_id,channel_username)"
+      "id,project_id,body,title_variants,photo_url,poll_data,publish_attempts,projects(channel_id,channel_username)"
     )
     .eq("status", "approved")
     .is("published_message_id", null)
@@ -42,16 +51,32 @@ export async function publishDueDrafts(): Promise<{ processed: number; results: 
     const text = escTitle ? `<b>${escTitle}</b>\n\n${d.body}` : d.body;
 
     try {
-      const apiPath = d.photo_url ? "sendPhoto" : "sendMessage";
-      const tgBody: any = {
-        chat_id: chat,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      };
-      if (d.photo_url) {
+      let apiPath: string;
+      const tgBody: any = { chat_id: chat };
+
+      if (d.poll_data) {
+        // Опрос: sendPoll. Игнорируем body/photo — sendPoll сам по себе пост.
+        apiPath = "sendPoll";
+        tgBody.question = d.poll_data.question.slice(0, 300);
+        tgBody.options = d.poll_data.options.slice(0, 4).map((o) => o.slice(0, 100));
+        tgBody.is_anonymous = true;
+        if (d.poll_data.type === "quiz") {
+          tgBody.type = "quiz";
+          tgBody.correct_option_id = typeof d.poll_data.correct_option_id === "number" ? d.poll_data.correct_option_id : 0;
+          if (d.poll_data.explanation) tgBody.explanation = d.poll_data.explanation.slice(0, 200);
+        } else {
+          tgBody.type = "regular";
+          tgBody.allows_multiple_answers = false;
+        }
+      } else if (d.photo_url) {
+        apiPath = "sendPhoto";
+        tgBody.parse_mode = "HTML";
         tgBody.photo = d.photo_url;
         tgBody.caption = text.slice(0, 1024);
       } else {
+        apiPath = "sendMessage";
+        tgBody.parse_mode = "HTML";
+        tgBody.disable_web_page_preview = true;
         tgBody.text = text;
       }
 

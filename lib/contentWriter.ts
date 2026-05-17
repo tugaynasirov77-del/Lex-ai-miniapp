@@ -41,6 +41,23 @@ titles — 3 разных A/B заголовка, 30–70 символов ка�
 body — готовый пост с разметкой Telegram HTML.
 Никакого текста до или после JSON.`;
 
+const POLL_TASK = `ЗАДАЧА: создать ОПРОС для Telegram-канала.
+
+Аудитория голосует — вопрос должен быть провокационным, заставлять выбрать сторону.
+
+Требования:
+• question: один короткий конкретный вопрос (≤ 200 символов). Не "что вы думаете о X", а "что важнее: А или Б?"
+• options: 2–4 варианта ответа, каждый ≤ 100 символов. Без эмодзи в начале. Варианты должны быть взаимоисключающие и плюс-минус равнопривлекательные.
+• type: "poll" (обычный опрос — голосуют без правильного ответа) или "quiz" (один правильный ответ + объяснение)
+• Для quiz: correct_option_id — индекс правильного варианта (0..n-1), explanation — короткое объяснение почему именно этот, ≤ 200 символов
+• Орфография — без ошибок
+
+Формат ответа — ВСЕГДА строгий JSON одной строкой:
+{"question":"вопрос?","options":["вариант 1","вариант 2"],"type":"poll","correct_option_id":null,"explanation":null}
+
+Для quiz: type="quiz", correct_option_id=число, explanation=строка.
+Никакого текста до или после JSON.`;
+
 const EDITOR_TASK = `ЗАДАЧА: отредактировать черновик поста (JSON) и вернуть улучшенную версию.
 
 Что делаешь:
@@ -63,6 +80,13 @@ titles — оставь без HTML, plain text.
 Никакого текста до или после JSON.`;
 
 type Draft = { titles: string[]; body: string };
+type PollDraft = {
+  question: string;
+  options: string[];
+  type: "poll" | "quiz";
+  correct_option_id?: number | null;
+  explanation?: string | null;
+};
 
 function safeJson<T>(s: string): T | null {
   try {
@@ -103,7 +127,7 @@ function buildUserContext(opts: {
 
 export async function generateDraftForProject(
   projectId: string,
-  seed?: { planId?: string; planDay?: string; topic?: string; hook?: string }
+  seed?: { planId?: string; planDay?: string; topic?: string; hook?: string; format?: "text" | "poll" | "quiz" }
 ): Promise<{ draftId: string; cost: number } | { skipped: string }> {
   const sb = getSupabase();
   const { data: project } = await sb
@@ -144,6 +168,14 @@ export async function generateDraftForProject(
   const finalContext = parts.join("\n\n");
 
   const client = new Anthropic({ apiKey });
+
+  // Ветка для опросов: один запрос к Алине, без Editor (формат строгий и короткий)
+  const isPoll = seed?.format === "poll" || seed?.format === "quiz";
+  if (isPoll) {
+    return await generatePollDraft({
+      sb, client, projectId, project, finalContext, seed,
+    });
+  }
 
   const writerRes = await client.messages.create({
     model: WRITER_MODEL,
@@ -219,4 +251,70 @@ export async function generateDraftForProject(
     .eq("project_id", projectId);
 
   return { draftId: insertedRows.id, cost: totalCost };
+}
+
+async function generatePollDraft(args: {
+  sb: ReturnType<typeof getSupabase>;
+  client: Anthropic;
+  projectId: string;
+  project: { tg_id: number };
+  finalContext: string;
+  seed?: { planId?: string; planDay?: string; format?: "text" | "poll" | "quiz" };
+}): Promise<{ draftId: string; cost: number } | { skipped: string }> {
+  const { sb, client, projectId, project, finalContext, seed } = args;
+  const typeHint = seed?.format === "quiz" ? "Сделай QUIZ (type=\"quiz\") с одним правильным ответом и explanation." : "Сделай обычный POLL (type=\"poll\") без правильного ответа.";
+  const ctx = `${finalContext}\n\n${typeHint}`;
+
+  const res = await client.messages.create({
+    model: WRITER_MODEL,
+    max_tokens: 500,
+    system: buildAgentSystem("alina", POLL_TASK),
+    messages: [{ role: "user", content: ctx }],
+  });
+
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "writer",
+    model: WRITER_MODEL,
+    usage: res.usage as any,
+    tgId: project.tg_id,
+  });
+
+  const raw = res.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
+  const poll = safeJson<PollDraft>(raw);
+  if (!poll || !poll.question || !Array.isArray(poll.options) || poll.options.length < 2 || poll.options.length > 4) {
+    return { skipped: "writer returned invalid poll JSON" };
+  }
+
+  const pollType: "poll" | "quiz" = poll.type === "quiz" ? "quiz" : "poll";
+  const pollData = {
+    question: poll.question.slice(0, 300),
+    options: poll.options.map((o) => o.slice(0, 100)),
+    type: pollType,
+    correct_option_id: pollType === "quiz" && typeof poll.correct_option_id === "number" ? poll.correct_option_id : null,
+    explanation: pollType === "quiz" && poll.explanation ? poll.explanation.slice(0, 200) : null,
+  };
+
+  // body хранит превью-текст для UI; title_variants пустой
+  const previewBody = `${pollData.question}\n${pollData.options.map((o, i) => `${i + 1}. ${o}`).join("\n")}`;
+
+  const { data: insertedRows, error } = await sb
+    .from("content_drafts")
+    .insert({
+      project_id: projectId,
+      title_variants: [],
+      body: previewBody,
+      source: seed?.planId ? "plan" : "auto",
+      model_writer: WRITER_MODEL,
+      cost_usd: cost,
+      status: "pending",
+      plan_id: seed?.planId ?? null,
+      plan_day: seed?.planDay ?? null,
+      poll_data: pollData,
+    })
+    .select("id")
+    .single();
+  if (error || !insertedRows) throw new Error(error?.message || "insert failed");
+
+  return { draftId: insertedRows.id, cost };
 }

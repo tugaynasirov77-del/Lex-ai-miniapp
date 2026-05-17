@@ -49,19 +49,34 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return Response.json({ error: "TELEGRAM_BOT_TOKEN missing" }, { status: 500 });
 
-  // Если есть фото — шлём sendPhoto с текстом в caption (одним постом),
-  // иначе обычное текстовое сообщение
-  const hasPhoto = !!draft.photo_url;
-  const apiPath = hasPhoto ? "sendPhoto" : "sendMessage";
-  const tgPayload: Record<string, any> = {
-    chat_id: a.project.channel_id,
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-  };
-  if (hasPhoto) {
+  // Выбор API: опрос → sendPoll, фото → sendPhoto, иначе текст
+  let apiPath: string;
+  const tgPayload: Record<string, any> = { chat_id: a.project.channel_id };
+
+  if (draft.poll_data) {
+    apiPath = "sendPoll";
+    const pd = draft.poll_data as { question: string; options: string[]; type: "poll" | "quiz"; correct_option_id?: number | null; explanation?: string | null };
+    tgPayload.question = pd.question.slice(0, 300);
+    tgPayload.options = pd.options.slice(0, 4).map((o) => o.slice(0, 100));
+    tgPayload.is_anonymous = true;
+    if (pd.type === "quiz") {
+      tgPayload.type = "quiz";
+      tgPayload.correct_option_id = typeof pd.correct_option_id === "number" ? pd.correct_option_id : 0;
+      if (pd.explanation) tgPayload.explanation = pd.explanation.slice(0, 200);
+    } else {
+      tgPayload.type = "regular";
+      tgPayload.allows_multiple_answers = false;
+    }
+  } else if (draft.photo_url) {
+    apiPath = "sendPhoto";
+    tgPayload.parse_mode = "HTML";
+    tgPayload.disable_web_page_preview = true;
     tgPayload.photo = draft.photo_url;
-    tgPayload.caption = text.slice(0, 1024); // Telegram caption limit
+    tgPayload.caption = text.slice(0, 1024);
   } else {
+    apiPath = "sendMessage";
+    tgPayload.parse_mode = "HTML";
+    tgPayload.disable_web_page_preview = true;
     tgPayload.text = text;
   }
 
