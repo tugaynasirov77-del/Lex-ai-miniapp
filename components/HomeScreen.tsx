@@ -91,7 +91,7 @@ export default function HomeScreen() {
               background: "linear-gradient(135deg, #FFC830 0%, #F0A020 35%, #E06020 70%, #C04020 100%)",
               color: "#0A0705",
               boxShadow:
-                "0 0 32px rgba(255,200,48,0.6), 0 0 16px rgba(255,160,32,0.55), 0 6px 22px rgba(240,96,32,0.5), 0 0 0 1px rgba(255,210,80,0.4) inset, 0 1px 0 rgba(255,255,255,0.4) inset",
+                "0 0 18px rgba(255,200,48,0.3), 0 4px 14px rgba(240,96,32,0.25), 0 0 0 1px rgba(255,210,80,0.25) inset, 0 1px 0 rgba(255,255,255,0.25) inset",
               textShadow: "0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
