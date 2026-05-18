@@ -3,6 +3,7 @@ import { getSupabase } from "./supabase";
 import { fetchChannelMeta, fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildAgentSystem } from "./agents";
+import { sanitizeForAnthropic } from "./sanitize";
 
 // Scout = Милена (маркетолог из команды 7 агентов — ниши и аудитории её зона)
 const SCOUT_MODEL = "claude-haiku-4-5-20251001";
@@ -155,7 +156,7 @@ export async function discoverCompetitorsForProject(
     model: SCOUT_MODEL,
     max_tokens: 1024,
     system: buildAgentSystem("milena", SCOUT_TASK),
-    messages: [{ role: "user", content: ctxLines.join("\n") }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(ctxLines.join("\n")) }],
   });
 
   const cost = await recordSpend({

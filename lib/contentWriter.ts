@@ -4,6 +4,7 @@ import { fetchChannelMeta } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildStrategyHint } from "./strategyAnalyzer";
 import { buildAgentSystem } from "./agents";
+import { sanitizeForAnthropic } from "./sanitize";
 
 // Writer = Алина (копирайтер из команды 7 агентов)
 // Editor = Аркадий (критик из команды 7 агентов)
@@ -181,7 +182,7 @@ export async function generateDraftForProject(
     model: WRITER_MODEL,
     max_tokens: 700,
     system: buildAgentSystem("alina", WRITER_TASK),
-    messages: [{ role: "user", content: finalContext }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(finalContext) }],
   });
 
   const writerCost = await recordSpend({
@@ -206,7 +207,7 @@ export async function generateDraftForProject(
     model: EDITOR_MODEL,
     max_tokens: 700,
     system: buildAgentSystem("arkadiy", EDITOR_TASK),
-    messages: [{ role: "user", content: JSON.stringify(draft) }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(JSON.stringify(draft)) }],
   });
 
   const editorCost = await recordSpend({
@@ -269,7 +270,7 @@ async function generatePollDraft(args: {
     model: WRITER_MODEL,
     max_tokens: 500,
     system: buildAgentSystem("alina", POLL_TASK),
-    messages: [{ role: "user", content: ctx }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(ctx) }],
   });
 
   const cost = await recordSpend({
