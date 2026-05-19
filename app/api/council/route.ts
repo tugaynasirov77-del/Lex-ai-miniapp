@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { verifyInitData } from "../../../lib/verifyTelegram";
 import { buildAgentSystem, AGENT_DEFS, type AgentKey } from "../../../lib/agents";
+import { sanitizeForAnthropic } from "../../../lib/sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
           model: COUNCIL_MODEL,
           max_tokens: 1024,
           system: buildAgentSystem(agentKey, COUNCIL_TASK),
-          messages: [{ role: "user", content: question }],
+          messages: [{ role: "user", content: sanitizeForAnthropic(question) }],
         });
         const text = res.content
           .filter((b: any) => b.type === "text")

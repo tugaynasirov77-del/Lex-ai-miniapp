@@ -3,6 +3,7 @@ import { getSupabase } from "./supabase";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildStrategyHint } from "./strategyAnalyzer";
 import { buildAgentSystem } from "./agents";
+import { sanitizeForAnthropic } from "./sanitize";
 
 // Strategist = Александр (стратег из команды 7 агентов)
 const STRATEGIST_MODEL = "claude-sonnet-4-6";
@@ -135,7 +136,7 @@ export async function generatePlanForProject(
     model: STRATEGIST_MODEL,
     max_tokens: 2048,
     system: buildAgentSystem("alexander", STRATEGIST_TASK),
-    messages: [{ role: "user", content: lines.join("\n") }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(lines.join("\n")) }],
   });
 
   const cost = await recordSpend({

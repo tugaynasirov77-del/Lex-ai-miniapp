@@ -3,6 +3,7 @@ import { getSupabase } from "./supabase";
 import { fetchChannelPreview } from "./parseTmePreview";
 import { canSpend, recordSpend } from "./projectBudget";
 import { buildAgentSystem } from "./agents";
+import { sanitizeForAnthropic } from "./sanitize";
 
 // Strategy Analyzer = Николай (аналитик из команды 7 агентов)
 const ANALYZER_MODEL = "claude-sonnet-4-6";
@@ -105,7 +106,7 @@ export async function analyzeNicheStrategy(projectId: string): Promise<{ cost: n
     model: ANALYZER_MODEL,
     max_tokens: 2048,
     system: buildAgentSystem("nikolay", ANALYZER_TASK),
-    messages: [{ role: "user", content: lines.join("\n") }],
+    messages: [{ role: "user", content: sanitizeForAnthropic(lines.join("\n")) }],
   });
 
   const cost = await recordSpend({
