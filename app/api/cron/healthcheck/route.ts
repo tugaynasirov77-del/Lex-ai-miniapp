@@ -81,6 +81,17 @@ export async function GET(req: Request) {
     return new Response("forbidden", { status: 403 });
   }
 
+  // ВАЖНО: публикация запланированных постов выполняется ПЕРВОЙ —
+  // healthcheck может падать из-за отсутствующих таблиц health_log/health_state,
+  // но публикатор должен срабатывать всегда. Раньше health-insert крашил
+  // эндпоинт ещё до того, как доходило до publishDueDrafts.
+  let publish: { processed: number; results: any[] } = { processed: 0, results: [] };
+  try {
+    publish = await publishDueDrafts();
+  } catch (e: any) {
+    publish.results.push({ error: e.message ?? "publish scheduler crashed" });
+  }
+
   const results = await Promise.all([
     checkTelegramBot(),
     checkMiniAppHome(),
@@ -90,58 +101,54 @@ export async function GET(req: Request) {
 
   const sb = getSupabase();
 
-  await sb.from("health_log").insert(
-    results.map((r) => ({
-      service: r.service,
-      status: r.status,
-      latency_ms: r.latency_ms,
-      error: r.error ?? null,
-    }))
-  );
-
-  const { data: prevStates } = await sb.from("health_state").select("*");
-  const prev = new Map<string, { status: string; alert_sent: boolean }>();
-  for (const row of prevStates ?? []) prev.set(row.service, { status: row.status, alert_sent: row.alert_sent });
+  // health_log / health_state могут не существовать — не падаем.
+  try {
+    await sb.from("health_log").insert(
+      results.map((r) => ({
+        service: r.service,
+        status: r.status,
+        latency_ms: r.latency_ms,
+        error: r.error ?? null,
+      }))
+    );
+  } catch {}
 
   const alerts: string[] = [];
 
-  for (const r of results) {
-    const before = prev.get(r.service);
-    const wasDown = before?.status === "down";
-    const isDown = r.status === "down";
-    const alertSent = before?.alert_sent ?? false;
+  try {
+    const { data: prevStates } = await sb.from("health_state").select("*");
+    const prev = new Map<string, { status: string; alert_sent: boolean }>();
+    for (const row of prevStates ?? []) prev.set(row.service, { status: row.status, alert_sent: row.alert_sent });
 
-    let alert_sent = alertSent;
-    if (isDown && !alertSent) {
-      alerts.push(`🔴 <b>${r.service}</b> упал\n${r.error ?? "unknown error"}`);
-      alert_sent = true;
-    } else if (!isDown && wasDown && alertSent) {
-      alerts.push(`🟢 <b>${r.service}</b> восстановился (${r.latency_ms}ms)`);
-      alert_sent = false;
+    for (const r of results) {
+      const before = prev.get(r.service);
+      const wasDown = before?.status === "down";
+      const isDown = r.status === "down";
+      const alertSent = before?.alert_sent ?? false;
+
+      let alert_sent = alertSent;
+      if (isDown && !alertSent) {
+        alerts.push(`🔴 <b>${r.service}</b> упал\n${r.error ?? "unknown error"}`);
+        alert_sent = true;
+      } else if (!isDown && wasDown && alertSent) {
+        alerts.push(`🟢 <b>${r.service}</b> восстановился (${r.latency_ms}ms)`);
+        alert_sent = false;
+      }
+
+      const changed = !before || before.status !== r.status;
+      await sb.from("health_state").upsert({
+        service: r.service,
+        status: r.status,
+        since: changed ? new Date().toISOString() : undefined,
+        alert_sent,
+        last_error: r.error ?? null,
+        updated_at: new Date().toISOString(),
+      });
     }
-
-    const changed = !before || before.status !== r.status;
-    await sb.from("health_state").upsert({
-      service: r.service,
-      status: r.status,
-      since: changed ? new Date().toISOString() : undefined,
-      alert_sent,
-      last_error: r.error ?? null,
-      updated_at: new Date().toISOString(),
-    });
-  }
+  } catch {}
 
   if (alerts.length > 0) {
     await sendAlert(alerts.join("\n\n"));
-  }
-
-  // Заодно публикуем все запланированные посты с scheduled_at <= now.
-  // Healthcheck бежит каждые 5 минут — это даёт точность ±2.5 минуты.
-  let publish: { processed: number; results: any[] } = { processed: 0, results: [] };
-  try {
-    publish = await publishDueDrafts();
-  } catch (e: any) {
-    publish.results.push({ error: e.message ?? "publish scheduler crashed" });
   }
 
   return Response.json({ ok: true, results, alerts_sent: alerts.length, publish });
