@@ -41,6 +41,7 @@ type InboxEvent = {
       explanation?: string | null;
     } | null;
     title?: string | null;
+    plan_id?: string | null;
   };
 };
 
@@ -162,6 +163,28 @@ export default function InboxScreen() {
     }
   };
 
+  const regenerate = async (ev: InboxEvent) => {
+    if (!ev.payload?.draft_id) return;
+    hapticImpact("medium");
+    setBusy(ev.id);
+    try {
+      await tgFetch(`/api/projects/${ev.project_id}/drafts`, {
+        method: "POST",
+        body: JSON.stringify({
+          plan_id: ev.payload.plan_id,
+          plan_day: ev.payload.plan_day,
+          replace_draft_id: ev.payload.draft_id,
+        }),
+      });
+      hapticNotify("success");
+      await load();
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const publishNow = async (ev: InboxEvent) => {
     if (!ev.payload?.draft_id) return;
     hapticImpact("heavy");
@@ -219,6 +242,7 @@ export default function InboxScreen() {
             onApprove={() => decideDraft(ev, "approved")}
             onDelete={() => decideDraft(ev, "rejected")}
             onPublishNow={() => publishNow(ev)}
+            onRegenerate={() => regenerate(ev)}
             onUploadPhoto={(file) => uploadPhoto(ev, file)}
             onRemovePhoto={() => removePhoto(ev)}
           />
@@ -255,6 +279,7 @@ function EventCard({
   onApprove,
   onDelete,
   onPublishNow,
+  onRegenerate,
   onUploadPhoto,
   onRemovePhoto,
 }: {
@@ -265,6 +290,7 @@ function EventCard({
   onApprove: () => void;
   onDelete: () => void;
   onPublishNow: () => void;
+  onRegenerate: () => void;
   onUploadPhoto: (f: File) => void;
   onRemovePhoto: () => void;
 }) {
@@ -396,43 +422,67 @@ function EventCard({
       )}
 
       {ev.type === "pending_draft" && isDraftEvent && (
-        <div className="flex gap-2">
-          <ActionButton
-            label={busy ? "…" : "одобрить"}
-            onClick={onApprove}
-            disabled={busy}
-            color="#22d3a5"
-            bg="rgba(34, 211, 165, 0.15)"
-            flex
-          />
-          <ActionButton
-            label="удалить"
-            onClick={onDelete}
-            disabled={busy}
-            color="#ef4444"
-            bg="rgba(239, 68, 68, 0.12)"
-            flex
-          />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <ActionButton
+              label={busy ? "…" : "одобрить"}
+              onClick={onApprove}
+              disabled={busy}
+              color="#22d3a5"
+              bg="rgba(34, 211, 165, 0.15)"
+              flex
+            />
+            <ActionButton
+              label="удалить"
+              onClick={onDelete}
+              disabled={busy}
+              color="#ef4444"
+              bg="rgba(239, 68, 68, 0.12)"
+              flex
+            />
+          </div>
+          {ev.payload?.plan_id && (
+            <ActionButton
+              label={busy ? "переписываю…" : "переделать пост"}
+              onClick={onRegenerate}
+              disabled={busy}
+              color="#F5EDD8"
+              bg="rgba(255,255,255,0.06)"
+              flex
+            />
+          )}
         </div>
       )}
 
       {ev.type === "approved_soon" && isDraftEvent && (
-        <div className="flex gap-2">
-          <ActionButton
-            label={busy ? "…" : "опубликовать сейчас"}
-            onClick={onPublishNow}
-            disabled={busy}
-            color="#0A0705"
-            bg="linear-gradient(135deg, #F0A020, #D05020)"
-            flex
-          />
-          <ActionButton
-            label="удалить"
-            onClick={onDelete}
-            disabled={busy}
-            color="#ef4444"
-            bg="rgba(239, 68, 68, 0.12)"
-          />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <ActionButton
+              label={busy ? "…" : "опубликовать сейчас"}
+              onClick={onPublishNow}
+              disabled={busy}
+              color="#0A0705"
+              bg="linear-gradient(135deg, #F0A020, #D05020)"
+              flex
+            />
+            <ActionButton
+              label="удалить"
+              onClick={onDelete}
+              disabled={busy}
+              color="#ef4444"
+              bg="rgba(239, 68, 68, 0.12)"
+            />
+          </div>
+          {ev.payload?.plan_id && (
+            <ActionButton
+              label={busy ? "переписываю…" : "переделать пост"}
+              onClick={onRegenerate}
+              disabled={busy}
+              color="#F5EDD8"
+              bg="rgba(255,255,255,0.06)"
+              flex
+            />
+          )}
         </div>
       )}
     </div>

@@ -41,6 +41,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if ("err" in a) return a.err;
 
   let seed: { planId?: string; planDay?: string; topic?: string; hook?: string; format?: "text" | "poll" | "quiz" } | undefined;
+  let replaceDraftId: string | null = null;
   try {
     const body = await req.json();
     if (body && typeof body === "object") {
@@ -51,8 +52,36 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         hook: body.hook,
         format: body.format,
       };
+      replaceDraftId = body.replace_draft_id || null;
     }
   } catch {}
+
+  // Если есть plan_id+plan_day но нет topic — подтягиваем из плана (для regenerate)
+  if (seed?.planId && seed?.planDay && !seed.topic) {
+    const sb = getSupabase();
+    const { data: plan } = await sb
+      .from("content_plans")
+      .select("items")
+      .eq("id", seed.planId)
+      .maybeSingle();
+    const items = (plan?.items as Array<{ day: string; topic: string; hook: string; format?: "text" | "poll" | "quiz" }>) ?? [];
+    const item = items.find((it) => it.day === seed!.planDay);
+    if (item) {
+      seed.topic = item.topic;
+      seed.hook = item.hook;
+      seed.format = seed.format ?? item.format ?? "text";
+    }
+  }
+
+  // Если просят заменить — отмечаем старый rejected до генерации нового
+  if (replaceDraftId) {
+    const sb = getSupabase();
+    await sb
+      .from("content_drafts")
+      .update({ status: "rejected", decided_at: new Date().toISOString() })
+      .eq("id", replaceDraftId)
+      .eq("project_id", id);
+  }
 
   try {
     const r = await generateDraftForProject(id, seed);
