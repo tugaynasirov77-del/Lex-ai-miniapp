@@ -131,11 +131,10 @@ export default function InstagramView({ projectId }: { projectId: string }) {
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(d1.error || "upload-url failed");
 
-      // 3) PUT в Supabase Storage
+      // 3) PUT в Supabase Storage — токен уже в URL, авторизация не нужна
       const up = await fetch(d1.upload_url, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${d1.token}`,
           "Content-Type": file.type || "video/mp4",
           "x-upsert": "true",
         },

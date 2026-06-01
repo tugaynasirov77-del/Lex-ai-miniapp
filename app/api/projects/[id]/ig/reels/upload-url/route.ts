@@ -91,8 +91,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   // Финальный публичный путь (private bucket — будем читать service_role'ом из воркера)
   const sourceVideoUrl = `${supaUrl}/storage/v1/object/${bucket}/${storagePath}`;
 
+  // signData.url имеет формат "/object/upload/sign/{bucket}/{path}?token=..."
+  // полный путь — supaUrl + /storage/v1 + signData.url
   return Response.json({
-    upload_url: `${supaUrl}${signData.url}`,
+    upload_url: `${supaUrl}/storage/v1${signData.url}`,
     token: signData.token,
     storage_path: storagePath,
     bucket,
