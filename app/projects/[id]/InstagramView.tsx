@@ -100,8 +100,75 @@ export default function InstagramView({ projectId }: { projectId: string }) {
     }
   };
 
-  const createReel = async () => {
-    const topic = window.prompt("Тема Reel (одна фраза):", "");
+  const uploadReelVideo = async (file: File) => {
+    if (file.size > 52_428_800) {
+      setError(`файл больше 50 МБ (${(file.size / 1_048_576).toFixed(1)} МБ)`);
+      hapticNotify("error");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // 1) узнаём длительность через video element
+      const duration = await new Promise<number>((res) => {
+        const url = URL.createObjectURL(file);
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        v.onloadedmetadata = () => { URL.revokeObjectURL(url); res(Math.round(v.duration || 0)); };
+        v.onerror = () => { URL.revokeObjectURL(url); res(0); };
+        v.src = url;
+      });
+      if (duration > 90) {
+        throw new Error(`видео длиннее 90 секунд (${duration} сек)`);
+      }
+
+      // 2) signed upload URL
+      const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+      const r1 = await tgFetch(`/api/projects/${projectId}/ig/reels/upload-url`, {
+        method: "POST",
+        body: JSON.stringify({ size: file.size, duration, ext }),
+      });
+      const d1 = await r1.json();
+      if (!r1.ok) throw new Error(d1.error || "upload-url failed");
+
+      // 3) PUT в Supabase Storage
+      const up = await fetch(d1.upload_url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${d1.token}`,
+          "Content-Type": file.type || "video/mp4",
+          "x-upsert": "true",
+        },
+        body: file,
+      });
+      if (!up.ok) {
+        const t = await up.text();
+        throw new Error(`upload failed ${up.status}: ${t.slice(0, 200)}`);
+      }
+
+      // 4) создаём драфт + job
+      const r2 = await tgFetch(`/api/projects/${projectId}/ig/reels`, {
+        method: "POST",
+        body: JSON.stringify({
+          source_video_url: d1.source_video_url,
+          source_video_size: file.size,
+          source_video_duration: duration,
+        }),
+      });
+      const d2 = await r2.json();
+      if (!r2.ok) throw new Error(d2.error || "create draft failed");
+      hapticImpact("medium");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createReelFromTopic = async () => {
+    const topic = window.prompt("Тема Reel (AI-аватар, Premium):", "");
     if (!topic || !topic.trim()) return;
     setBusy(true);
     setError(null);
@@ -253,16 +320,34 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         {/* 05 Reels-фабрика */}
         <Section idx="05" icon="drafts" title="Reels — Михаил">
           <p className="text-xs text-muted mb-3">
-            Алина пишет сценарий → HeyGen генерит avatar-видео → Whisper SRT → FFmpeg
-            (subs + overlays + music) → MP4 1080×1920. Воркер на VPS пуллит очередь.
+            Грузишь своё видео (до 50 МБ, до 90 сек) → Whisper транскрибирует →
+            Алина пишет caption + расставляет overlays → Аркадий ревьюит →
+            FFmpeg выжигает субтитры + музыку + 9:16 → готово к публикации.
           </p>
-          <button
-            onClick={createReel}
-            disabled={busy}
-            className="text-xs py-2 px-3 rounded-md font-medium mb-3"
-            style={{ background: "rgba(225, 48, 108, 0.15)", color: "#E1306C" }}
+          <label
+            className="block text-center text-xs py-2 px-3 rounded-md font-medium mb-2 cursor-pointer"
+            style={{ background: "rgba(225, 48, 108, 0.15)", color: "#E1306C", opacity: busy ? 0.4 : 1 }}
           >
-            + новый Reel — сценарий + рендер
+            📹 загрузить своё видео
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadReelVideo(f);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+          <button
+            onClick={createReelFromTopic}
+            disabled={busy}
+            className="w-full text-[11px] py-1.5 px-3 rounded-md mb-3"
+            style={{ background: "rgba(255,255,255,0.04)", color: "#94A3B8" }}
+          >
+            или сгенерировать AI-аватара (Premium)
           </button>
           <ReelList items={data?.reels ?? []} />
         </Section>
