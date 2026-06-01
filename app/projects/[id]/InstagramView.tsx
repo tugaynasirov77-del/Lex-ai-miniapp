@@ -128,8 +128,8 @@ export default function InstagramView({ projectId }: { projectId: string }) {
   };
 
   const uploadReelVideo = async (file: File) => {
-    if (file.size > 52_428_800) {
-      setError(`файл больше 50 МБ (${(file.size / 1_048_576).toFixed(1)} МБ)`);
+    if (file.size > 104_857_600) {
+      setError(`файл больше 100 МБ (${(file.size / 1_048_576).toFixed(1)} МБ)`);
       hapticNotify("error");
       return;
     }
@@ -360,7 +360,7 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         {/* 05 Reels-фабрика */}
         <Section idx="05" icon="drafts" title="Reels — Михаил">
           <p className="text-xs text-muted mb-3">
-            Грузишь своё видео (до 50 МБ, до 90 сек) → Whisper транскрибирует →
+            Грузишь своё видео (до 100 МБ, до 90 сек) → Whisper транскрибирует →
             Алина пишет caption + overlays → FFmpeg выжигает субтитры в выбранном стиле.
           </p>
 

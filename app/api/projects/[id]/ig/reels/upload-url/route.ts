@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 //   4. Mini App делает PUT на upload_url с mp4 и заголовком x-upsert
 //   5. После успеха Mini App → POST /api/projects/[id]/ig/reels с source_video_url
 
-const MAX_BYTES = 52_428_800; // 50 МБ (Supabase Free лимит; на Pro можно 100+)
+const MAX_BYTES = 104_857_600; // 100 МБ (VPS-proxy ужмёт через FFmpeg если > 40 МБ перед загрузкой в Supabase)
 const MAX_DURATION_SEC = 90;
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const ext = String(body.ext || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   if (size <= 0 || size > MAX_BYTES) {
-    return Response.json({ error: `файл должен быть от 1 байта до 50 МБ (получено ${(size / 1_048_576).toFixed(1)} МБ)` }, { status: 400 });
+    return Response.json({ error: `файл должен быть от 1 байта до 100 МБ (получено ${(size / 1_048_576).toFixed(1)} МБ)` }, { status: 400 });
   }
   if (duration > 0 && duration > MAX_DURATION_SEC) {
     return Response.json({ error: `видео длиннее ${MAX_DURATION_SEC} секунд` }, { status: 400 });
