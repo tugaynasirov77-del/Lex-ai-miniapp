@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import crypto from "node:crypto";
 import { getSupabase } from "../../../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../../../lib/verifyTelegram";
 
@@ -64,38 +65,31 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return Response.json({ error: `лимит тарифа: ${cap} Reels/мес. Использовано: ${usedThisMonth}.` }, { status: 402 });
   }
 
-  // Генерим signed upload через Supabase Storage REST
+  // Mini App льёт mp4 на VPS-proxy (Cloudflare Tunnel) — обходим iOS-блокировку
+  // на прямой PUT в Supabase Storage. Proxy валидирует token и стримит в bucket.
   const storagePath = `${projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const bucket = "raw-uploads";
   const supaUrl = process.env.SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  const signResp = await fetch(`${supaUrl}/storage/v1/object/upload/sign/${bucket}/${storagePath}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ expiresIn: 600 }),
-  });
-  if (!signResp.ok) {
-    const t = await signResp.text();
-    return Response.json({ error: `sign failed: ${t.slice(0, 200)}` }, { status: 500 });
-  }
-  const signData = (await signResp.json()) as { url?: string; token?: string };
-  if (!signData.token || !signData.url) {
-    return Response.json({ error: "sign returned empty" }, { status: 500 });
+  const proxyUrl = process.env.UPLOAD_PROXY_URL;
+  const workerSecret = process.env.WORKER_SECRET;
+  if (!proxyUrl || !workerSecret) {
+    return Response.json({ error: "UPLOAD_PROXY_URL / WORKER_SECRET not set" }, { status: 500 });
   }
 
-  // Финальный публичный путь (private bucket — будем читать service_role'ом из воркера)
+  // HMAC-токен: <exp>.<sig>, где sig = HMAC(WORKER_SECRET, `${storage_path}|${exp}`)
+  const exp = Math.floor(Date.now() / 1000) + 600;
+  const sig = crypto
+    .createHmac("sha256", workerSecret)
+    .update(`${storagePath}|${exp}`)
+    .digest("hex");
+  const uploadToken = `${exp}.${sig}`;
+
   const sourceVideoUrl = `${supaUrl}/storage/v1/object/${bucket}/${storagePath}`;
 
-  // signData.url имеет формат "/object/upload/sign/{bucket}/{path}?token=..."
-  // полный путь — supaUrl + /storage/v1 + signData.url
   return Response.json({
-    upload_url: `${supaUrl}/storage/v1${signData.url}`,
-    token: signData.token,
+    proxy_url: `${proxyUrl.replace(/\/$/, "")}/upload`,
+    upload_token: uploadToken,
     storage_path: storagePath,
     bucket,
     source_video_url: sourceVideoUrl,

@@ -133,14 +133,14 @@ export default function InstagramView({ projectId }: { projectId: string }) {
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(`sign: ${d1.error || r1.status}`);
 
-      // 3) Загружаем в Supabase Storage через XMLHttpRequest с raw File body
-      // (iOS Telegram WebView ломается на fetch с File body, FormData тоже не подходит — Supabase ждёт raw)
+      // 3) Льём mp4 на VPS-proxy (Cloudflare Tunnel) — iOS блокирует прямую загрузку в Supabase
       stage = "upload";
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", d1.upload_url, true);
+        xhr.open("POST", d1.proxy_url, true);
         xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
-        xhr.setRequestHeader("x-upsert", "true");
+        xhr.setRequestHeader("x-upload-token", d1.upload_token);
+        xhr.setRequestHeader("x-storage-path", d1.storage_path);
         xhr.upload.onprogress = (ev) => {
           if (ev.lengthComputable) {
             const pct = Math.round((ev.loaded / ev.total) * 100);
