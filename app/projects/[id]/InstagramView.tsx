@@ -78,7 +78,7 @@ export default function InstagramView({ projectId }: { projectId: string }) {
 
   const [attachUsername, setAttachUsername] = useState("");
   const [attachAccountId, setAttachAccountId] = useState("");
-  const [preset, setPreset] = useState<"expert_clean" | "personal_brand_energy" | "ai_tech_fast">("expert_clean");
+  const [preset, setPreset] = useState<"expert_clean" | "personal_brand_energy" | "ai_tech_fast" | "cinematic_mentor">("cinematic_mentor");
 
   const load = async () => {
     try {
@@ -367,8 +367,9 @@ export default function InstagramView({ projectId }: { projectId: string }) {
           {/* выбор пресета */}
           <div className="mb-3 space-y-1.5">
             <div className="text-[10px] text-muted uppercase tracking-wider">стиль монтажа</div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {([
+                { id: "cinematic_mentor", label: "Cinematic", emoji: "🎬", desc: "Премиум-наставник" },
                 { id: "expert_clean", label: "Эксперт", emoji: "✨", desc: "Минимализм" },
                 { id: "personal_brand_energy", label: "Бренд", emoji: "🔥", desc: "Динамика" },
                 { id: "ai_tech_fast", label: "AI-tech", emoji: "⚡", desc: "Холодный" },

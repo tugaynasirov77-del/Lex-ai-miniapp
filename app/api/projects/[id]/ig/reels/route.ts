@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const sourceVideoSize = Number(body.source_video_size || 0) || null;
   const sourceVideoDuration = Number(body.source_video_duration || 0) || null;
   const presetIn = String(body.preset || "expert_clean");
-  const preset = ["expert_clean", "personal_brand_energy", "ai_tech_fast"].includes(presetIn) ? presetIn : "expert_clean";
+  const preset = ["expert_clean", "personal_brand_energy", "ai_tech_fast", "cinematic_mentor"].includes(presetIn) ? presetIn : "expert_clean";
 
   // mode определяется наличием source_video_url
   const mode: "avatar" | "from_upload" = sourceVideoUrl ? "from_upload" : "avatar";
