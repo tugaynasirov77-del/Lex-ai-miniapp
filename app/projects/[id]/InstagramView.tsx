@@ -133,25 +133,26 @@ export default function InstagramView({ projectId }: { projectId: string }) {
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(`sign: ${d1.error || r1.status}`);
 
-      // 3) PUT в Supabase Storage — токен уже в URL, авторизация не нужна
+      // 3) Загружаем в Supabase Storage через XMLHttpRequest + FormData
+      // (iOS Telegram WebView ломается на fetch с File body)
       stage = "upload";
-      let up: Response;
-      try {
-        up = await fetch(d1.upload_url, {
-          method: "PUT",
-          headers: {
-            "Content-Type": file.type || "video/mp4",
-            "x-upsert": "true",
-          },
-          body: file,
-        });
-      } catch (netErr: any) {
-        throw new Error(`network: ${netErr?.message || netErr}`);
-      }
-      if (!up.ok) {
-        const t = await up.text().catch(() => "");
-        throw new Error(`upload ${up.status}: ${t.slice(0, 200)}`);
-      }
+      const fd = new FormData();
+      fd.append("cacheControl", "3600");
+      fd.append("", file, file.name);
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", d1.upload_url, true);
+        xhr.setRequestHeader("x-upsert", "true");
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`upload ${xhr.status}: ${(xhr.responseText || "").slice(0, 200)}`));
+        };
+        xhr.onerror = () => reject(new Error("network error during upload"));
+        xhr.ontimeout = () => reject(new Error("upload timeout"));
+        xhr.timeout = 180_000;
+        xhr.send(fd);
+      });
 
       // 4) создаём драфт + job
       stage = "create-draft";
