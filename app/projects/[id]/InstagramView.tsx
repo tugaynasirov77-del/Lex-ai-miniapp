@@ -108,44 +108,53 @@ export default function InstagramView({ projectId }: { projectId: string }) {
     }
     setBusy(true);
     setError(null);
+    let stage = "init";
     try {
-      // 1) узнаём длительность через video element
+      // 1) длительность — best effort, с таймаутом 3 сек (TG WebView не везде поддерживает)
+      stage = "metadata";
       const duration = await new Promise<number>((res) => {
         const url = URL.createObjectURL(file);
         const v = document.createElement("video");
+        const timer = setTimeout(() => { URL.revokeObjectURL(url); res(0); }, 3000);
         v.preload = "metadata";
-        v.onloadedmetadata = () => { URL.revokeObjectURL(url); res(Math.round(v.duration || 0)); };
-        v.onerror = () => { URL.revokeObjectURL(url); res(0); };
+        v.onloadedmetadata = () => { clearTimeout(timer); URL.revokeObjectURL(url); res(Math.round(v.duration || 0)); };
+        v.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(url); res(0); };
         v.src = url;
       });
-      if (duration > 90) {
-        throw new Error(`видео длиннее 90 секунд (${duration} сек)`);
-      }
+      if (duration > 90) throw new Error(`видео длиннее 90 секунд (${duration} сек)`);
 
       // 2) signed upload URL
+      stage = "sign";
       const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
       const r1 = await tgFetch(`/api/projects/${projectId}/ig/reels/upload-url`, {
         method: "POST",
         body: JSON.stringify({ size: file.size, duration, ext }),
       });
       const d1 = await r1.json();
-      if (!r1.ok) throw new Error(d1.error || "upload-url failed");
+      if (!r1.ok) throw new Error(`sign: ${d1.error || r1.status}`);
 
       // 3) PUT в Supabase Storage — токен уже в URL, авторизация не нужна
-      const up = await fetch(d1.upload_url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type || "video/mp4",
-          "x-upsert": "true",
-        },
-        body: file,
-      });
+      stage = "upload";
+      let up: Response;
+      try {
+        up = await fetch(d1.upload_url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type || "video/mp4",
+            "x-upsert": "true",
+          },
+          body: file,
+        });
+      } catch (netErr: any) {
+        throw new Error(`network: ${netErr?.message || netErr}`);
+      }
       if (!up.ok) {
-        const t = await up.text();
-        throw new Error(`upload failed ${up.status}: ${t.slice(0, 200)}`);
+        const t = await up.text().catch(() => "");
+        throw new Error(`upload ${up.status}: ${t.slice(0, 200)}`);
       }
 
       // 4) создаём драфт + job
+      stage = "create-draft";
       const r2 = await tgFetch(`/api/projects/${projectId}/ig/reels`, {
         method: "POST",
         body: JSON.stringify({
@@ -155,11 +164,11 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         }),
       });
       const d2 = await r2.json();
-      if (!r2.ok) throw new Error(d2.error || "create draft failed");
+      if (!r2.ok) throw new Error(`draft: ${d2.error || r2.status}`);
       hapticImpact("medium");
       await load();
     } catch (e: any) {
-      setError(e.message);
+      setError(`[${stage}] ${e.message || e}`);
       hapticNotify("error");
     } finally {
       setBusy(false);
