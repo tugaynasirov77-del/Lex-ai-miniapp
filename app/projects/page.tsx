@@ -21,6 +21,7 @@ export default function ProjectsPage() {
   const [tgId, setTgId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [newPlatform, setNewPlatform] = useState<"telegram" | "instagram">("telegram");
 
   useEffect(() => {
     const id = getTgId();
@@ -55,7 +56,7 @@ export default function ProjectsPage() {
     try {
       const r = await tgFetch("/api/projects", {
         method: "POST",
-        body: JSON.stringify({ title: newTitle.trim() }),
+        body: JSON.stringify({ title: newTitle.trim(), platform: newPlatform }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "create failed");
@@ -76,23 +77,49 @@ export default function ProjectsPage() {
       <div className="pb-24 space-y-3" style={{ paddingLeft: 22, paddingRight: 22 }}>
 
         {tgId && (
-          <div className="glass rounded-xl p-2.5 flex gap-2 items-center">
-            <input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Название проекта"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted px-2"
-              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, caretColor: "#F0A020" }}
-              onKeyDown={(e) => e.key === "Enter" && createProject()}
-            />
-            <button
-              onClick={createProject}
-              disabled={!newTitle.trim() || creating}
-              className="text-sm px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
-              style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
-            >
-              +
-            </button>
+          <div className="glass rounded-xl p-2.5 space-y-2">
+            <div className="flex gap-1">
+              <button
+                onClick={() => { hapticSelection(); setNewPlatform("telegram"); }}
+                className="flex-1 text-xs py-2 rounded-md font-medium transition"
+                style={
+                  newPlatform === "telegram"
+                    ? { background: "linear-gradient(135deg, #0088cc, #2AABEE)", color: "#fff" }
+                    : { background: "rgba(255,255,255,0.04)", color: "#94A3B8" }
+                }
+              >
+                ✈ Telegram
+              </button>
+              <button
+                onClick={() => { hapticSelection(); setNewPlatform("instagram"); }}
+                className="flex-1 text-xs py-2 rounded-md font-medium transition"
+                style={
+                  newPlatform === "instagram"
+                    ? { background: "linear-gradient(135deg, #E1306C, #F77737)", color: "#fff" }
+                    : { background: "rgba(255,255,255,0.04)", color: "#94A3B8" }
+                }
+              >
+                📸 Instagram
+              </button>
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder={newPlatform === "instagram" ? "Название IG-проекта" : "Название TG-проекта"}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted px-2"
+                style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, caretColor: "#F0A020" }}
+                onKeyDown={(e) => e.key === "Enter" && createProject()}
+              />
+              <button
+                onClick={createProject}
+                disabled={!newTitle.trim() || creating}
+                className="text-sm px-3 py-1.5 rounded-md font-medium disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg, #F0A020, #D05020)", color: "#0A0705" }}
+              >
+                +
+              </button>
+            </div>
           </div>
         )}
 
@@ -130,10 +157,22 @@ export default function ProjectsPage() {
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{p.title}</h3>
-                  {p.channel_username && (
-                    <span className="text-xs text-amber">@{p.channel_username}</span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded shrink-0"
+                      style={
+                        p.platform === "instagram"
+                          ? { background: "rgba(225,48,108,0.15)", color: "#E1306C" }
+                          : { background: "rgba(42,171,238,0.15)", color: "#2AABEE" }
+                      }
+                    >
+                      {p.platform === "instagram" ? "📸 IG" : "✈ TG"}
+                    </span>
+                    <h3 className="font-semibold truncate">{p.title}</h3>
+                  </div>
+                  {p.platform === "instagram"
+                    ? p.instagram_username && <span className="text-xs text-amber">@{p.instagram_username}</span>
+                    : p.channel_username && <span className="text-xs text-amber">@{p.channel_username}</span>}
                 </div>
                 <span className={`text-[15px] px-2 py-1 rounded-full ${s.color} shrink-0`}>{s.text}</span>
               </div>
