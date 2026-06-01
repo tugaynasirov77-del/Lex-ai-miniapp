@@ -5,11 +5,12 @@ import { canSpend, recordSpend } from "./projectBudget";
 import { buildStrategyHint } from "./strategyAnalyzer";
 import { buildAgentSystem } from "./agents";
 import { sanitizeForAnthropic } from "./sanitize";
+import { reviewDraft, ARKADIY_MODEL, type DraftJSON } from "./arkadiyEditor";
 
-// Writer = Алина (копирайтер из команды 7 агентов)
-// Editor = Аркадий (критик из команды 7 агентов)
+// Writer = Алина (копирайтер)
+// Editor = Аркадий (критик-редактор): оценивает 1-10 + чистит. <7 → 1 retry к Алине.
 const WRITER_MODEL = "claude-sonnet-4-6";
-const EDITOR_MODEL = "claude-sonnet-4-6";
+const EDITOR_MODEL = ARKADIY_MODEL;
 
 const WRITER_TASK = `ЗАДАЧА: пост для Telegram-канала.
 
@@ -59,28 +60,7 @@ const POLL_TASK = `ЗАДАЧА: создать ОПРОС для Telegram-ка�
 Для quiz: type="quiz", correct_option_id=число, explanation=строка.
 Никакого текста до или после JSON.`;
 
-const EDITOR_TASK = `ЗАДАЧА: отредактировать черновик поста (JSON) и вернуть улучшенную версию.
-
-Что делаешь:
-• Исправляешь все орфографические и пунктуационные ошибки — это приоритет №1
-• Убираешь канцеляризмы, штампы, водянистые обороты
-• Если body длиннее 800 символов — сокращаешь до 600–800, не теряя сути
-• Сохраняешь голос автора, не переписываешь радикально
-• УБИРАЕШЬ упоминания конкретных годов и фраз "в этом году", "сегодня"
-
-РАЗМЕТКА (Telegram HTML) — обязательно сохрани и при необходимости приведи в порядок:
-• Разрешены ТОЛЬКО теги: <b> <i> <u> <blockquote>. Все остальные удали, оставив содержимое.
-• Markdown (**, __, #, ~) — заменяй на нужный тег или убирай.
-• Ровно ОДИН <blockquote> за пост с ключевой фразой. Если автор забыл — выдели самую сильную мысль и оберни.
-• Если тегов слишком много (>5 пар не считая blockquote) — оставь самые значимые.
-• Спецсимволы &<> вне тегов должны быть как &amp; &lt; &gt;.
-
-titles — оставь без HTML, plain text.
-
-Формат вывода — тот же JSON, что на входе: {"titles":[...],"body":"..."}
-Никакого текста до или после JSON.`;
-
-type Draft = { titles: string[]; body: string };
+type Draft = DraftJSON;
 type PollDraft = {
   question: string;
   options: string[];
@@ -203,29 +183,46 @@ export async function generateDraftForProject(
     return { skipped: "writer returned invalid JSON" };
   }
 
-  const editorRes = await client.messages.create({
-    model: EDITOR_MODEL,
-    max_tokens: 700,
-    system: buildAgentSystem("arkadiy", EDITOR_TASK),
-    messages: [{ role: "user", content: sanitizeForAnthropic(JSON.stringify(draft)) }],
-  });
+  // Аркадий-редактор: оценка 1-10 + чистка
+  let totalCost = writerCost;
+  const firstReview = await reviewDraft({ client, draft, projectId, tgId: project.tg_id });
+  totalCost += firstReview.cost;
 
-  const editorCost = await recordSpend({
-    projectId,
-    agentRole: "editor",
-    model: EDITOR_MODEL,
-    usage: editorRes.usage as any,
-    tgId: project.tg_id,
-  });
+  let review = firstReview.review;
+  if (review?.cleaned) draft = review.cleaned;
 
-  const editorText = editorRes.content
-    .filter((b: any) => b.type === "text")
-    .map((b: any) => b.text)
-    .join("");
-  const edited = safeJson<Draft>(editorText);
-  if (edited && Array.isArray(edited.titles) && edited.body) draft = edited;
+  // Если Аркадий вернул rewrite — один retry к Алине с его комментариями
+  let retried = false;
+  if (review && review.verdict === "rewrite") {
+    retried = true;
+    const retryContext = `${sanitizeForAnthropic(finalContext)}\n\nПРЕДЫДУЩАЯ ВЕРСИЯ НЕ ПРОШЛА РЕДАКТУРУ (Аркадий, балл ${review.score}/10).\nЗамечания: ${review.comments}\n${review.errors.length ? "Косяки: " + review.errors.join("; ") : ""}\nПерепиши пост, устранив всё перечисленное. Сохрани JSON-формат.`;
 
-  const totalCost = writerCost + editorCost;
+    const retryRes = await client.messages.create({
+      model: WRITER_MODEL,
+      max_tokens: 700,
+      system: buildAgentSystem("alina", WRITER_TASK),
+      messages: [{ role: "user", content: retryContext }],
+    });
+    totalCost += await recordSpend({
+      projectId,
+      agentRole: "writer",
+      model: WRITER_MODEL,
+      usage: retryRes.usage as any,
+      tgId: project.tg_id,
+    });
+    const retryText = retryRes.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
+    const retryDraft = safeJson<Draft>(retryText);
+    if (retryDraft && Array.isArray(retryDraft.titles) && retryDraft.body) {
+      const secondReview = await reviewDraft({ client, draft: retryDraft, projectId, tgId: project.tg_id });
+      totalCost += secondReview.cost;
+      if (secondReview.review?.cleaned) {
+        draft = secondReview.review.cleaned;
+        review = secondReview.review;
+      }
+    }
+  }
+
+  const needsReview = !review || review.score < 7;
 
   const { data: insertedRows, error } = await sb
     .from("content_drafts")
@@ -240,6 +237,12 @@ export async function generateDraftForProject(
       status: "pending",
       plan_id: seed?.planId ?? null,
       plan_day: seed?.planDay ?? null,
+      editor_score: review?.score ?? null,
+      editor_verdict: review?.verdict ?? null,
+      editor_comments: review?.comments ?? null,
+      editor_errors: review?.errors ?? null,
+      editor_retried: retried,
+      needs_review: needsReview,
     })
     .select("id")
     .single();

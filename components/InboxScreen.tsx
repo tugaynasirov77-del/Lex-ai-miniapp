@@ -42,8 +42,27 @@ type InboxEvent = {
     } | null;
     title?: string | null;
     plan_id?: string | null;
+    editor_score?: number | null;
+    editor_comments?: string | null;
+    needs_review?: boolean;
   };
 };
+
+function EditorScoreChip({ score, comments }: { score: number; comments?: string | null }) {
+  const color =
+    score >= 8 ? { bg: "rgba(34,211,165,0.15)", fg: "#22d3a5" } :
+    score >= 7 ? { bg: "rgba(240,160,32,0.15)", fg: "#F0A020" } :
+                 { bg: "rgba(239,68,68,0.15)", fg: "#ef4444" };
+  return (
+    <span
+      title={comments || "Оценка Аркадия"}
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+      style={{ background: color.bg, color: color.fg }}
+    >
+      ✎ {score}/10
+    </span>
+  );
+}
 
 const TYPE_STYLE: Record<EventKind, { color: string; bg: string; emoji: string }> = {
   publish_failed: { color: "#ef4444", bg: "rgba(239, 68, 68, 0.10)", emoji: "⚠️" },
@@ -336,6 +355,12 @@ function EventCard({
             <span className="truncate">{ev.channel_username ? `@${ev.channel_username}` : ev.project_title}</span>
             <span>·</span>
             <span>{timeAgo(ev.at)}</span>
+            {typeof ev.payload?.editor_score === "number" && (
+              <>
+                <span>·</span>
+                <EditorScoreChip score={ev.payload.editor_score} comments={ev.payload?.editor_comments} />
+              </>
+            )}
             {isDraftEvent && <span className="ml-auto text-[10px]">{expanded ? "▴" : "▾"}</span>}
           </div>
         </div>
@@ -379,6 +404,12 @@ function EventCard({
               <TelegramPostPreview body={ev.payload.body} className="text-xs text-ink/90 leading-relaxed bg-white/[0.03] rounded-md p-2.5" />
             </div>
           ) : null}
+
+          {ev.payload?.editor_comments && (typeof ev.payload?.editor_score !== "number" || ev.payload.editor_score < 8) && (
+            <div className="text-[11px] leading-snug rounded-md p-2 border border-white/5" style={{ background: "rgba(255,255,255,0.02)", color: "#F5EDD8" }}>
+              <span className="opacity-60">Аркадий: </span>{ev.payload.editor_comments}
+            </div>
+          )}
 
           {/* Фото — только для текстовых постов */}
           {!isPoll && (
