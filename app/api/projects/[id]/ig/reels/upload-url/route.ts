@@ -77,6 +77,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       apikey: serviceKey,
       "Content-Type": "application/json",
     },
+    body: JSON.stringify({ expiresIn: 600 }),
   });
   if (!signResp.ok) {
     const t = await signResp.text();
