@@ -36,6 +36,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const sourceVideoUrl = String(body.source_video_url || "").trim();
   const sourceVideoSize = Number(body.source_video_size || 0) || null;
   const sourceVideoDuration = Number(body.source_video_duration || 0) || null;
+  const presetIn = String(body.preset || "expert_clean");
+  const preset = ["expert_clean", "personal_brand_energy", "ai_tech_fast"].includes(presetIn) ? presetIn : "expert_clean";
 
   // mode определяется наличием source_video_url
   const mode: "avatar" | "from_upload" = sourceVideoUrl ? "from_upload" : "avatar";
@@ -104,8 +106,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       project_id: projectId,
       status: "pending",
       mode: "from_upload",
+      preset,
       source_video_url: sourceVideoUrl,
-      script: "", // не используется в from_upload
+      script: "",
       overlays: [],
     });
     if (jobError) {
@@ -157,6 +160,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     project_id: projectId,
     status: "pending",
     mode: "avatar",
+    preset,
     script: draft.script,
     overlays: draft.overlays,
   });

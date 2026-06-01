@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     })
     .eq("id", candidate.id)
     .eq("status", "pending")
-    .select("id,draft_id,project_id,script,overlays,attempts,mode,source_video_url")
+    .select("id,draft_id,project_id,script,overlays,attempts,mode,source_video_url,preset")
     .maybeSingle();
 
   if (claimErr) return Response.json({ error: claimErr.message }, { status: 500 });
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       draft_id: claimed.draft_id,
       project_id: claimed.project_id,
       mode: claimed.mode ?? "avatar",
+      preset: claimed.preset ?? "expert_clean",
       source_video_url: claimed.source_video_url ?? null,
       script: claimed.script,
       overlays: claimed.overlays ?? [],
