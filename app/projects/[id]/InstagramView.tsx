@@ -25,6 +25,8 @@ type IgReel = {
     error: string | null;
     attempts: number;
     updated_at: string;
+    transcript_words?: { idx: number; w: string; start_ms: number; end_ms: number }[] | null;
+    user_selections?: { key_indices: number[]; animation: string } | null;
   } | null;
 };
 
@@ -36,6 +38,7 @@ const PHASE_LABELS: Record<string, string> = {
   caption: "Алина пишет подпись",
   render: "выжигаю субтитры",
   upload: "загружаю результат",
+  awaiting_approval: "жду выбора слов",
 };
 
 type IgCarousel = {
@@ -416,7 +419,7 @@ export default function InstagramView({ projectId }: { projectId: string }) {
           >
             или сгенерировать AI-аватара (Premium)
           </button>
-          <ReelList items={data?.reels ?? []} />
+          <ReelList items={data?.reels ?? []} projectId={projectId} onAfterAction={load} />
         </Section>
 
         {/* 06 Карусели */}
@@ -491,27 +494,132 @@ function ReelProgress({ job }: { job: NonNullable<IgReel["job"]> }) {
   );
 }
 
-function ReelList({ items }: { items: IgReel[] }) {
+function TranscriptEditor({ reel, projectId, onSubmitted }: { reel: IgReel; projectId: string; onSubmitted: () => void }) {
+  const words = reel.job?.transcript_words || [];
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [animation, setAnimation] = useState<"slide_up" | "pop" | "fade">("slide_up");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const toggle = (idx: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/reels/${reel.id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ key_indices: Array.from(selected), animation }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      hapticImpact("medium");
+      onSubmitted();
+    } catch (e: any) {
+      setErr(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-3 bg-white/[0.04] rounded-md p-3 border border-white/10">
+      <div className="text-[11px] text-amber font-medium">✏️ выбери ключевые слова</div>
+      <div className="text-[10px] text-muted">тапни слова — они станут жёлтыми и большими в видео</div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {words.map((w) => {
+          const isKey = selected.has(w.idx);
+          return (
+            <button
+              key={w.idx}
+              onClick={() => toggle(w.idx)}
+              className="text-xs px-2 py-1 rounded transition active:scale-95"
+              style={
+                isKey
+                  ? { background: "rgba(255,213,79,0.25)", color: "#FFD54F", border: "1px solid rgba(255,213,79,0.5)" }
+                  : { background: "rgba(255,255,255,0.04)", color: "#F5F5F5", border: "1px solid transparent" }
+              }
+            >
+              {w.w}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="text-[10px] text-muted uppercase">анимация ключевых</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {([
+            { id: "slide_up", label: "Выкатывание", emoji: "↑" },
+            { id: "pop", label: "Bounce", emoji: "✦" },
+            { id: "fade", label: "Плавно", emoji: "～" },
+          ] as const).map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAnimation(a.id)}
+              className="text-[10px] py-2 rounded font-medium"
+              style={
+                animation === a.id
+                  ? { background: "linear-gradient(135deg, #E1306C, #F77737)", color: "#fff" }
+                  : { background: "rgba(255,255,255,0.04)", color: "#94A3B8" }
+              }
+            >
+              {a.emoji} {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {err && <div className="text-[10px] text-rose-400">{err}</div>}
+
+      <button
+        onClick={submit}
+        disabled={busy}
+        className="w-full text-xs py-2.5 rounded-md font-semibold disabled:opacity-40"
+        style={{ background: "linear-gradient(135deg, #E1306C, #F77737)", color: "#fff" }}
+      >
+        {busy ? "отправляю..." : `сгенерировать видео (${selected.size} ключевых)`}
+      </button>
+    </div>
+  );
+}
+
+function ReelList({ items, projectId, onAfterAction }: { items: IgReel[]; projectId: string; onAfterAction: () => void }) {
   if (items.length === 0) return <p className="text-[11px] text-muted/60">пока пусто</p>;
   return (
     <ul className="space-y-2">
-      {items.map((r) => (
-        <li key={r.id} className="bg-white/[0.03] rounded-md p-2.5 text-xs">
-          <div className="flex justify-between items-start gap-2">
-            <span className="line-clamp-2 flex-1">{r.body || "(пусто)"}</span>
-            <StatusChip status={r.status} score={r.editor_score} />
-          </div>
-          {r.job && r.job.status !== "done" && <ReelProgress job={r.job} />}
-          {r.video_url && (
-            <video controls src={r.video_url} poster={r.cover_url || undefined} className="mt-2 w-full rounded-md max-h-64 bg-black" />
-          )}
-          {r.ig_permalink && (
-            <a href={r.ig_permalink} target="_blank" rel="noreferrer" className="text-[10px] text-amber">
-              опубликовано →
-            </a>
-          )}
-        </li>
-      ))}
+      {items.map((r) => {
+        const awaitingApproval = r.job?.status === "awaiting_approval" && Array.isArray(r.job?.transcript_words);
+        return (
+          <li key={r.id} className="bg-white/[0.03] rounded-md p-2.5 text-xs">
+            <div className="flex justify-between items-start gap-2">
+              <span className="line-clamp-2 flex-1">{r.body || "(пусто)"}</span>
+              <StatusChip status={r.status} score={r.editor_score} />
+            </div>
+            {r.job && r.job.status !== "done" && r.job.status !== "awaiting_approval" && <ReelProgress job={r.job} />}
+            {awaitingApproval && (
+              <TranscriptEditor reel={r} projectId={projectId} onSubmitted={onAfterAction} />
+            )}
+            {r.video_url && (
+              <video controls src={r.video_url} poster={r.cover_url || undefined} className="mt-2 w-full rounded-md max-h-64 bg-black" />
+            )}
+            {r.ig_permalink && (
+              <a href={r.ig_permalink} target="_blank" rel="noreferrer" className="text-[10px] text-amber">
+                опубликовано →
+              </a>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -19,6 +19,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (typeof body.phase === "string") patch.phase = body.phase;
   if (typeof body.heygen_video_id === "string") patch.heygen_video_id = body.heygen_video_id;
   if (typeof body.srt_text === "string") patch.srt_text = body.srt_text;
+  if (Array.isArray(body.transcript_words)) {
+    patch.transcript_words = body.transcript_words;
+    patch.awaiting_approval_at = new Date().toISOString();
+  }
 
   const sb = getSupabase();
   const { error } = await sb.from("reel_jobs").update(patch).eq("id", id);
