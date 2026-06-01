@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const sb = getSupabase();
 
-  const [{ data: project }, { data: reels }, { data: carousels }, { data: competitors }, { data: snaps }] = await Promise.all([
+  const [{ data: project }, { data: reels }, { data: carousels }, { data: competitors }, { data: snaps }, { data: jobs }] = await Promise.all([
     sb.from("projects").select("*").eq("id", id).eq("tg_id", v.user.id).maybeSingle(),
     sb
       .from("content_drafts")
@@ -31,13 +31,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .limit(20),
     sb.from("ig_competitors").select("*").eq("project_id", id).order("followers", { ascending: false, nullsFirst: false }).limit(10),
     sb.from("ig_snapshots").select("followers,posts_count,reels_count,snapshot_at").eq("project_id", id).order("snapshot_at", { ascending: false }).limit(14),
+    sb.from("reel_jobs").select("draft_id,status,phase,error,attempts,updated_at").eq("project_id", id).order("updated_at", { ascending: false }).limit(50),
   ]);
 
   if (!project) return Response.json({ error: "not found" }, { status: 404 });
 
+  // склеиваем фазу job'а в каждый reel
+  const jobByDraft = new Map<string, any>();
+  for (const j of jobs ?? []) {
+    if (!jobByDraft.has(j.draft_id)) jobByDraft.set(j.draft_id, j);
+  }
+  const reelsWithJob = (reels ?? []).map((r: any) => ({ ...r, job: jobByDraft.get(r.id) ?? null }));
+
   return Response.json({
     project,
-    reels: reels ?? [],
+    reels: reelsWithJob,
     carousels: carousels ?? [],
     competitors: competitors ?? [],
     snapshots: snaps ?? [],

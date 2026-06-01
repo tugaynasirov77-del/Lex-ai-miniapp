@@ -19,6 +19,23 @@ type IgReel = {
   ig_media_id: string | null;
   ig_permalink: string | null;
   published_at: string | null;
+  job?: {
+    status: string;
+    phase: string | null;
+    error: string | null;
+    attempts: number;
+    updated_at: string;
+  } | null;
+};
+
+const PHASE_STEPS = ["download", "extract_audio", "transcribe", "caption", "render", "upload"] as const;
+const PHASE_LABELS: Record<string, string> = {
+  download: "скачиваю видео",
+  extract_audio: "извлекаю аудио",
+  transcribe: "распознаю речь",
+  caption: "Алина пишет подпись",
+  render: "выжигаю субтитры",
+  upload: "загружаю результат",
 };
 
 type IgCarousel = {
@@ -76,6 +93,15 @@ export default function InstagramView({ projectId }: { projectId: string }) {
   useEffect(() => {
     load();
   }, [projectId]);
+
+  // авто-поллинг пока есть Reels в обработке
+  useEffect(() => {
+    if (!data) return;
+    const inProgress = data.reels.some((r) => r.job && r.job.status !== "done" && r.job.status !== "failed");
+    if (!inProgress) return;
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [data]);
 
   const attachInstagram = async () => {
     if (!attachUsername.trim()) return;
@@ -405,6 +431,37 @@ function Section({ idx, icon, title, children }: { idx: string; icon: any; title
   );
 }
 
+function ReelProgress({ job }: { job: NonNullable<IgReel["job"]> }) {
+  if (job.status === "failed") {
+    return (
+      <div className="mt-2 text-[10px] rounded-md p-2 border" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)", color: "#fca5a5" }}>
+        ⚠️ ошибка: {job.error?.slice(0, 200) || "неизвестная"}
+      </div>
+    );
+  }
+  if (job.status === "done") return null;
+
+  const phase = job.phase || "download";
+  const phaseIdx = PHASE_STEPS.indexOf(phase as any);
+  const pct = phaseIdx < 0 ? 5 : Math.round(((phaseIdx + 1) / PHASE_STEPS.length) * 100);
+  const label = PHASE_LABELS[phase] || (job.status === "pending" ? "в очереди" : "обрабатываю");
+
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex justify-between items-center text-[10px]">
+        <span className="text-amber">{label}…</span>
+        <span className="text-muted">{pct}%</span>
+      </div>
+      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, background: "linear-gradient(90deg, #E1306C, #F77737)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ReelList({ items }: { items: IgReel[] }) {
   if (items.length === 0) return <p className="text-[11px] text-muted/60">пока пусто</p>;
   return (
@@ -415,7 +472,10 @@ function ReelList({ items }: { items: IgReel[] }) {
             <span className="line-clamp-2 flex-1">{r.body || "(пусто)"}</span>
             <StatusChip status={r.status} score={r.editor_score} />
           </div>
-          {!r.video_url && <div className="text-[10px] text-muted/60 mt-1">видео не сгенерировано</div>}
+          {r.job && r.job.status !== "done" && <ReelProgress job={r.job} />}
+          {r.video_url && (
+            <video controls src={r.video_url} poster={r.cover_url || undefined} className="mt-2 w-full rounded-md max-h-64 bg-black" />
+          )}
           {r.ig_permalink && (
             <a href={r.ig_permalink} target="_blank" rel="noreferrer" className="text-[10px] text-amber">
               опубликовано →

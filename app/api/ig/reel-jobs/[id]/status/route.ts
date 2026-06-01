@@ -16,6 +16,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   const patch: Record<string, any> = { updated_at: new Date().toISOString() };
   if (typeof body.status === "string") patch.status = body.status;
+  if (typeof body.phase === "string") patch.phase = body.phase;
   if (typeof body.heygen_video_id === "string") patch.heygen_video_id = body.heygen_video_id;
   if (typeof body.srt_text === "string") patch.srt_text = body.srt_text;
 
