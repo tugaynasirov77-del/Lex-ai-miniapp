@@ -35,10 +35,11 @@ export async function POST(req: NextRequest) {
   if ("error" in a) return a.error;
   try {
     const body = await req.json();
-    const { title, status, progress, agents } = body ?? {};
+    const { title, status, progress, agents, platform } = body ?? {};
     if (typeof title !== "string" || !title.trim()) {
       return Response.json({ error: "title required" }, { status: 400 });
     }
+    const plat: "telegram" | "instagram" = platform === "instagram" ? "instagram" : "telegram";
 
     const sb = getSupabase();
     const { data, error } = await sb
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
         status: status ?? "in_progress",
         progress: typeof progress === "number" ? progress : 0,
         agents: Array.isArray(agents) ? agents : [],
+        platform: plat,
       })
       .select()
       .single();

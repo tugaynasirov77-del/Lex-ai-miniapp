@@ -1,0 +1,356 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import SectionIcon from "../../../components/SectionIcon";
+import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
+import type { ProjectRow } from "../../../lib/supabase";
+
+type IgReel = {
+  id: string;
+  body: string;
+  video_url: string | null;
+  cover_url: string | null;
+  status: string;
+  scheduled_at: string | null;
+  created_at: string;
+  editor_score: number | null;
+  needs_review: boolean;
+  ig_media_id: string | null;
+  ig_permalink: string | null;
+  published_at: string | null;
+};
+
+type IgCarousel = {
+  id: string;
+  body: string;
+  media_urls: string[] | null;
+  status: string;
+  scheduled_at: string | null;
+  created_at: string;
+  editor_score: number | null;
+  needs_review: boolean;
+  ig_media_id: string | null;
+  ig_permalink: string | null;
+  published_at: string | null;
+};
+
+type IgCompetitor = {
+  id: string;
+  username: string;
+  full_name: string | null;
+  followers: number | null;
+  top_post_likes: number | null;
+};
+
+type IgSnapshot = { followers: number | null; posts_count: number | null; reels_count: number | null; snapshot_at: string };
+
+type IgData = {
+  project: ProjectRow;
+  reels: IgReel[];
+  carousels: IgCarousel[];
+  competitors: IgCompetitor[];
+  snapshots: IgSnapshot[];
+};
+
+export default function InstagramView({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const [data, setData] = useState<IgData | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [attachUsername, setAttachUsername] = useState("");
+  const [attachAccountId, setAttachAccountId] = useState("");
+
+  const load = async () => {
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "load failed");
+      setData(d);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [projectId]);
+
+  const attachInstagram = async () => {
+    if (!attachUsername.trim()) return;
+    setBusy(true);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/attach-instagram`, {
+        method: "POST",
+        body: JSON.stringify({
+          username: attachUsername.trim(),
+          account_id: attachAccountId.trim() || null,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "attach failed");
+      hapticNotify("success");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createReel = async () => {
+    setBusy(true);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/reels`, {
+        method: "POST",
+        body: JSON.stringify({ caption: "(placeholder caption)", script: "" }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      hapticImpact("light");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createCarousel = async () => {
+    setBusy(true);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/carousels`, {
+        method: "POST",
+        body: JSON.stringify({ caption: "(placeholder caption)", media_urls: [] }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      hapticImpact("light");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const project = data?.project;
+  const attached = !!project?.instagram_username;
+
+  return (
+    <>
+      <div style={{ paddingTop: 16, paddingLeft: 22, paddingRight: 22 }} className="flex justify-between items-center">
+        <button onClick={() => router.back()} className="text-sm text-amber">← назад</button>
+        <span className="text-[11px] text-muted uppercase tracking-wider">Instagram-проект</span>
+      </div>
+
+      <div style={{ paddingLeft: 22, paddingRight: 22 }} className="pt-3 pb-24 space-y-4">
+        <h1 className="text-xl font-semibold">{project?.title ?? "…"}</h1>
+
+        {/* Привязка IG-аккаунта */}
+        {!attached && (
+          <div className="glass rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold">📸 Привязать Instagram-аккаунт</h3>
+            <p className="text-xs text-muted">
+              Введи @username и (опционально) Business Account ID. Long-lived access token
+              настраивается через переменные окружения (Этап 4).
+            </p>
+            <input
+              value={attachUsername}
+              onChange={(e) => setAttachUsername(e.target.value)}
+              placeholder="@username"
+              className="w-full bg-white/[0.04] rounded-md px-3 py-2 text-sm outline-none"
+            />
+            <input
+              value={attachAccountId}
+              onChange={(e) => setAttachAccountId(e.target.value)}
+              placeholder="IG account ID (опц.)"
+              className="w-full bg-white/[0.04] rounded-md px-3 py-2 text-sm outline-none"
+            />
+            <button
+              onClick={attachInstagram}
+              disabled={!attachUsername.trim() || busy}
+              className="w-full text-sm py-2 rounded-md font-medium disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #E1306C, #F77737)", color: "#fff" }}
+            >
+              привязать
+            </button>
+          </div>
+        )}
+
+        {attached && (
+          <div className="glass rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">@{project!.instagram_username}</div>
+              <div className="text-xs text-muted">
+                {project!.instagram_followers != null ? `${project!.instagram_followers.toLocaleString("ru-RU")} подписчиков` : "подписчики — TBD"}
+              </div>
+            </div>
+            <a
+              href={`https://instagram.com/${project!.instagram_username}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-amber"
+            >
+              открыть →
+            </a>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">{error}</div>
+        )}
+
+        {/* 01 Аналитика IG */}
+        <Section idx="01" icon="analytics" title="Аналитика IG">
+          <p className="text-xs text-muted">
+            Подписчики, лайки, охваты, топ постов. TODO Этап 4 — Николай-аналитик подключит IG Graph Insights API.
+          </p>
+          <div className="text-[11px] text-muted/60 mt-2">
+            снимков: {data?.snapshots.length ?? 0}
+          </div>
+        </Section>
+
+        {/* 02 Конкуренты IG */}
+        <Section idx="02" icon="scout" title="Конкуренты IG">
+          <p className="text-xs text-muted mb-2">
+            Топ-аккаунтов в нише + их топ-посты. TODO Этап 4 — Разведчик IG (hashtag scout).
+          </p>
+          {(data?.competitors ?? []).length === 0 ? (
+            <p className="text-[11px] text-muted/60">пока пусто</p>
+          ) : (
+            <ul className="space-y-1">
+              {data!.competitors.map((c) => (
+                <li key={c.id} className="text-xs flex justify-between">
+                  <span>@{c.username}</span>
+                  <span className="text-muted">{c.followers?.toLocaleString("ru-RU") ?? "—"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        {/* 03 Стратегия ниши IG */}
+        <Section idx="03" icon="strategy" title="Стратегия ниши IG">
+          <p className="text-xs text-muted">
+            Паттерны топ-аккаунтов: формат Reels, длина caption, hashtag-стратегия. TODO Этап 4.
+          </p>
+        </Section>
+
+        {/* 04 План на неделю IG */}
+        <Section idx="04" icon="plan" title="План на неделю IG">
+          <p className="text-xs text-muted">
+            Микс на неделю: 2 Reels + 2 карусели + 3 поста. TODO Этап 4 — Милана Контент-директор.
+          </p>
+        </Section>
+
+        {/* 05 Reels-фабрика */}
+        <Section idx="05" icon="drafts" title="Reels — Михаил">
+          <p className="text-xs text-muted mb-3">
+            HeyGen avatar → Whisper SRT → FFmpeg (subs + overlays + music) → MP4 1080×1920. TODO Этап 2.
+          </p>
+          <button
+            onClick={createReel}
+            disabled={busy}
+            className="text-xs py-2 px-3 rounded-md font-medium mb-3"
+            style={{ background: "rgba(225, 48, 108, 0.15)", color: "#E1306C" }}
+          >
+            + новый Reel-черновик (заглушка)
+          </button>
+          <ReelList items={data?.reels ?? []} />
+        </Section>
+
+        {/* 06 Карусели */}
+        <Section idx="06" icon="drafts" title="Карусели — Алина + Аркадий">
+          <p className="text-xs text-muted mb-3">
+            Caption + раскадровка слайдов. Алина пишет, Аркадий ревьюит, Виктор публикует.
+          </p>
+          <button
+            onClick={createCarousel}
+            disabled={busy}
+            className="text-xs py-2 px-3 rounded-md font-medium mb-3"
+            style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
+          >
+            + новая карусель (заглушка)
+          </button>
+          <CarouselList items={data?.carousels ?? []} />
+        </Section>
+
+        {/* 07 Публикатор */}
+        <Section idx="07" icon="community" title="Публикатор — Виктор">
+          <p className="text-xs text-muted">
+            Автопубликация в IG по расписанию (cron `ig-publish-scheduled`). TODO Этап 3 —
+            подключение IG Graph API + retry до 3 раз. Сейчас все эндпойнты вернут 501.
+          </p>
+        </Section>
+      </div>
+    </>
+  );
+}
+
+function Section({ idx, icon, title, children }: { idx: string; icon: any; title: string; children: React.ReactNode }) {
+  return (
+    <div className="glass rounded-xl p-4 space-y-2">
+      <h4 className="font-semibold text-sm flex items-center gap-2">
+        <span className="text-amber text-xs font-medium">{idx}</span>
+        <SectionIcon name={icon} />
+        <span>{title}</span>
+      </h4>
+      {children}
+    </div>
+  );
+}
+
+function ReelList({ items }: { items: IgReel[] }) {
+  if (items.length === 0) return <p className="text-[11px] text-muted/60">пока пусто</p>;
+  return (
+    <ul className="space-y-2">
+      {items.map((r) => (
+        <li key={r.id} className="bg-white/[0.03] rounded-md p-2.5 text-xs">
+          <div className="flex justify-between items-start gap-2">
+            <span className="line-clamp-2 flex-1">{r.body || "(пусто)"}</span>
+            <StatusChip status={r.status} score={r.editor_score} />
+          </div>
+          {!r.video_url && <div className="text-[10px] text-muted/60 mt-1">видео не сгенерировано</div>}
+          {r.ig_permalink && (
+            <a href={r.ig_permalink} target="_blank" rel="noreferrer" className="text-[10px] text-amber">
+              опубликовано →
+            </a>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CarouselList({ items }: { items: IgCarousel[] }) {
+  if (items.length === 0) return <p className="text-[11px] text-muted/60">пока пусто</p>;
+  return (
+    <ul className="space-y-2">
+      {items.map((c) => (
+        <li key={c.id} className="bg-white/[0.03] rounded-md p-2.5 text-xs">
+          <div className="flex justify-between items-start gap-2">
+            <span className="line-clamp-2 flex-1">{c.body || "(пусто)"}</span>
+            <StatusChip status={c.status} score={c.editor_score} />
+          </div>
+          <div className="text-[10px] text-muted/60 mt-1">
+            слайдов: {Array.isArray(c.media_urls) ? c.media_urls.length : 0}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function StatusChip({ status, score }: { status: string; score: number | null }) {
+  const label =
+    status === "approved" ? "одобрено" :
+    status === "pending" ? "черновик" : status;
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(255,255,255,0.06)", color: "#F0A020" }}>
+      {label}{typeof score === "number" ? ` · ${score}/10` : ""}
+    </span>
+  );
+}

@@ -32,6 +32,11 @@ export interface ProjectRow {
   channel_attached_at?: string | null;
   publish_time?: string | null;
   publish_timezone?: string | null;
+  platform?: "telegram" | "instagram";
+  instagram_username?: string | null;
+  instagram_account_id?: string | null;
+  instagram_followers?: number | null;
+  instagram_attached_at?: string | null;
 }
 
 export interface ProjectBudgetRow {

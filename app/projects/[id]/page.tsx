@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/Header";
 import SectionIcon from "../../../components/SectionIcon";
+import InstagramView from "./InstagramView";
 import { formatScheduledLabel } from "../../../lib/scheduling";
 import { tgFetch, hapticImpact, hapticNotify } from "../../../lib/telegram";
 import type { ProjectRow, ProjectBudgetRow, ProjectAgentRow, ProjectAgentRole } from "../../../lib/supabase";
@@ -560,6 +561,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       hapticNotify("error");
     }
   };
+
+  // IG-проект — отдельный view, не смешиваем с TG-логикой
+  if (project?.platform === "instagram") {
+    return <InstagramView projectId={id} />;
+  }
 
   return (
     <>
