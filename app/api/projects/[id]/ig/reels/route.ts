@@ -1,13 +1,14 @@
 import { NextRequest } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "../../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../../lib/verifyTelegram";
+import { generateReelScript } from "../../../../../../lib/reelWriter";
+import { canSpend } from "../../../../../../lib/projectBudget";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-// СКЕЛЕТ — Этап 2 (Михаил Reels-maker) наполнит реальной генерацией.
-// Сейчас: GET возвращает список Reel-черновиков проекта,
-// POST создаёт пустой Reel-черновик (placeholder для будущего пайплайна HeyGen+FFmpeg).
-
+// GET: список Reel-черновиков
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const sb = getSupabase();
@@ -22,6 +23,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   return Response.json({ reels: data ?? [] });
 }
 
+// POST: Алина пишет сценарий → создаём draft → ставим job в очередь рендеринга.
+// Само видео генерирует воркер на VPS (Lex-agents repo).
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const initData = req.headers.get("x-telegram-init-data");
   const v = verifyInitData(initData);
@@ -29,31 +32,76 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const { id: projectId } = await ctx.params;
   const body = await req.json().catch(() => ({}));
-  const caption = String(body.caption || "").slice(0, 2200);
-  const script = String(body.script || "").slice(0, 5000);
+  const topic = String(body.topic || "").trim() || "интересный факт для аудитории";
 
-  // TODO Этап 2:
-  //   1) Алина пишет script + overlays metadata
-  //   2) Михаил → HeyGen API (avatar video) → polling → download
-  //   3) Whisper → SRT
-  //   4) FFmpeg → burn subs + overlays + music → 1080x1920 → upload to S3/Supabase Storage
-  //   5) Аркадий — ревью текста (caption + script)
-  //   6) сохраняется video_url в этом драфте + meta для Виктора
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return Response.json({ error: "ANTHROPIC_API_KEY missing" }, { status: 500 });
+
+  const budget = await canSpend(projectId);
+  if (!budget.ok) return Response.json({ error: budget.reason || "budget" }, { status: 402 });
 
   const sb = getSupabase();
-  const { data, error } = await sb
+  const { data: project } = await sb
+    .from("projects")
+    .select("id,tg_id,title,instagram_username")
+    .eq("id", projectId)
+    .single();
+  if (!project) return Response.json({ error: "project not found" }, { status: 404 });
+
+  // niche hint опционально
+  const { data: niche } = await sb.from("niche_strategy").select("summary").eq("project_id", projectId).maybeSingle();
+
+  const client = new Anthropic({ apiKey });
+  const { draft, cost } = await generateReelScript({
+    client,
+    topic,
+    niche: niche?.summary ?? null,
+    projectId,
+    tgId: project.tg_id,
+  });
+
+  if (!draft) {
+    return Response.json({ error: "reel writer returned invalid JSON" }, { status: 502 });
+  }
+
+  // Сохраняем черновик. body = caption (текст под видео), media в video_url появится после рендера.
+  const { data: inserted, error } = await sb
     .from("content_drafts")
     .insert({
       project_id: projectId,
       platform: "instagram",
       content_type: "reel",
-      body: caption || script || "(пустой Reel-черновик)",
+      body: draft.caption,
       title_variants: [],
-      source: "manual",
+      source: "auto",
       status: "pending",
+      model_writer: "claude-sonnet-4-6",
+      cost_usd: cost,
     })
     .select("id")
     .single();
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json({ draft_id: data.id, stub: true, message: "Reel skeleton created. Pipeline TODO Этап 2." });
+
+  if (error || !inserted) return Response.json({ error: error?.message || "insert failed" }, { status: 500 });
+
+  // Ставим задачу в очередь рендеринга для воркера на VPS.
+  const { error: jobError } = await sb.from("reel_jobs").insert({
+    draft_id: inserted.id,
+    project_id: projectId,
+    status: "pending",
+    script: draft.script,
+    overlays: draft.overlays,
+  });
+
+  if (jobError) {
+    return Response.json({ error: `draft created but queue failed: ${jobError.message}`, draft_id: inserted.id }, { status: 500 });
+  }
+
+  return Response.json({
+    draft_id: inserted.id,
+    queued: true,
+    caption: draft.caption,
+    script_preview: draft.script.slice(0, 200),
+    overlays_count: draft.overlays.length,
+    cost,
+  });
 }

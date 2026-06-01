@@ -101,18 +101,22 @@ export default function InstagramView({ projectId }: { projectId: string }) {
   };
 
   const createReel = async () => {
+    const topic = window.prompt("Тема Reel (одна фраза):", "");
+    if (!topic || !topic.trim()) return;
     setBusy(true);
+    setError(null);
     try {
       const r = await tgFetch(`/api/projects/${projectId}/ig/reels`, {
         method: "POST",
-        body: JSON.stringify({ caption: "(placeholder caption)", script: "" }),
+        body: JSON.stringify({ topic: topic.trim() }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "fail");
-      hapticImpact("light");
+      hapticImpact("medium");
       await load();
     } catch (e: any) {
       setError(e.message);
+      hapticNotify("error");
     } finally {
       setBusy(false);
     }
@@ -249,7 +253,8 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         {/* 05 Reels-фабрика */}
         <Section idx="05" icon="drafts" title="Reels — Михаил">
           <p className="text-xs text-muted mb-3">
-            HeyGen avatar → Whisper SRT → FFmpeg (subs + overlays + music) → MP4 1080×1920. TODO Этап 2.
+            Алина пишет сценарий → HeyGen генерит avatar-видео → Whisper SRT → FFmpeg
+            (subs + overlays + music) → MP4 1080×1920. Воркер на VPS пуллит очередь.
           </p>
           <button
             onClick={createReel}
@@ -257,7 +262,7 @@ export default function InstagramView({ projectId }: { projectId: string }) {
             className="text-xs py-2 px-3 rounded-md font-medium mb-3"
             style={{ background: "rgba(225, 48, 108, 0.15)", color: "#E1306C" }}
           >
-            + новый Reel-черновик (заглушка)
+            + новый Reel — сценарий + рендер
           </button>
           <ReelList items={data?.reels ?? []} />
         </Section>
