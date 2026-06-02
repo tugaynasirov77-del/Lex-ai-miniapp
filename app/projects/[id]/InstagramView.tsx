@@ -232,19 +232,26 @@ export default function InstagramView({ projectId }: { projectId: string }) {
     }
   };
 
-  const createCarousel = async () => {
+  const createCarousel = async (topicInput: string) => {
+    const t = topicInput.trim();
+    if (t.length < 8) {
+      setError("Тема слишком короткая (минимум 8 символов)");
+      return;
+    }
     setBusy(true);
+    setError(null);
     try {
       const r = await tgFetch(`/api/projects/${projectId}/ig/carousels`, {
         method: "POST",
-        body: JSON.stringify({ caption: "(placeholder caption)", media_urls: [] }),
+        body: JSON.stringify({ topic: t }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "fail");
-      hapticImpact("light");
+      hapticImpact("medium");
       await load();
     } catch (e: any) {
       setError(e.message);
+      hapticNotify("error");
     } finally {
       setBusy(false);
     }
@@ -425,16 +432,9 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         {/* 06 Карусели */}
         <Section idx="06" icon="drafts" title="Карусели — Алина + Аркадий">
           <p className="text-xs text-muted mb-3">
-            Caption + раскадровка слайдов. Алина пишет, Аркадий ревьюит, Виктор публикует.
+            Caption + раскадровка 6–8 слайдов. Алина пишет, Аркадий ревьюит, итог попадает в Review.
           </p>
-          <button
-            onClick={createCarousel}
-            disabled={busy}
-            className="text-xs py-2 px-3 rounded-md font-medium mb-3"
-            style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
-          >
-            + новая карусель (заглушка)
-          </button>
+          <CarouselGenerator busy={busy} onGenerate={createCarousel} />
           <CarouselList items={data?.carousels ?? []} />
         </Section>
 
@@ -664,6 +664,68 @@ function CarouselList({ items }: { items: IgCarousel[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function CarouselGenerator({
+  busy,
+  onGenerate,
+}: {
+  busy: boolean;
+  onGenerate: (topic: string) => Promise<void> | void;
+}) {
+  const [topic, setTopic] = useState("");
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={busy}
+        className="text-xs py-2 px-3 rounded-md font-medium mb-3"
+        style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
+      >
+        + новая карусель
+      </button>
+    );
+  }
+  return (
+    <div className="mb-3 space-y-2 rounded-md bg-white/[0.04] p-3">
+      <label className="block text-[11px] text-muted">Тема карусели</label>
+      <textarea
+        value={topic}
+        onChange={(e) => setTopic(e.target.value)}
+        rows={3}
+        placeholder="Например: 5 ошибок начинающих предпринимателей при найме первой команды"
+        className="w-full rounded-md bg-white/[0.04] px-3 py-2 text-sm outline-none"
+      />
+      <div className="flex gap-2">
+        <button
+          disabled={busy || topic.trim().length < 8}
+          onClick={async () => {
+            await onGenerate(topic);
+            setTopic("");
+            setOpen(false);
+          }}
+          className="flex-1 rounded-md px-3 py-2 text-xs font-medium disabled:opacity-50"
+          style={{ background: "rgba(247, 119, 55, 0.25)", color: "#F77737" }}
+        >
+          {busy ? "Генерация…" : "Сгенерировать"}
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => {
+            setOpen(false);
+            setTopic("");
+          }}
+          className="rounded-md bg-white/[0.06] px-3 py-2 text-xs"
+        >
+          Отмена
+        </button>
+      </div>
+      <p className="text-[10px] text-muted">
+        Алина напишет 6–8 слайдов, Аркадий оценит. ~30 сек. Результат — в Review Screen.
+      </p>
+    </div>
   );
 }
 

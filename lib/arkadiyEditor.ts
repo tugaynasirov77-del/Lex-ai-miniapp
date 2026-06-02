@@ -196,3 +196,92 @@ export async function reviewReelCaption(args: {
 
   return { review: parsed, cost };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Carousel review (v1) — оценка структуры, hook, CTA, читабельности
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ARKADIY_CAROUSEL_PROMPT_VERSION = "v1";
+
+export type CarouselReview = {
+  score: number;
+  structure: number;
+  hook_strength: number;
+  cta_quality: number;
+  clarity: number;
+  errors: string[];
+  comments: string;
+  verdict: EditorVerdict;
+};
+
+const ARKADIY_CAROUSEL_TASK = `ЗАДАЧА: оценить сценарий Instagram-карусели.
+
+Входной JSON: {"carousel_title":"...","hook":"...","cta":"...","caption":"...","slides":[{"index":1,"title":"...","body":"...","visual":"..."},...]}.
+
+Что оцениваешь (шкалы 1–10):
+1. structure — логика и связность между слайдами, плавный переход от слайда к слайду
+2. hook_strength — насколько цепляет первый слайд (заставляет ли свайпнуть дальше)
+3. cta_quality — насколько чёткий и сильный CTA на последнем слайде
+4. clarity — ясность мысли, читабельность каждого слайда отдельно
+5. score — общий балл
+
+Что проверяешь:
+- слайдов 6–8 (если меньше 6 или больше 8 — снижаешь score)
+- title слайда ≤40 символов
+- body слайда читается с экрана телефона, не "стена текста" (≤240 символов)
+- нет markdown / служебных символов
+- caption: hook в первой строке, 200–500 символов до хэштегов, 3–5 английских хэштегов в конце
+- нет фактических противоречий между слайдами
+
+Выходи:
+- errors — конкретные косяки (если есть)
+- comments — 1–2 предложения, что улучшить если score<7
+- verdict — "approve" если score≥7, иначе "rewrite"
+
+Формат ответа — строгий JSON одной строкой:
+{"score":8,"structure":9,"hook_strength":7,"cta_quality":8,"clarity":9,"errors":[],"comments":"...","verdict":"approve"}
+
+Никакого текста до или после JSON.`;
+
+export async function reviewCarousel(args: {
+  client: Anthropic;
+  carouselJson: object; // сериализуется ниже
+  projectId: string;
+  tgId: number;
+}): Promise<{ review: CarouselReview | null; cost: number }> {
+  const { client, carouselJson, projectId, tgId } = args;
+
+  const res = await client.messages.create({
+    model: ARKADIY_MODEL,
+    max_tokens: 800,
+    system: buildAgentSystem("arkadiy", ARKADIY_CAROUSEL_TASK),
+    messages: [
+      {
+        role: "user",
+        content: sanitizeForAnthropic(JSON.stringify(carouselJson).slice(0, 6000)),
+      },
+    ],
+  });
+
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "editor",
+    model: ARKADIY_MODEL,
+    usage: res.usage as any,
+    tgId,
+  });
+
+  const raw = res.content
+    .filter((b: any) => b.type === "text")
+    .map((b: any) => b.text)
+    .join("");
+  const parsed = safeJson<CarouselReview>(raw);
+  if (!parsed || typeof parsed.score !== "number") return { review: null, cost };
+
+  parsed.score = Math.max(1, Math.min(10, Math.round(parsed.score)));
+  parsed.verdict = parsed.score >= 7 ? "approve" : "rewrite";
+  if (!Array.isArray(parsed.errors)) parsed.errors = [];
+  if (typeof parsed.comments !== "string") parsed.comments = "";
+
+  return { review: parsed, cost };
+}

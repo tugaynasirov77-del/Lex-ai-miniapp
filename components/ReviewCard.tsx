@@ -284,6 +284,25 @@ function PostBody({
   );
 }
 
+type StructuredSlide = {
+  index?: number;
+  title?: string;
+  body?: string;
+  visual?: string;
+  text?: string; // legacy
+  url?: string;  // legacy
+};
+
+// градиент-заливка по индексу (детерминированно)
+const SLIDE_PALETTES = [
+  "from-rose-500/40 to-amber-500/40",
+  "from-sky-500/40 to-indigo-500/40",
+  "from-emerald-500/40 to-teal-500/40",
+  "from-violet-500/40 to-fuchsia-500/40",
+  "from-orange-500/40 to-red-500/40",
+  "from-cyan-500/40 to-blue-500/40",
+];
+
 function CarouselBody({
   draft,
   editing,
@@ -295,49 +314,70 @@ function CarouselBody({
   onSave: (p: Record<string, any>) => Promise<void>;
   onCancel: () => void;
 }) {
-  const slides = Array.isArray(draft.media_urls) ? draft.media_urls : [];
+  const slides: StructuredSlide[] = Array.isArray(draft.media_urls) ? (draft.media_urls as any) : [];
   if (editing) {
     return (
       <InlineEdit
         initial={{
-          caption: draft.caption || "",
+          chosen_title: draft.chosen_title || "",
+          caption: draft.caption || draft.body || "",
           media_urls: JSON.stringify(slides, null, 2),
         }}
-        onSave={(v) => onSave({ caption: v.caption, media_urls: v.media_urls })}
+        onSave={(v) => onSave({
+          chosen_title: v.chosen_title,
+          caption: v.caption,
+          media_urls: v.media_urls,
+        })}
         onCancel={onCancel}
         fields={[
-          { key: "caption", label: "Caption", multiline: true },
-          { key: "media_urls", label: "Слайды (JSON)", multiline: true },
+          { key: "chosen_title", label: "Название карусели" },
+          { key: "caption", label: "Caption (с хэштегами)", multiline: true },
+          { key: "media_urls", label: "Слайды JSON [{title,body,visual}]", multiline: true },
         ]}
       />
     );
   }
   return (
     <div className="space-y-2">
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1">
-        {slides.length === 0 && (
-          <div className="text-xs text-zinc-500">Слайдов нет</div>
-        )}
-        {slides.map((s, i) => (
-          <div
-            key={i}
-            className="relative aspect-[4/5] w-32 shrink-0 overflow-hidden rounded-lg bg-zinc-800"
-          >
-            {s.url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={s.url} alt="" className="h-full w-full object-cover" />
-            )}
-            {s.text && (
-              <div className="absolute inset-x-0 bottom-0 line-clamp-3 bg-black/70 p-1 text-[10px]">
-                {s.text}
+      {draft.chosen_title && (
+        <h3 className="text-sm font-semibold text-zinc-100">{draft.chosen_title}</h3>
+      )}
+      <div className="text-xs text-zinc-500">Слайдов: {slides.length}</div>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 snap-x">
+        {slides.length === 0 && <div className="text-xs text-zinc-500">Слайдов нет</div>}
+        {slides.map((s, i) => {
+          const palette = SLIDE_PALETTES[i % SLIDE_PALETTES.length];
+          const title = s.title || s.text || `Слайд ${i + 1}`;
+          const body = s.body || (s.text && s.text !== title ? s.text : "");
+          return (
+            <div
+              key={i}
+              className={`relative aspect-[4/5] w-40 shrink-0 snap-start overflow-hidden rounded-lg bg-gradient-to-br ${palette}`}
+            >
+              {s.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+              )}
+              <div className="relative flex h-full flex-col justify-between p-2">
+                <div className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white self-start">
+                  {i + 1}/{slides.length}
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[11px] font-semibold leading-tight text-white line-clamp-3">{title}</div>
+                  {body && (
+                    <div className="text-[9px] leading-snug text-white/80 line-clamp-4">{body}</div>
+                  )}
+                  {s.visual && (
+                    <div className="text-[8px] italic text-white/50 line-clamp-2">🎨 {s.visual}</div>
+                  )}
+                </div>
               </div>
-            )}
-            <div className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px]">{i + 1}</div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
-      {draft.caption && (
-        <p className="whitespace-pre-wrap text-sm text-zinc-200">{draft.caption}</p>
+      {(draft.caption || draft.body) && (
+        <p className="whitespace-pre-wrap text-sm text-zinc-200">{draft.caption || draft.body}</p>
       )}
     </div>
   );
