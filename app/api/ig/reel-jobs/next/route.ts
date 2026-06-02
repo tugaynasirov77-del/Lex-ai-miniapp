@@ -16,6 +16,21 @@ export async function POST(req: NextRequest) {
 
   const sb = getSupabase();
 
+  // Перед claim — реанимация stuck-jobs: status=rendering/claimed обновлено >5 мин назад → pending
+  const STUCK_MS = 5 * 60 * 1000;
+  const cutoff = new Date(Date.now() - STUCK_MS).toISOString();
+  await sb
+    .from("reel_jobs")
+    .update({
+      status: "pending",
+      claimed_by: null,
+      claimed_at: null,
+      phase: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("status", ["rendering", "claimed"])
+    .lt("updated_at", cutoff);
+
   // Берём 1 pending, помечаем claimed.
   const { data: candidate, error: selErr } = await sb
     .from("reel_jobs")
