@@ -594,6 +594,20 @@ function TranscriptEditor({ reel, projectId, onSubmitted }: { reel: IgReel; proj
 }
 
 function ReelList({ items, projectId, onAfterAction }: { items: IgReel[]; projectId: string; onAfterAction: () => void }) {
+  const deleteDraft = async (draftId: string) => {
+    if (!window.confirm("удалить этот Reel-черновик?")) return;
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/reels/${draftId}`, { method: "DELETE" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      hapticImpact("light");
+      onAfterAction();
+    } catch (e: any) {
+      hapticNotify("error");
+      window.alert(e.message);
+    }
+  };
+
   if (items.length === 0) return <p className="text-[11px] text-muted/60">пока пусто</p>;
   return (
     <ul className="space-y-2">
@@ -603,7 +617,17 @@ function ReelList({ items, projectId, onAfterAction }: { items: IgReel[]; projec
           <li key={r.id} className="bg-white/[0.03] rounded-md p-2.5 text-xs">
             <div className="flex justify-between items-start gap-2">
               <span className="line-clamp-2 flex-1">{r.body || "(пусто)"}</span>
-              <StatusChip status={r.status} score={r.editor_score} />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <StatusChip status={r.status} score={r.editor_score} />
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteDraft(r.id); }}
+                  className="text-[10px] px-1.5 py-0.5 rounded text-rose-300/70 hover:text-rose-300 active:scale-95"
+                  title="удалить"
+                  aria-label="delete draft"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             {r.job && r.job.status !== "done" && r.job.status !== "awaiting_approval" && <ReelProgress job={r.job} />}
             {awaitingApproval && (
