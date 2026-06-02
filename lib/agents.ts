@@ -111,8 +111,10 @@ export const AGENT_DEFS: Record<AgentKey, AgentDef> = {
  */
 export function buildAgentSystem(agentKey: AgentKey, taskInstructions?: string) {
   const blocks: { type: "text"; text: string; cache_control?: { type: "ephemeral" } }[] = [
+    // 2 cache breakpoints: общие правила команды + per-agent system.
+    // taskInstructions не кешируем — часто меняются (retry с фидбеком).
     { type: "text", text: LEX_TEAM_RULES, cache_control: { type: "ephemeral" } },
-    { type: "text", text: AGENT_DEFS[agentKey].system },
+    { type: "text", text: AGENT_DEFS[agentKey].system, cache_control: { type: "ephemeral" } },
   ];
   if (taskInstructions && taskInstructions.trim().length > 0) {
     blocks.push({ type: "text", text: taskInstructions });
