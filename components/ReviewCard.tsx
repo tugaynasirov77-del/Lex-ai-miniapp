@@ -214,6 +214,7 @@ export default function ReviewCard({
 }
 
 function ReelBody({ draft }: { draft: ReviewDraft }) {
+  const captionText = draft.caption || draft.body || "";
   return (
     <div className="space-y-2">
       {draft.video_url ? (
@@ -235,8 +236,8 @@ function ReelBody({ draft }: { draft: ReviewDraft }) {
           <span>Ключевых слов: {draft.user_selections!.key_indices!.length}</span>
         )}
       </div>
-      {draft.caption && (
-        <p className="whitespace-pre-wrap text-sm text-zinc-200">{draft.caption}</p>
+      {captionText && (
+        <p className="whitespace-pre-wrap text-sm text-zinc-200">{captionText}</p>
       )}
     </div>
   );
