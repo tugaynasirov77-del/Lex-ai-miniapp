@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import crypto from "node:crypto";
 import { getSupabase } from "../../../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../../../lib/verifyTelegram";
+import { enforceQuota } from "../../../../../../../lib/gating";
 
 export const runtime = "nodejs";
 
@@ -46,24 +47,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .maybeSingle();
   if (!project) return Response.json({ error: "project not found" }, { status: 404 });
 
-  // Проверяем тарифный кап: сколько Reels в текущем месяце
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
-
-  const [{ count: usedThisMonth }, { data: budget }] = await Promise.all([
-    sb
-      .from("content_drafts")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("content_type", "reel")
-      .gte("created_at", monthStart.toISOString()),
-    sb.from("project_budget").select("reels_per_month").eq("project_id", projectId).maybeSingle(),
-  ]);
-  const cap = budget?.reels_per_month ?? 15;
-  if ((usedThisMonth ?? 0) >= cap) {
-    return Response.json({ error: `лимит тарифа: ${cap} Reels/мес. Использовано: ${usedThisMonth}.` }, { status: 402 });
-  }
+  // Tier-aware гейтинг через централизованный helper
+  const gate = await enforceQuota({ projectId, tgId: v.user.id, action: "reel" });
+  if (!gate.pass) return gate.response;
 
   // Mini App льёт mp4 на VPS-proxy (Cloudflare Tunnel) — обходим iOS-блокировку
   // на прямой PUT в Supabase Storage. Proxy валидирует token и стримит в bucket.
@@ -95,7 +81,5 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     source_video_url: sourceVideoUrl,
     max_bytes: MAX_BYTES,
     max_duration_sec: MAX_DURATION_SEC,
-    used_this_month: usedThisMonth ?? 0,
-    cap,
   });
 }

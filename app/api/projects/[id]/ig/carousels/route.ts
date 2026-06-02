@@ -11,6 +11,7 @@ import {
   ARKADIY_CAROUSEL_PROMPT_VERSION,
   type CarouselReview,
 } from "../../../../../../lib/arkadiyEditor";
+import { enforceQuota } from "../../../../../../lib/gating";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .eq("tg_id", v.user.id)
     .maybeSingle();
   if (!project) return Response.json({ error: "project not found" }, { status: 404 });
+
+  const gate = await enforceQuota({ projectId, tgId: v.user.id, action: "carousel" });
+  if (!gate.pass) return gate.response;
 
   const body = await req.json().catch(() => ({}));
   let topic = String(body.topic || "").trim();

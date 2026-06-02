@@ -6,6 +6,7 @@ import {
   analyzeIgCompetitors,
   IG_ANALYST_PROMPT_VERSION,
 } from "../../../../../../lib/igAnalyst";
+import { enforceQuota } from "../../../../../../lib/gating";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
+
+  const gate = await enforceQuota({ projectId: id, tgId: a.tgId, action: "analysis" });
+  if (!gate.pass) return gate.response;
 
   const sb = getSupabase();
 
