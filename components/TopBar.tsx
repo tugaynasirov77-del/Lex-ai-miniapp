@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import AtomLogo from "./AtomLogo";
 
 export default function TopBar() {
-  // TopBar показывается на всех экранах, включая главную (Консилиум)
-  usePathname();
+  const pathname = usePathname();
+  if (pathname === "/") return null;
   return (
     <header
       style={{

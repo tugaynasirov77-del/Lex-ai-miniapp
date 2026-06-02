@@ -70,6 +70,7 @@ const TABS = [
 export default function BottomNav() {
   const path = usePathname();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  if (path === "/") return null;
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
