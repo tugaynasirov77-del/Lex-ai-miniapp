@@ -83,6 +83,12 @@ export default function InstagramView({ projectId }: { projectId: string }) {
   const [attachAccountId, setAttachAccountId] = useState("");
   const [preset, setPreset] = useState<"expert_clean" | "personal_brand_energy" | "ai_tech_fast" | "cinematic_mentor">("cinematic_mentor");
 
+  // IG strategy state
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [igPlan, setIgPlan] = useState<any>(null);
+  const [compHandle, setCompHandle] = useState("");
+  const [compNotes, setCompNotes] = useState("");
+
   const load = async () => {
     try {
       const r = await tgFetch(`/api/projects/${projectId}/ig`);
@@ -94,8 +100,22 @@ export default function InstagramView({ projectId }: { projectId: string }) {
     }
   };
 
+  const loadStrategy = async () => {
+    try {
+      const [aRes, pRes] = await Promise.all([
+        tgFetch(`/api/projects/${projectId}/ig/analyze`).then((r) => r.json()).catch(() => null),
+        tgFetch(`/api/projects/${projectId}/ig/plan`).then((r) => r.json()).catch(() => null),
+      ]);
+      if (aRes?.analysis) setAnalysis(aRes.analysis);
+      if (pRes?.plan) setIgPlan(pRes.plan);
+    } catch {
+      /* silent */
+    }
+  };
+
   useEffect(() => {
     load();
+    loadStrategy();
   }, [projectId]);
 
   // авто-поллинг пока есть Reels в обработке
@@ -232,6 +252,102 @@ export default function InstagramView({ projectId }: { projectId: string }) {
     }
   };
 
+  const addCompetitor = async () => {
+    const h = compHandle.trim();
+    if (h.length < 2) return setError("введи @handle или ссылку instagram.com/name");
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/competitors`, {
+        method: "POST",
+        body: JSON.stringify({ handle: h, notes: compNotes.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      setCompHandle("");
+      setCompNotes("");
+      hapticImpact("light");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteCompetitor = async (cid: string) => {
+    if (!window.confirm("Удалить конкурента?")) return;
+    setBusy(true);
+    try {
+      await tgFetch(`/api/projects/${projectId}/ig/competitors`, {
+        method: "DELETE",
+        body: JSON.stringify({ competitor_id: cid }),
+      });
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runAnalysis = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/analyze`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      setAnalysis({ result: d.result, created_at: new Date().toISOString() });
+      hapticImpact("medium");
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const generateIgPlan = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await tgFetch(`/api/projects/${projectId}/ig/plan`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      setIgPlan(d.plan);
+      hapticImpact("medium");
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const generateCarouselFromPlanItem = async (item: any) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const topic = `${item.topic}\n\nHook: ${item.hook}\nCTA: ${item.cta}\nGoal: ${item.goal}`;
+      const r = await tgFetch(`/api/projects/${projectId}/ig/carousels`, {
+        method: "POST",
+        body: JSON.stringify({ topic }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "fail");
+      hapticImpact("medium");
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+      hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const createCarousel = async (topicInput: string) => {
     const t = topicInput.trim();
     if (t.length < 8) {
@@ -337,16 +453,59 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         {/* 02 Конкуренты IG */}
         <Section idx="02" icon="scout" title="Конкуренты IG">
           <p className="text-xs text-muted mb-2">
-            Топ-аккаунтов в нише + их топ-посты. TODO Этап 4 — Разведчик IG (hashtag scout).
+            Добавь конкурентов: @handle или ссылка. Заметки повышают качество анализа.
           </p>
+          <div className="space-y-2 mb-3">
+            <input
+              value={compHandle}
+              onChange={(e) => setCompHandle(e.target.value)}
+              placeholder="@username или instagram.com/name"
+              className="w-full bg-white/[0.04] rounded-md px-3 py-2 text-sm outline-none"
+            />
+            <textarea
+              value={compNotes}
+              onChange={(e) => setCompNotes(e.target.value)}
+              rows={2}
+              placeholder="Заметки (опц.): какой контент делает, кому продаёт, что зашло"
+              className="w-full bg-white/[0.04] rounded-md px-3 py-2 text-xs outline-none"
+            />
+            <button
+              onClick={addCompetitor}
+              disabled={busy}
+              className="text-xs py-2 px-3 rounded-md font-medium"
+              style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
+            >
+              + добавить
+            </button>
+          </div>
           {(data?.competitors ?? []).length === 0 ? (
             <p className="text-[11px] text-muted/60">пока пусто</p>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {data!.competitors.map((c) => (
-                <li key={c.id} className="text-xs flex justify-between">
-                  <span>@{c.username}</span>
-                  <span className="text-muted">{c.followers?.toLocaleString("ru-RU") ?? "—"}</span>
+                <li key={c.id} className="text-xs bg-white/[0.03] rounded p-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={(c as any).profile_url || `https://instagram.com/${c.username}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-amber"
+                      >
+                        @{c.username}
+                      </a>
+                      {(c as any).notes && (
+                        <p className="text-[10px] text-muted mt-0.5 line-clamp-2">{(c as any).notes}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => deleteCompetitor(c.id)}
+                      disabled={busy}
+                      className="text-[10px] text-muted hover:text-rose-400"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -354,17 +513,44 @@ export default function InstagramView({ projectId }: { projectId: string }) {
         </Section>
 
         {/* 03 Стратегия ниши IG */}
-        <Section idx="03" icon="strategy" title="Стратегия ниши IG">
-          <p className="text-xs text-muted">
-            Паттерны топ-аккаунтов: формат Reels, длина caption, hashtag-стратегия. TODO Этап 4.
+        <Section idx="03" icon="strategy" title="Стратегия ниши IG — Анна">
+          <p className="text-xs text-muted mb-3">
+            Анна анализирует конкурентов: темы, форматы, hook'и, CTA-паттерны, что упускают.
           </p>
+          <button
+            onClick={runAnalysis}
+            disabled={busy || (data?.competitors ?? []).length === 0}
+            className="text-xs py-2 px-3 rounded-md font-medium mb-3 disabled:opacity-50"
+            style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
+          >
+            {busy ? "Анализ…" : analysis ? "Перезапустить анализ" : "Запустить анализ"}
+          </button>
+          {analysis?.result && <AnalysisView a={analysis.result} createdAt={analysis.created_at} />}
         </Section>
 
         {/* 04 План на неделю IG */}
-        <Section idx="04" icon="plan" title="План на неделю IG">
-          <p className="text-xs text-muted">
-            Микс на неделю: 2 Reels + 2 карусели + 3 поста. TODO Этап 4 — Милана Контент-директор.
+        <Section idx="04" icon="plan" title="План на неделю IG — Александр">
+          <p className="text-xs text-muted mb-3">
+            7 единиц контента (Reels + карусели + посты). Можно сгенерировать карусель прямо из плана.
           </p>
+          <button
+            onClick={generateIgPlan}
+            disabled={busy || !analysis}
+            className="text-xs py-2 px-3 rounded-md font-medium mb-3 disabled:opacity-50"
+            style={{ background: "rgba(247, 119, 55, 0.15)", color: "#F77737" }}
+            title={!analysis ? "Сначала запусти анализ" : ""}
+          >
+            {busy ? "Генерация…" : igPlan ? "Перегенерировать план" : "Сгенерировать план"}
+          </button>
+          {igPlan?.items && (
+            <PlanView
+              items={igPlan.items}
+              summary={igPlan.summary}
+              weekStart={igPlan.week_start}
+              onGenerateCarousel={generateCarouselFromPlanItem}
+              busy={busy}
+            />
+          )}
         </Section>
 
         {/* 05 Reels-фабрика */}
@@ -664,6 +850,151 @@ function CarouselList({ items }: { items: IgCarousel[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function AnalysisView({ a, createdAt }: { a: any; createdAt?: string }) {
+  return (
+    <div className="space-y-3 text-xs bg-white/[0.03] rounded-md p-3">
+      {createdAt && (
+        <div className="text-[10px] text-muted/60">
+          {new Date(createdAt).toLocaleString("ru-RU")}
+        </div>
+      )}
+      <p className="text-sm text-zinc-200">{a.executive_summary}</p>
+
+      {a.content_themes?.length > 0 && (
+        <Chips title="Темы" items={a.content_themes} color="#F0A020" />
+      )}
+      {a.recurring_formats?.length > 0 && (
+        <Chips title="Форматы" items={a.recurring_formats} color="#4FC3F7" />
+      )}
+      {a.hook_patterns?.length > 0 && (
+        <Chips title="Hook-паттерны" items={a.hook_patterns} color="#FFD54F" />
+      )}
+      {a.cta_patterns?.length > 0 && (
+        <Chips title="CTA" items={a.cta_patterns} color="#A5D6A7" />
+      )}
+      {a.visual_style && (
+        <div>
+          <div className="text-[10px] text-muted uppercase tracking-wide mb-1">Визуал</div>
+          <p>{a.visual_style}</p>
+        </div>
+      )}
+      {a.posting_cadence && (
+        <div>
+          <div className="text-[10px] text-muted uppercase tracking-wide mb-1">Частота</div>
+          <p>{a.posting_cadence}</p>
+        </div>
+      )}
+      {a.content_gaps?.length > 0 && (
+        <div>
+          <div className="text-[10px] text-muted uppercase tracking-wide mb-1">Что упускают</div>
+          <ul className="list-disc list-inside space-y-0.5">
+            {a.content_gaps.map((g: string, i: number) => <li key={i}>{g}</li>)}
+          </ul>
+        </div>
+      )}
+      {a.opportunities?.length > 0 && (
+        <div>
+          <div className="text-[10px] text-muted uppercase tracking-wide mb-1">Возможности</div>
+          <ul className="list-disc list-inside space-y-0.5 text-emerald-300/90">
+            {a.opportunities.map((o: string, i: number) => <li key={i}>{o}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Chips({ title, items, color }: { title: string; items: string[]; color: string }) {
+  return (
+    <div>
+      <div className="text-[10px] text-muted uppercase tracking-wide mb-1">{title}</div>
+      <div className="flex flex-wrap gap-1">
+        {items.map((x, i) => (
+          <span
+            key={i}
+            className="text-[10px] px-1.5 py-0.5 rounded"
+            style={{ background: `${color}22`, color }}
+          >
+            {x}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlanView({
+  items,
+  summary,
+  weekStart,
+  onGenerateCarousel,
+  busy,
+}: {
+  items: any[];
+  summary?: string;
+  weekStart?: string;
+  onGenerateCarousel: (item: any) => void;
+  busy: boolean;
+}) {
+  const formatColor: Record<string, string> = {
+    reel: "#F77737",
+    carousel: "#4FC3F7",
+    post: "#A5D6A7",
+  };
+  return (
+    <div className="space-y-2">
+      {weekStart && (
+        <div className="text-[10px] text-muted/60">
+          Неделя с {new Date(weekStart).toLocaleDateString("ru-RU")}
+        </div>
+      )}
+      {summary && <p className="text-xs text-zinc-300">{summary}</p>}
+      <ul className="space-y-2">
+        {items.map((it, i) => (
+          <li key={i} className="bg-white/[0.03] rounded-md p-2.5 text-xs space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase"
+                style={{ background: `${formatColor[it.format] || "#888"}22`, color: formatColor[it.format] || "#fff" }}
+              >
+                {it.format}
+              </span>
+              <span className="text-[10px] text-muted">
+                {it.day ? new Date(it.day).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" }) : ""}
+              </span>
+              {it.priority === "high" && (
+                <span className="text-[9px] text-rose-300 uppercase">high</span>
+              )}
+              {it.effort && (
+                <span className="text-[9px] text-muted/60 ml-auto">effort: {it.effort}</span>
+              )}
+            </div>
+            <div className="font-medium text-zinc-100">{it.topic}</div>
+            {it.hook && <div className="text-[11px] text-amber">🪝 {it.hook}</div>}
+            {it.cta && <div className="text-[11px] text-emerald-300/90">CTA: {it.cta}</div>}
+            {it.reason && <div className="text-[10px] text-muted italic">{it.reason}</div>}
+            {Array.isArray(it.required_assets) && it.required_assets.length > 0 && (
+              <div className="text-[10px] text-muted">
+                Нужно: {it.required_assets.join(", ")}
+              </div>
+            )}
+            {it.format === "carousel" && (
+              <button
+                onClick={() => onGenerateCarousel(it)}
+                disabled={busy}
+                className="text-[10px] py-1 px-2 rounded font-medium disabled:opacity-50"
+                style={{ background: "rgba(79, 195, 247, 0.15)", color: "#4FC3F7" }}
+              >
+                → собрать карусель
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
