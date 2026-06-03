@@ -37,19 +37,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // content_drafts.status в существующей схеме: pending|ready|approved|rejected|published.
   // Для flow polling: pending→generating, ready→ready, approved→ready (юзер уже approve'нул),
   // published→published, rejected→failed.
+  // Sync-генерация в POST /api/drafts кладёт status='pending', контент уже готов.
+  // Маппим pending → ready чтобы polling в Mini App сразу видел terminal-success.
   const rawStatus = String((draft as any).status || "");
   const dtoStatus =
-    rawStatus === "pending"
-      ? "generating"
-      : rawStatus === "rejected"
-        ? "failed"
-        : rawStatus === "approved"
+    rawStatus === "rejected"
+      ? "failed"
+      : rawStatus === "published"
+        ? "published"
+        : rawStatus === "approved" || rawStatus === "ready" || rawStatus === "pending"
           ? "ready"
-          : rawStatus === "published"
-            ? "published"
-            : rawStatus === "ready"
-              ? "ready"
-              : "generating";
+          : "generating";
 
   // Слайды карусели лежат в media_urls jsonb с полями из carouselWriter:
   // {index, title, body, ...}. Мап в DTO-формат {idx, text}.

@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
           caption: carousel.caption || "",
           chosen_title: carousel.carousel_title || null,
           media_urls: carousel.slides,
-          source: "user_brief",
-          status: "ready",
+          source: "manual",
+          status: "pending",
         })
         .select("id")
         .single();
@@ -146,8 +146,8 @@ ${brief?.goal ? `Цель: ${brief.goal}.` : ""}
         platform,
         content_type: "post",
         body: text,
-        source: "user_brief",
-        status: "ready",
+        source: "manual",
+        status: "pending",
       })
       .select("id")
       .single();
