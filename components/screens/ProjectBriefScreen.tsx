@@ -12,7 +12,14 @@ import {
   type Platform,
   type Tone,
 } from "../../flow";
-import { hapticImpact, hapticSelection } from "../../lib/telegram";
+import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
+import { useDraftBackup } from "../../hooks/useDraftBackup";
+import {
+  ApiError,
+  createDraft,
+  createWeeklyPlan,
+  type DraftFormat,
+} from "../../lib/api";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -79,6 +86,14 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: "biweek", label: "14 дней" },
 ];
 
+function mapErrorToHuman(e: ApiError): string {
+  if (e.status === 402 || e.status === 403) return "Лимит тарифа исчерпан.";
+  if (e.status === 401) return "Не удалось авторизоваться. Откройте через @Lex_app_bot.";
+  if (e.status >= 500) return "Сервер временно недоступен. Попробуйте через минуту.";
+  if (e.status === 404) return "Маршрут не найден. Обновите Mini App.";
+  return e.message || "Не получилось. Попробуйте ещё раз.";
+}
+
 function defaultPlatformFor(format: ContentFormat): Platform {
   return format === "carousel" ? "instagram" : "telegram";
 }
@@ -111,12 +126,52 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
   const [expanded, setExpanded] = useState(false);
   const [shake, setShake] = useState(false);
   const [showHelperError, setShowHelperError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  // Backup brief в localStorage с debounce — back/close не теряет ввод.
+  useDraftBackup(`lex.brief.${format}`, brief);
 
   const patch = <K extends keyof Brief>(key: K, value: Brief[K]) => {
     setBrief((b) => ({ ...b, [key]: value }));
+    if (serverError) setServerError(null);
+  };
+
+  const persistAndNavigate = async (finalBrief: Brief) => {
+    setSubmitting(true);
+    setServerError(null);
+    try {
+      if (format === "weekly-plan") {
+        const { planId, projectId } = await createWeeklyPlan({
+          brief: finalBrief,
+          projectId: state.projectId ?? undefined,
+        });
+        actions.setIds({ projectId, weeklyPlanId: planId });
+      } else if (format === "carousel" || format === "post") {
+        const { draftId, projectId } = await createDraft({
+          format: format as DraftFormat,
+          brief: finalBrief,
+          projectId: state.projectId ?? undefined,
+        });
+        actions.setIds({ projectId, draftId });
+      }
+      // Reel сюда не попадает (skip brief), но если попадёт — просто навигейтим.
+      hapticNotify("success");
+      onSubmit();
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? mapErrorToHuman(e)
+          : "Не дозвонились до сервера. Проверьте интернет.";
+      setServerError(msg);
+      hapticImpact("rigid");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = () => {
+    if (submitting) return;
     const trimmed = brief.topic.trim();
     if (trimmed.length < 8) {
       hapticImpact("rigid");
@@ -126,18 +181,20 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
       return;
     }
     hapticImpact("medium");
-    actions.setBrief({ ...brief, topic: trimmed });
-    onSubmit();
+    const finalBrief: Brief = { ...brief, topic: trimmed };
+    actions.setBrief(finalBrief);
+    persistAndNavigate(finalBrief);
   };
 
   const handleSkip = () => {
+    if (submitting) return;
     hapticSelection();
     const skipped: Brief = {
       ...defaultBriefFor(format),
       topic: "auto: соберите по умолчанию",
     };
     actions.setBrief(skipped);
-    onSubmit();
+    persistAndNavigate(skipped);
   };
 
   const [h1, subtitle] = H1[format];
@@ -333,9 +390,28 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
       {/* SPACER → CTA прижата вниз */}
       <div style={{ flex: 1, minHeight: 28 }} />
 
+      {/* Server error (inline) */}
+      {serverError && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 14,
+            background: "rgba(245,80,80,0.08)",
+            border: "1px solid rgba(245,80,80,0.25)",
+            color: "#F39B40",
+            fontSize: 13,
+            lineHeight: 1.35,
+          }}
+        >
+          {serverError}
+        </div>
+      )}
+
       {/* CTA */}
       <button
         onClick={handleSubmit}
+        disabled={submitting}
         style={{
           width: "100%",
           minHeight: 56,
@@ -350,10 +426,12 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
           textTransform: "uppercase",
           boxShadow:
             "0 22px 52px rgba(245,231,10,0.30), 0 0 0 1px rgba(255,255,255,0.12) inset",
-          cursor: "pointer",
+          cursor: submitting ? "default" : "pointer",
+          opacity: submitting ? 0.7 : 1,
+          transition: "opacity 160ms ease",
         }}
       >
-        {CTA_LABEL[format]}
+        {submitting ? "СОБИРАЕМ…" : CTA_LABEL[format]}
       </button>
     </div>
   );

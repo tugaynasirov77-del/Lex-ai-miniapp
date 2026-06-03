@@ -9,7 +9,9 @@ import ProjectBriefScreen from "./screens/ProjectBriefScreen";
 import UploadScreen from "./screens/UploadScreen";
 import GenerateScreen from "./screens/GenerateScreen";
 import { useFlow, useFlowActions, type ContentFormat } from "../flow";
-import { hapticImpact, showBackButton } from "../lib/telegram";
+import { useTgBackButton } from "../hooks/useTgBackButton";
+import { useResumeFlow } from "../hooks/useResumeFlow";
+import { hapticImpact } from "../lib/telegram";
 
 const ENTER = { opacity: 0, y: 10 };
 const SHOW = { opacity: 1, y: 0 };
@@ -40,13 +42,11 @@ export default function AppFlow() {
     actions.back();
   };
 
-  // Telegram BackButton: показываем на любом не-home экране, прячем на home.
-  useEffect(() => {
-    if (currentScreen === "home") return;
-    const off = showBackButton(goBack);
-    return off;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentScreen]);
+  // Telegram BackButton — централизованно через хук.
+  useTgBackButton(currentScreen !== "home", goBack);
+
+  // Восстановление flow из localStorage + автосохранение на изменениях state.
+  useResumeFlow();
 
   // Полностью блокируем скролл документа на flow-странице,
   // оставляем мягкий rubber-band только внутри foreground.
