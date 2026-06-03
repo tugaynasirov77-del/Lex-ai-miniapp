@@ -84,15 +84,26 @@ export function updateDraft(draftId: string, patch: UpdateDraftPatch): Promise<{
   return patchJSON(`/api/drafts/${draftId}`, patch);
 }
 
+/** Статусы content_drafts. Backend источник истины. */
+export type DraftStatus =
+  | "generating"
+  | "reviewing"
+  | "ready"
+  | "published"
+  | "failed";
+
 export type DraftDTO = {
   id: string;
   project_id: string;
   format: DraftFormat;
-  status: string;
+  status: DraftStatus;
+  /** Опц. под-фаза агента (если backend репортит). */
+  phase?: "writing" | "review" | "finalize" | null;
   text?: string;
   slides?: Array<{ idx: number; text: string }>;
   caption?: string;
   review_log?: unknown[];
+  error?: string | null;
   updated_at: string;
 };
 
@@ -120,6 +131,22 @@ export function createWeeklyPlan(
   return postJSON("/api/weekly-plans", payload);
 }
 
+export type WeeklyPlanStatus = "generating" | "reviewing" | "ready" | "failed";
+
+export type WeeklyPlanDTO = {
+  id: string;
+  project_id: string;
+  status: WeeklyPlanStatus;
+  phase?: "research" | "writing" | "review" | null;
+  ideas?: Array<{ idx: number; format: string; topic: string; hook: string }>;
+  error?: string | null;
+  updated_at: string;
+};
+
+export function getWeeklyPlan(planId: string): Promise<WeeklyPlanDTO> {
+  return getJSON(`/api/weekly-plans/${planId}`);
+}
+
 // ---------------------------------------------------------------------------
 // projects (опционально, если бэк требует явного create перед draft)
 // ---------------------------------------------------------------------------
@@ -133,4 +160,42 @@ export type CreateProjectResult = { projectId: string };
 
 export function createProject(payload: CreateProjectPayload): Promise<CreateProjectResult> {
   return postJSON("/api/projects", payload);
+}
+
+// ---------------------------------------------------------------------------
+// reel jobs
+// ---------------------------------------------------------------------------
+
+export type ReelJobStatus =
+  | "pending"
+  | "claimed"
+  | "rendering"
+  | "awaiting_approval"
+  | "done"
+  | "failed";
+
+export type ReelJobPhase =
+  | "download"
+  | "validate"
+  | "transcribe"
+  | "render"
+  | "upload"
+  | null;
+
+export type ReelJobDTO = {
+  id: string;
+  project_id: string;
+  draft_id: string | null;
+  status: ReelJobStatus;
+  phase: ReelJobPhase;
+  transcript_words?: Array<{ idx: number; w: string; start_ms: number; end_ms: number }>;
+  video_url?: string | null;
+  cover_url?: string | null;
+  attempts?: number;
+  error?: string | null;
+  updated_at: string;
+};
+
+export function getReelJob(jobId: string): Promise<ReelJobDTO> {
+  return getJSON(`/api/ig/reel-jobs/${jobId}`);
 }
