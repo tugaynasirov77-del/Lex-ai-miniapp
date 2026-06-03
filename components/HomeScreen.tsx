@@ -60,10 +60,10 @@ export default function HomeScreen() {
         overflow: "hidden",
       }}
     >
-      {/* HEADER */}
+      {/* HEADER — отступ сверху рассчитан так, чтобы не цепляться за кнопку «Закрыть» Telegram */}
       <header
         style={{
-          padding: "calc(env(safe-area-inset-top) + 18px) 22px 0",
+          padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
           display: "flex",
           alignItems: "center",
           gap: 10,
@@ -222,6 +222,39 @@ export default function HomeScreen() {
               {p.label}
             </Link>
           ))}
+        </div>
+
+        {/* LIVE STRIP — заполняет вертикальный воздух между пилюлями и CTA */}
+        <div
+          style={{
+            marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "14px 16px",
+            borderRadius: 18,
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              background: "#22c55e",
+              boxShadow: "0 0 12px rgba(34,197,94,0.6)",
+              flexShrink: 0,
+            }}
+          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, color: INK, fontWeight: 600 }}>
+              Команда работает
+            </div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+              3 драфта ждут ревью · план обновлён сегодня
+            </div>
+          </div>
         </div>
       </div>
 
