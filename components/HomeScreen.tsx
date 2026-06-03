@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
@@ -52,16 +52,162 @@ function LexLogo({ height = 40 }: { height?: number }) {
   );
 }
 
-function Thumb() {
+type Slide = {
+  badge: string;
+  title: string;
+  subtitle: string;
+  icon: string; // эмодзи-иконка, лёгкий способ дать визуал без файлов
+  accent: string; // подкрашиваем фон слайда
+};
+
+const SLIDES: Slide[] = [
+  {
+    badge: "Команда AI",
+    title: "7 агентов работают за вас",
+    subtitle: "Алина пишет, Михаил монтирует, Виктор публикует",
+    icon: "🤝",
+    accent: "rgba(178,30,60,0.35)",
+  },
+  {
+    badge: "Авто-монтаж",
+    title: "Reels из вашего видео",
+    subtitle: "Загрузите — транскрипт, субтитры и публикация автоматом",
+    icon: "🎬",
+    accent: "rgba(96,18,80,0.45)",
+  },
+  {
+    badge: "Контент-план",
+    title: "План на неделю за минуту",
+    subtitle: "AI собирает 7 идей под ваш канал и аудиторию",
+    icon: "📅",
+    accent: "rgba(40,60,140,0.40)",
+  },
+  {
+    badge: "Три формата",
+    title: "Посты, Reels и карусели",
+    subtitle: "Telegram и Instagram — из одного окна",
+    icon: "✨",
+    accent: "rgba(140,90,30,0.40)",
+  },
+];
+
+function BannerCarousel() {
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 4500);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  const s = SLIDES[idx];
+
   return (
     <div
+      onPointerDown={() => setPaused(true)}
+      onPointerUp={() => setPaused(false)}
+      onPointerLeave={() => setPaused(false)}
       style={{
-        aspectRatio: "3 / 4",
-        borderRadius: 16,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.03)",
+        position: "relative",
+        borderRadius: 28,
+        background:
+          "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
+        border: "1px solid rgba(255,255,255,0.05)",
+        boxShadow:
+          "0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+        overflow: "hidden",
+        minHeight: 200,
       }}
-    />
+    >
+      {/* акцентный glow меняется со слайдом */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `radial-gradient(120% 80% at 100% 0%, ${s.accent} 0%, transparent 60%)`,
+          transition: "background 600ms ease",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        key={idx}
+        style={{
+          position: "relative",
+          padding: 20,
+          animation: "lex-slide-in 520ms cubic-bezier(0.16,1,0.3,1) both",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#0A0608",
+              background: YELLOW,
+              padding: "5px 10px",
+              borderRadius: 999,
+            }}
+          >
+            {s.badge}
+          </span>
+          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{s.icon}</span>
+        </div>
+
+        <div
+          style={{
+            marginTop: 16,
+            fontSize: 22,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            letterSpacing: "-0.01em",
+            color: "#FFFFFF",
+          }}
+        >
+          {s.title}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+          {s.subtitle}
+        </div>
+
+        {/* dots */}
+        <div style={{ marginTop: 18, display: "flex", gap: 6, justifyContent: "center" }}>
+          {SLIDES.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIdx(i);
+                hapticSelection();
+              }}
+              aria-label={`слайд ${i + 1}`}
+              style={{
+                width: i === idx ? 22 : 6,
+                height: 6,
+                borderRadius: 999,
+                background: i === idx ? YELLOW : "rgba(255,255,255,0.25)",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                transition: "width 320ms ease, background 320ms ease",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes lex-slide-in {
+          0% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -178,75 +324,8 @@ export default function HomeScreen() {
           </p>
         </div>
 
-        {/* PROJECT CARD */}
-        <Link
-          href="/projects"
-          onClick={() => hapticSelection()}
-          style={{
-            textDecoration: "none",
-            color: "inherit",
-            display: "block",
-            padding: 18,
-            borderRadius: 28,
-            background:
-              "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
-            border: "1px solid rgba(255,255,255,0.05)",
-            boxShadow:
-              "0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 20,
-                  fontWeight: 700,
-                  lineHeight: 1.15,
-                  letterSpacing: "-0.01em",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                Instagram-проект
-              </div>
-              <div style={{ marginTop: 6, fontSize: 13, color: MUTED }}>
-                План на неделю готов
-              </div>
-            </div>
-            <span
-              style={{
-                flexShrink: 0,
-                background: YELLOW,
-                color: "#0A0608",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "7px 14px",
-                borderRadius: 999,
-              }}
-            >
-              В работе
-            </span>
-          </div>
-
-          <div
-            style={{
-              marginTop: 16,
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 10,
-            }}
-          >
-            <Thumb />
-            <Thumb />
-            <Thumb />
-          </div>
-        </Link>
+        {/* BANNER CAROUSEL — анимированная витрина возможностей приложения */}
+        <BannerCarousel />
 
         {/* PILL ROW — все три должны уместиться по ширине iPhone Mini App */}
         <div
