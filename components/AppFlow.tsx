@@ -1,45 +1,51 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
 import HomeScreen from "./HomeScreen";
 import ChooseFormatScreen from "./screens/ChooseFormatScreen";
 import UploadScreen from "./screens/UploadScreen";
 import GenerateScreen from "./screens/GenerateScreen";
+import { useFlow, useFlowActions, type ContentFormat } from "../flow";
 import { hapticImpact, showBackButton } from "../lib/telegram";
-
-export type Screen = "home" | "choose-format" | "upload" | "generate";
 
 const ENTER = { opacity: 0, y: 10 };
 const SHOW = { opacity: 1, y: 0 };
 const EXIT = { opacity: 0, y: -8 };
-const TRANS = { duration: 0.24, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
+const TRANS = {
+  duration: 0.24,
+  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+};
 
+/**
+ * Тонкий orchestrator: НЕТ локального state, источник правды — FlowProvider.
+ * Здесь живут только AnimatePresence, TG BackButton подписка, body-overflow lock
+ * и render-switch по state.currentScreen.
+ */
 export default function AppFlow() {
-  const [screen, setScreen] = useState<Screen>("home");
-  const historyRef = useRef<Screen[]>([]);
+  const { state } = useFlow();
+  const actions = useFlowActions();
+  const { currentScreen } = state;
 
-  const navigate = useCallback((next: Screen) => {
-    historyRef.current.push(screen);
+  // Хелпер с хаптиком для primary-навигации.
+  const goNext = (screen: Parameters<typeof actions.navigate>[0]) => {
     hapticImpact("light");
-    setScreen(next);
-  }, [screen]);
+    actions.navigate(screen);
+  };
 
-  const back = useCallback(() => {
-    const prev = historyRef.current.pop();
-    if (prev) {
-      hapticImpact("light");
-      setScreen(prev);
-    }
-  }, []);
+  const goBack = () => {
+    hapticImpact("light");
+    actions.back();
+  };
 
   // Telegram BackButton: показываем на любом не-home экране, прячем на home.
   useEffect(() => {
-    if (screen === "home") return;
-    const off = showBackButton(back);
+    if (currentScreen === "home") return;
+    const off = showBackButton(goBack);
     return off;
-  }, [screen, back]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScreen]);
 
   // Полностью блокируем скролл документа на flow-странице,
   // оставляем мягкий rubber-band только внутри foreground.
@@ -72,7 +78,7 @@ export default function AppFlow() {
       <AppBg />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={screen}
+          key={currentScreen}
           initial={ENTER}
           animate={SHOW}
           exit={EXIT}
@@ -85,14 +91,36 @@ export default function AppFlow() {
             flexDirection: "column",
           }}
         >
-          {screen === "home" && <HomeScreen onStart={() => navigate("choose-format")} />}
-          {screen === "choose-format" && (
-            <ChooseFormatScreen onPick={() => navigate("upload")} onBack={back} />
+          {currentScreen === "home" && (
+            <HomeScreen onStart={() => goNext("choose-format")} />
           )}
-          {screen === "upload" && (
-            <UploadScreen onUploaded={() => navigate("generate")} onBack={back} />
+          {currentScreen === "choose-format" && (
+            <ChooseFormatScreen
+              onPick={(format?: ContentFormat) => {
+                // ChooseFormatScreen пока вызывает onPick() без аргумента —
+                // как только переведём его на новый API, format будет проброшен в state.
+                if (format) actions.setFormat(format);
+                // Для Reel дальше upload, для остальных — project-brief.
+                // Пока project-brief не реализован: всё ведём в upload (старое поведение).
+                goNext("upload");
+              }}
+              onBack={goBack}
+            />
           )}
-          {screen === "generate" && <GenerateScreen onBack={back} />}
+          {currentScreen === "upload" && (
+            <UploadScreen
+              onUploaded={() => {
+                // TODO: пробросить реальный reelJobId через actions.setIds.
+                goNext("generate");
+              }}
+              onBack={goBack}
+            />
+          )}
+          {currentScreen === "generate" && <GenerateScreen onBack={goBack} />}
+
+          {/* project-brief и review ещё не реализованы как screens — render-fallback в виде null.
+              Навигация на эти ключи валидна (ScreenKey), но визуально ничего не отрендерится. */}
+          {(currentScreen === "project-brief" || currentScreen === "review") && null}
         </motion.div>
       </AnimatePresence>
     </div>
