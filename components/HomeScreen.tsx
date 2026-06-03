@@ -8,8 +8,9 @@ const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
-function LexLogo({ height = 56 }: { height?: number }) {
-  // Native aspect 1280×550 ≈ 2.327. mix-blend-mode: lighten убирает чёрный фон JPG.
+function LexLogo({ height = 170 }: { height?: number }) {
+  // mix-blend-mode: screen + контраст-фильтр выжимает JPEG-артефакты по краям,
+  // чёрный квадрат полностью сливается с фоном приложения.
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
@@ -22,7 +23,8 @@ function LexLogo({ height = 56 }: { height?: number }) {
         display: "block",
         userSelect: "none",
         pointerEvents: "none",
-        mixBlendMode: "lighten",
+        mixBlendMode: "screen",
+        filter: "contrast(1.15)",
       }}
     />
   );
@@ -108,7 +110,7 @@ export default function HomeScreen() {
           alignItems: "center",
         }}
       >
-        <LexLogo height={56} />
+        <LexLogo height={170} />
       </header>
       <div style={{ padding: "4px 22px 0 62px", fontSize: 13, color: MUTED }}>
         Ваш контент-цех
