@@ -8,17 +8,23 @@ const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
-function LexMark({ size = 30 }: { size?: number }) {
+function LexLogo({ height = 36 }: { height?: number }) {
+  // Native aspect 1280×550 ≈ 2.327
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden>
-      <path
-        d="M8 11 H22 C28 11 28 19 22 19 H14 C8 19 8 27 14 27 H30"
-        stroke={YELLOW}
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src="/lex-logo.jpg"
+      alt="LEX AI"
+      draggable={false}
+      style={{
+        height,
+        width: "auto",
+        display: "block",
+        userSelect: "none",
+        pointerEvents: "none",
+        // jpg чёрный фон сливается с темой
+      }}
+    />
   );
 }
 
@@ -100,13 +106,9 @@ export default function HomeScreen() {
           padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
           display: "flex",
           alignItems: "center",
-          gap: 10,
         }}
       >
-        <LexMark size={30} />
-        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.04em" }}>
-          LEX&nbsp;AI
-        </span>
+        <LexLogo height={36} />
       </header>
       <div style={{ padding: "4px 22px 0 62px", fontSize: 13, color: MUTED }}>
         Ваш контент-цех
