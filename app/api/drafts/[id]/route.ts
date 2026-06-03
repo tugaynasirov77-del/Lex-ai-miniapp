@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { data: draft } = await sb
     .from("content_drafts")
     .select(
-      "id,project_id,content_type,status,body,slides_data,decided_at,published_message_id,created_at,projects!inner(tg_id)",
+      "id,project_id,content_type,status,body,caption,media_urls,decided_at,published_message_id,created_at,projects!inner(tg_id)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -51,10 +51,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
               ? "ready"
               : "generating";
 
-  const slidesData = (draft as any).slides_data as
-    | { slides?: Array<{ idx: number; text: string }>; caption?: string }
-    | null
-    | undefined;
+  // Слайды карусели лежат в media_urls jsonb с полями из carouselWriter:
+  // {index, title, body, ...}. Мап в DTO-формат {idx, text}.
+  const rawSlides = Array.isArray((draft as any).media_urls)
+    ? ((draft as any).media_urls as any[])
+    : [];
+  const slides = rawSlides.map((s, i) => ({
+    idx: typeof s?.index === "number" ? s.index - 1 : i,
+    text: [s?.title, s?.body].filter(Boolean).join("\n\n") || String(s?.text || ""),
+  }));
 
   return Response.json({
     id: draft.id,
@@ -63,8 +68,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     status: dtoStatus,
     phase: null,
     text: contentType === "post" ? (draft as any).body || "" : undefined,
-    slides: contentType === "carousel" ? slidesData?.slides || [] : undefined,
-    caption: contentType === "carousel" ? slidesData?.caption || (draft as any).body : undefined,
+    slides: contentType === "carousel" ? slides : undefined,
+    caption:
+      contentType === "carousel"
+        ? (draft as any).caption || (draft as any).body || ""
+        : undefined,
     error: null,
     updated_at: (draft as any).decided_at || (draft as any).created_at,
   });

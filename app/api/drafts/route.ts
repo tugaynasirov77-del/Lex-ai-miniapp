@@ -84,10 +84,6 @@ export async function POST(req: NextRequest) {
       if (!carousel) {
         return Response.json({ error: "carousel writer returned invalid JSON" }, { status: 502 });
       }
-      const slides = carousel.slides.map((s) => ({
-        idx: (s.index ?? 0) - 1,
-        text: [s.title, s.body].filter(Boolean).join("\n\n"),
-      }));
       const { data: inserted, error } = await sb
         .from("content_drafts")
         .insert({
@@ -95,9 +91,11 @@ export async function POST(req: NextRequest) {
           platform,
           content_type: "carousel",
           body: carousel.caption || "",
+          caption: carousel.caption || "",
+          chosen_title: carousel.carousel_title || null,
+          media_urls: carousel.slides,
           source: "user_brief",
           status: "ready",
-          slides_data: { slides, caption: carousel.caption },
         })
         .select("id")
         .single();
