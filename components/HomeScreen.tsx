@@ -428,7 +428,7 @@ export default function HomeScreen() {
       {/* HEADER — компактный, не съедает первый экран */}
       <header
         style={{
-          padding: "max(calc(env(safe-area-inset-top) + 44px), 72px) 22px 0",
+          padding: "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px 0",
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-start",
