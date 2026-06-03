@@ -11,10 +11,10 @@ export default function Splash() {
 
   useEffect(() => {
     hapticImpact("light");
-    const tv = setTimeout(() => hapticNotify("success"), 800);
-    // Total timeline: draw mark 700ms + text fade 300ms (overlaps) + hold 500ms + fade out 300ms ≈ 1500ms
-    const t1 = setTimeout(() => setFading(true), 1200);
-    const t2 = setTimeout(() => setVisible(false), 1500);
+    const tv = setTimeout(() => hapticNotify("success"), 1100);
+    // Timeline: 200ms delay + draw 1100ms + dot 280ms + text overlap + hold 400ms + fade out 350ms ≈ 2300ms
+    const t1 = setTimeout(() => setFading(true), 1950);
+    const t2 = setTimeout(() => setVisible(false), 2300);
     return () => {
       clearTimeout(tv);
       clearTimeout(t1);
@@ -60,10 +60,11 @@ export default function Splash() {
           strokeWidth="16"
           strokeLinecap="round"
           strokeLinejoin="round"
+          pathLength="100"
           style={{
-            strokeDasharray: 260,
-            strokeDashoffset: 260,
-            animation: "lex-mark-draw 700ms cubic-bezier(0.65,0,0.35,1) 100ms forwards",
+            strokeDasharray: "100",
+            strokeDashoffset: "100",
+            animation: "lex-mark-draw 1100ms cubic-bezier(0.65,0,0.35,1) 200ms forwards",
             filter: `drop-shadow(0 0 18px ${YELLOW}66)`,
           }}
         />
@@ -75,7 +76,7 @@ export default function Splash() {
           fill="#FFFFFF"
           style={{
             opacity: 0,
-            animation: "lex-dot-in 280ms cubic-bezier(0.16,1,0.3,1) 720ms forwards",
+            animation: "lex-dot-in 320ms cubic-bezier(0.16,1,0.3,1) 1320ms forwards",
             transformOrigin: "96px 70px",
             filter: "drop-shadow(0 0 10px rgba(255,255,255,0.95))",
           }}
@@ -90,7 +91,7 @@ export default function Splash() {
           letterSpacing: "0.06em",
           lineHeight: 1,
           opacity: 0,
-          animation: "lex-text-in 500ms cubic-bezier(0.16,1,0.3,1) 550ms forwards",
+          animation: "lex-text-in 500ms cubic-bezier(0.16,1,0.3,1) 1100ms forwards",
         }}
       >
         <span style={{ color: "#FFFFFF" }}>LEX </span>
