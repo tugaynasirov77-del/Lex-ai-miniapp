@@ -110,6 +110,10 @@ function BannerCarousel() {
       onPointerLeave={() => setPaused(false)}
       style={{
         position: "relative",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
         borderRadius: 28,
         background:
           "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
@@ -117,7 +121,6 @@ function BannerCarousel() {
         boxShadow:
           "0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
         overflow: "hidden",
-        minHeight: 200,
       }}
     >
       {/* акцентный glow меняется со слайдом */}
@@ -136,7 +139,10 @@ function BannerCarousel() {
         key={idx}
         style={{
           position: "relative",
+          flex: 1,
           padding: 20,
+          display: "flex",
+          flexDirection: "column",
           animation: "lex-slide-in 520ms cubic-bezier(0.16,1,0.3,1) both",
         }}
       >
@@ -174,8 +180,8 @@ function BannerCarousel() {
           {s.subtitle}
         </div>
 
-        {/* dots */}
-        <div style={{ marginTop: 18, display: "flex", gap: 6, justifyContent: "center" }}>
+        {/* dots — прижаты к низу карточки */}
+        <div style={{ marginTop: "auto", paddingTop: 18, display: "flex", gap: 6, justifyContent: "center" }}>
           {SLIDES.map((_, i) => (
             <button
               key={i}
@@ -324,40 +330,8 @@ export default function HomeScreen() {
           </p>
         </div>
 
-        {/* BANNER CAROUSEL — анимированная витрина возможностей приложения */}
+        {/* BANNER CAROUSEL — заполняет всю свободную высоту до CTA */}
         <BannerCarousel />
-
-        {/* PILL ROW — все три должны уместиться по ширине iPhone Mini App */}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            justifyContent: "space-between",
-          }}
-        >
-          {PILLS.map((p) => (
-            <Link
-              key={p.label}
-              href={p.href}
-              onClick={() => hapticSelection()}
-              style={{
-                flex: 1,
-                textDecoration: "none",
-                color: INK,
-                padding: "11px 8px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.045)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                fontSize: 12,
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                textAlign: "center",
-              }}
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
       </div>
 
       {/* BOTTOM CTA — отступ снизу учитывает safe-area iPhone */}
