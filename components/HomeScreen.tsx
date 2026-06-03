@@ -23,15 +23,16 @@ function LexLogo({ height = 40 }: { height?: number }) {
       }}
     >
       <svg
-        viewBox="0 0 100 100"
+        viewBox="0 0 110 90"
         style={{ height: "100%", width: "auto", overflow: "visible" }}
         fill="none"
         aria-hidden
       >
+        {/* Зигзаг-знак: верхняя длинная пилюля → вниз справа → короткая средняя → вниз слева → нижняя длинная */}
         <path
-          d="M 18 26 H 62 C 78 26 78 44 62 44 H 40 C 24 44 24 62 40 62 H 84"
+          d="M 14 20 H 70 C 86 20 86 45 70 45 H 40 C 24 45 24 70 40 70 H 96"
           stroke={YELLOW}
-          strokeWidth="14"
+          strokeWidth="16"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -128,14 +129,14 @@ export default function HomeScreen() {
         style={{
           padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
           display: "flex",
-          alignItems: "center",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 6,
         }}
       >
-        <LexLogo height={40} />
+        <LexLogo height={42} />
+        <span style={{ fontSize: 13, color: MUTED }}>Ваш контент-цех</span>
       </header>
-      <div style={{ padding: "4px 22px 0 62px", fontSize: 13, color: MUTED }}>
-        Ваш контент-цех
-      </div>
 
       {/* CONTENT — статичный, без скролла */}
       <div
