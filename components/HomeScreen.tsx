@@ -8,25 +8,17 @@ const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
-function LexLogo({ height = 170 }: { height?: number }) {
-  // mix-blend-mode: screen + контраст-фильтр выжимает JPEG-артефакты по краям,
-  // чёрный квадрат полностью сливается с фоном приложения.
+function LexMark({ size = 30 }: { size?: number }) {
   return (
-    /* eslint-disable-next-line @next/next/no-img-element */
-    <img
-      src="/lex-logo.jpg"
-      alt="LEX AI"
-      draggable={false}
-      style={{
-        height,
-        width: "auto",
-        display: "block",
-        userSelect: "none",
-        pointerEvents: "none",
-        mixBlendMode: "screen",
-        filter: "contrast(1.15)",
-      }}
-    />
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden>
+      <path
+        d="M8 11 H22 C28 11 28 19 22 19 H14 C8 19 8 27 14 27 H30"
+        stroke={YELLOW}
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -108,9 +100,13 @@ export default function HomeScreen() {
           padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
           display: "flex",
           alignItems: "center",
+          gap: 10,
         }}
       >
-        <LexLogo height={170} />
+        <LexMark size={30} />
+        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.04em" }}>
+          LEX&nbsp;AI
+        </span>
       </header>
       <div style={{ padding: "4px 22px 0 62px", fontSize: 13, color: MUTED }}>
         Ваш контент-цех
