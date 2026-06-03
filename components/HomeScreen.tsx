@@ -217,9 +217,10 @@ function BannerCarousel() {
           transition: dragging ? "none" : "transform 320ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
           <span
             style={{
+              display: "inline-block",
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.12em",
@@ -232,7 +233,6 @@ function BannerCarousel() {
           >
             {s.badge}
           </span>
-          <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{s.icon}</span>
         </div>
 
         <div
