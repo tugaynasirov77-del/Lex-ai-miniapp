@@ -71,12 +71,13 @@ export default function Splash() {
         <circle
           cx="96"
           cy="70"
-          r="6"
+          r="9"
           fill="#FFFFFF"
           style={{
             opacity: 0,
             animation: "lex-dot-in 280ms cubic-bezier(0.16,1,0.3,1) 720ms forwards",
             transformOrigin: "96px 70px",
+            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.95))",
           }}
         />
       </svg>
