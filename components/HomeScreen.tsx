@@ -42,20 +42,16 @@ const PILLS = [
 ];
 
 export default function HomeScreen() {
-  // Полностью отключаем скролл документа на главной (iOS rubber-band, swipe-down).
+  // Минимальный bounce — контент влезает в viewport, но iOS rubber-band оставляем.
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const prevHtml = html.style.cssText;
     const prevBody = body.style.cssText;
-    html.style.overflow = "hidden";
     html.style.height = "100%";
-    body.style.overflow = "hidden";
     body.style.height = "100%";
-    body.style.position = "fixed";
-    body.style.width = "100%";
-    body.style.touchAction = "none";
-    body.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "contain";
     return () => {
       html.style.cssText = prevHtml;
       body.style.cssText = prevBody;
