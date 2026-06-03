@@ -78,7 +78,7 @@ export default function HomeScreen() {
         Ваш контент-цех
       </div>
 
-      {/* CONTENT */}
+      {/* CONTENT — статичный, без скролла */}
       <div
         style={{
           flex: 1,
@@ -87,7 +87,7 @@ export default function HomeScreen() {
           display: "flex",
           flexDirection: "column",
           gap: 20,
-          overflowY: "auto",
+          overflow: "hidden",
         }}
       >
         {/* HERO */}
