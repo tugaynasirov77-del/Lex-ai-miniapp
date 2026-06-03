@@ -42,7 +42,7 @@ const PILLS = [
 ];
 
 export default function HomeScreen() {
-  // Минимальный bounce — контент влезает в viewport, но iOS rubber-band оставляем.
+  // Документ не скроллится — скроллится только foreground поверх статичного фона.
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -58,25 +58,42 @@ export default function HomeScreen() {
     };
   }, []);
 
-  return (
+  const BG = (
     <div
+      aria-hidden
       style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: "calc(-1 * (env(safe-area-inset-bottom) + 78px))",
-        display: "flex",
-        flexDirection: "column",
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
         background:
           "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.55) 0%, rgba(178,30,60,0) 55%)," +
           "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.40) 0%, rgba(96,18,80,0) 60%)," +
           "#0A0608",
-        color: INK,
-        fontFamily: "'Inter', system-ui, sans-serif",
-        overflow: "hidden",
       }}
-    >
+    />
+  );
+
+  return (
+    <>
+      {BG}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: "calc(-1 * (env(safe-area-inset-bottom) + 78px))",
+          display: "flex",
+          flexDirection: "column",
+          color: INK,
+          fontFamily: "'Inter', system-ui, sans-serif",
+          overflowY: "auto",
+          // iOS rubber-band на этом контейнере (фон не двигается, т.к. он fixed).
+          WebkitOverflowScrolling: "touch",
+          zIndex: 1,
+        }}
+      >
       {/* HEADER — отступ сверху рассчитан так, чтобы не цепляться за кнопку «Закрыть» Telegram */}
       <header
         style={{
@@ -300,5 +317,6 @@ export default function HomeScreen() {
         </div>
       </div>
     </div>
+    </>
   );
 }
