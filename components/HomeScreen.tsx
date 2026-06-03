@@ -477,7 +477,7 @@ export default function HomeScreen() {
       {/* BOTTOM CTA — отступ снизу учитывает safe-area iPhone */}
       <div
         style={{
-          padding: "0 22px max(calc(env(safe-area-inset-bottom) + 88px), 104px)",
+          padding: "0 22px max(calc(env(safe-area-inset-bottom) + 128px), 144px)",
           display: "flex",
           flexDirection: "column",
           gap: 14,
