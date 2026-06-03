@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
 import HomeScreen from "./HomeScreen";
 import ChooseFormatScreen from "./screens/ChooseFormatScreen";
+import ProjectBriefScreen from "./screens/ProjectBriefScreen";
 import UploadScreen from "./screens/UploadScreen";
 import GenerateScreen from "./screens/GenerateScreen";
 import { useFlow, useFlowActions, type ContentFormat } from "../flow";
@@ -97,13 +98,18 @@ export default function AppFlow() {
           {currentScreen === "choose-format" && (
             <ChooseFormatScreen
               onPick={(format?: ContentFormat) => {
-                // ChooseFormatScreen пока вызывает onPick() без аргумента —
-                // как только переведём его на новый API, format будет проброшен в state.
                 if (format) actions.setFormat(format);
-                // Для Reel дальше upload, для остальных — project-brief.
-                // Пока project-brief не реализован: всё ведём в upload (старое поведение).
-                goNext("upload");
+                // Reel идёт в upload (нужно загрузить видео).
+                // Остальные форматы идут в project-brief.
+                if (format === "reel") goNext("upload");
+                else goNext("project-brief");
               }}
+              onBack={goBack}
+            />
+          )}
+          {currentScreen === "project-brief" && (
+            <ProjectBriefScreen
+              onSubmit={() => goNext("generate")}
               onBack={goBack}
             />
           )}
@@ -118,9 +124,8 @@ export default function AppFlow() {
           )}
           {currentScreen === "generate" && <GenerateScreen onBack={goBack} />}
 
-          {/* project-brief и review ещё не реализованы как screens — render-fallback в виде null.
-              Навигация на эти ключи валидна (ScreenKey), но визуально ничего не отрендерится. */}
-          {(currentScreen === "project-brief" || currentScreen === "review") && null}
+          {/* review ещё не реализован как screen — render-fallback null. */}
+          {currentScreen === "review" && null}
         </motion.div>
       </AnimatePresence>
     </div>
