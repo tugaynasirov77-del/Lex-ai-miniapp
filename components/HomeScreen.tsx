@@ -76,6 +76,7 @@ const SLIDES: Slide[] = [
     subtitle: "Загрузите — транскрипт, субтитры и публикация автоматом",
     icon: "🎬",
     accent: "rgba(96,18,80,0.45)",
+    image: "/slide-reels.jpg",
   },
   {
     badge: "Контент-план",
@@ -83,6 +84,7 @@ const SLIDES: Slide[] = [
     subtitle: "AI собирает 7 идей под ваш канал и аудиторию",
     icon: "📅",
     accent: "rgba(40,60,140,0.40)",
+    image: "/slide-plan.jpg",
   },
   {
     badge: "Три формата",
@@ -90,6 +92,7 @@ const SLIDES: Slide[] = [
     subtitle: "Telegram и Instagram — из одного окна",
     icon: "✨",
     accent: "rgba(140,90,30,0.40)",
+    image: "/slide-formats.jpg",
   },
 ];
 
