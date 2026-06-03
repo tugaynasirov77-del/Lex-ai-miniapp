@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.96.0",
     "@fontsource/dm-sans": "^5.2.8",
     "@supabase/supabase-js": "^2.105.4",
+    "framer-motion": "^12.40.0",
     "next": "^16.2.6",
     "react": "19.0.0",
     "react-dom": "19.0.0"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react"; // useEffect остаётся — нужен в BannerCarousel
 import Link from "next/link";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
@@ -372,59 +372,25 @@ const PILLS = [
   { label: "Лимиты и тариф", href: "/billing" },
 ];
 
-export default function HomeScreen() {
-  // Документ не скроллится — скроллится только foreground поверх статичного фона.
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtml = html.style.cssText;
-    const prevBody = body.style.cssText;
-    html.style.height = "100%";
-    body.style.height = "100%";
-    body.style.overflow = "hidden";
-    body.style.overscrollBehavior = "contain";
-    return () => {
-      html.style.cssText = prevHtml;
-      body.style.cssText = prevBody;
-    };
-  }, []);
+type HomeScreenProps = {
+  /** Колбэк по тапу «Начать» — управляется родителем (AppFlow). */
+  onStart?: () => void;
+};
 
-  const BG = (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: "none",
-        background:
-          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.45) 0%, rgba(178,30,60,0) 55%)," +
-          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.32) 0%, rgba(96,18,80,0) 60%)," +
-          "#0A0608",
-      }}
-    />
-  );
-
+export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
   return (
-    <>
-      {BG}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: "calc(-1 * (env(safe-area-inset-bottom) + 78px))",
-          display: "flex",
-          flexDirection: "column",
-          color: INK,
-          fontFamily: "'Inter', system-ui, sans-serif",
-          overflowY: "auto",
-          // iOS rubber-band на этом контейнере (фон не двигается, т.к. он fixed).
-          WebkitOverflowScrolling: "touch",
-          zIndex: 1,
-        }}
-      >
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        color: INK,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
       {/* HEADER — компактный, не съедает первый экран */}
       <header
         style={{
@@ -495,7 +461,10 @@ export default function HomeScreen() {
         }}
       >
         <button
-          onClick={() => hapticImpact("medium")}
+          onClick={() => {
+            hapticImpact("medium");
+            onStart?.();
+          }}
           style={{
             width: "100%",
             minHeight: 56,
@@ -517,6 +486,5 @@ export default function HomeScreen() {
         </button>
       </div>
     </div>
-    </>
   );
 }

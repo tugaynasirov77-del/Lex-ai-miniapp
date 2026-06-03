@@ -1,5 +1,5 @@
-import HomeScreen from "../components/HomeScreen";
+import AppFlow from "../components/AppFlow";
 
 export default function HomePage() {
-  return <HomeScreen />;
+  return <AppFlow />;
 }
