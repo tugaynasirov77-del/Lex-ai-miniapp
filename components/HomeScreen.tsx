@@ -188,16 +188,12 @@ export default function HomeScreen() {
           </div>
         </Link>
 
-        {/* PILL ROW — горизонтальный скролл, чтобы 3 пилюли влезали без переноса */}
+        {/* PILL ROW — все три должны уместиться по ширине iPhone Mini App */}
         <div
-          className="no-scrollbar"
           style={{
             display: "flex",
-            gap: 10,
-            overflowX: "auto",
-            margin: "0 -22px",
-            padding: "0 22px",
-            scrollSnapType: "x mandatory",
+            gap: 8,
+            justifyContent: "space-between",
           }}
         >
           {PILLS.map((p) => (
@@ -206,62 +202,29 @@ export default function HomeScreen() {
               href={p.href}
               onClick={() => hapticSelection()}
               style={{
-                flex: "0 0 auto",
+                flex: 1,
                 textDecoration: "none",
                 color: INK,
-                padding: "11px 16px",
+                padding: "11px 8px",
                 borderRadius: 999,
                 background: "rgba(255,255,255,0.045)",
                 border: "1px solid rgba(255,255,255,0.10)",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 500,
                 whiteSpace: "nowrap",
-                scrollSnapAlign: "start",
+                textAlign: "center",
               }}
             >
               {p.label}
             </Link>
           ))}
         </div>
-
-        {/* LIVE STRIP — заполняет вертикальный воздух между пилюлями и CTA */}
-        <div
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "14px 16px",
-            borderRadius: 18,
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: "#22c55e",
-              boxShadow: "0 0 12px rgba(34,197,94,0.6)",
-              flexShrink: 0,
-            }}
-          />
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, color: INK, fontWeight: 600 }}>
-              Команда работает
-            </div>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-              3 драфта ждут ревью · план обновлён сегодня
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* BOTTOM CTA */}
+      {/* BOTTOM CTA — отступ снизу учитывает safe-area iPhone */}
       <div
         style={{
-          padding: "0 22px calc(env(safe-area-inset-bottom) + 20px)",
+          padding: "0 22px max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
           display: "flex",
           flexDirection: "column",
           gap: 14,
