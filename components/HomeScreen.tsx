@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
@@ -94,21 +94,55 @@ const SLIDES: Slide[] = [
 function BannerCarousel() {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [dragDX, setDragDX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef<number | null>(null);
 
   useEffect(() => {
     if (paused) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 4500);
+    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 7000);
     return () => clearInterval(t);
   }, [paused]);
+
+  const go = (next: number) => {
+    setIdx((next + SLIDES.length) % SLIDES.length);
+    hapticSelection();
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    startX.current = e.clientX;
+    setDragging(true);
+    setPaused(true);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (startX.current == null) return;
+    setDragDX(e.clientX - startX.current);
+  };
+  const onUp = () => {
+    const dx = dragDX;
+    setDragging(false);
+    setDragDX(0);
+    setPaused(false);
+    startX.current = null;
+    const THRESHOLD = 50;
+    if (dx > THRESHOLD) go(idx - 1);
+    else if (dx < -THRESHOLD) go(idx + 1);
+  };
 
   const s = SLIDES[idx];
 
   return (
     <div
-      onPointerDown={() => setPaused(true)}
-      onPointerUp={() => setPaused(false)}
-      onPointerLeave={() => setPaused(false)}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      onPointerLeave={() => {
+        if (dragging) onUp();
+      }}
       style={{
+        touchAction: "pan-y",
+        userSelect: "none",
         position: "relative",
         flex: 1,
         minHeight: 0,
@@ -144,6 +178,8 @@ function BannerCarousel() {
           display: "flex",
           flexDirection: "column",
           animation: "lex-slide-in 520ms cubic-bezier(0.16,1,0.3,1) both",
+          transform: dragging ? `translateX(${dragDX * 0.4}px)` : undefined,
+          transition: dragging ? "none" : "transform 320ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
