@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
-import AtomLogo from "./AtomLogo";
+
+const YELLOW = "#F5E70A";
 
 export default function Splash() {
   const [visible, setVisible] = useState(true);
@@ -10,9 +11,10 @@ export default function Splash() {
 
   useEffect(() => {
     hapticImpact("light");
-    const tv = setTimeout(() => hapticNotify("success"), 700);
-    const t1 = setTimeout(() => setFading(true), 2800);
-    const t2 = setTimeout(() => setVisible(false), 3400);
+    const tv = setTimeout(() => hapticNotify("success"), 800);
+    // Total timeline: draw mark 700ms + text fade 300ms (overlaps) + hold 500ms + fade out 300ms ≈ 1500ms
+    const t1 = setTimeout(() => setFading(true), 1200);
+    const t2 = setTimeout(() => setVisible(false), 1500);
     return () => {
       clearTimeout(tv);
       clearTimeout(t1);
@@ -29,79 +31,65 @@ export default function Splash() {
         position: "fixed",
         inset: 0,
         zIndex: 100,
-        background: "#000",
+        background:
+          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.45) 0%, rgba(178,30,60,0) 55%)," +
+          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.35) 0%, rgba(96,18,80,0) 60%)," +
+          "#08050A",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        gap: 14,
         opacity: fading ? 0 : 1,
-        transition: "opacity 600ms cubic-bezier(0.16,1,0.3,1)",
+        transition: "opacity 300ms cubic-bezier(0.16,1,0.3,1)",
         pointerEvents: fading ? "none" : "auto",
         overflow: "hidden",
         padding: "0 20px",
+        fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
+      {/* MARK — рисуется stroke-by-stroke */}
+      <svg
+        viewBox="0 0 110 90"
+        style={{ height: 56, width: "auto", overflow: "visible" }}
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d="M 14 20 H 70 C 86 20 86 45 70 45 H 40 C 24 45 24 70 40 70 H 96"
+          stroke={YELLOW}
+          strokeWidth="16"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            strokeDasharray: 260,
+            strokeDashoffset: 260,
+            animation: "lex-mark-draw 700ms cubic-bezier(0.65,0,0.35,1) 100ms forwards",
+            filter: `drop-shadow(0 0 18px ${YELLOW}66)`,
+          }}
+        />
+      </svg>
+
+      {/* WORDMARK */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 18,
-          maxWidth: "100%",
-          animation: "lexLogoIn 700ms cubic-bezier(0.16,1,0.3,1) both",
+          fontSize: 34,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          lineHeight: 1,
+          opacity: 0,
+          animation: "lex-text-in 500ms cubic-bezier(0.16,1,0.3,1) 550ms forwards",
         }}
       >
-        <div
-          style={{
-            animation: "lexLogoSpinSplash 12s linear 700ms infinite",
-          }}
-        >
-          <AtomLogo size={108} uid="splash" glow />
-        </div>
-
-        <div
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 200,
-            fontSize: 32,
-            letterSpacing: "0.32em",
-            color: "#F5EDD8",
-            paddingLeft: "0.32em",
-            whiteSpace: "nowrap",
-            animation: "lexTextIn 800ms cubic-bezier(0.16,1,0.3,1) 600ms both",
-            minWidth: 0,
-          }}
-        >
-          LEX{" "}
-          <span
-            style={{
-              background:
-                "linear-gradient(135deg, #F0A020 0%, #E06020 55%, #C04020 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              fontWeight: 300,
-            }}
-          >
-            AI
-          </span>
-        </div>
+        <span style={{ color: "#FFFFFF" }}>LEX </span>
+        <span style={{ color: YELLOW }}>AI</span>
       </div>
 
       <style>{`
-        @keyframes lexLogoIn {
-          0% { opacity: 0; transform: scale(0.55); }
-          100% { opacity: 1; transform: scale(1); }
+        @keyframes lex-mark-draw {
+          to { stroke-dashoffset: 0; }
         }
-        @keyframes lexLogoSpinSplash {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes lexLogoGlow {
-          0%, 100% { opacity: 0.55; transform: scale(0.95); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-        @keyframes lexTextIn {
-          0% { opacity: 0; transform: translateX(-14px); filter: blur(8px); }
+        @keyframes lex-text-in {
+          0% { opacity: 0; transform: translateX(-12px); filter: blur(6px); }
           60% { filter: blur(0); }
           100% { opacity: 1; transform: translateX(0); filter: blur(0); }
         }
