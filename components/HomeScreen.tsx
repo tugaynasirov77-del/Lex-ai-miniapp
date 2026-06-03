@@ -131,35 +131,35 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    badge: "Команда AI",
-    title: "7 агентов работают за вас",
+    badge: "AI-команда",
+    title: "AI-команда вместо рутины",
     subtitle: "Алина пишет, Михаил монтирует, Виктор публикует",
     icon: "🤝",
-    accent: "rgba(178,30,60,0.35)",
+    accent: "rgba(178,30,60,0.30)",
     image: "/slide-team.jpg",
   },
   {
     badge: "Авто-монтаж",
     title: "Reels из вашего видео",
-    subtitle: "Загрузите — транскрипт, субтитры и публикация автоматом",
+    subtitle: "Готовый ролик за минуты — без монтажа вручную",
     icon: "🎬",
-    accent: "rgba(96,18,80,0.45)",
+    accent: "rgba(96,18,80,0.38)",
     image: "/slide-reels.jpg",
   },
   {
     badge: "Контент-план",
-    title: "План на неделю за минуту",
-    subtitle: "AI собирает 7 идей под ваш канал и аудиторию",
+    title: "7 идей на неделю",
+    subtitle: "AI собирает план под ваш канал и аудиторию",
     icon: "📅",
-    accent: "rgba(40,60,140,0.40)",
+    accent: "rgba(40,60,140,0.34)",
     image: "/slide-plan.jpg",
   },
   {
-    badge: "Три формата",
+    badge: "Все форматы",
     title: "Посты, Reels и карусели",
-    subtitle: "Telegram и Instagram — из одного окна",
+    subtitle: "Telegram и Instagram в одном окне",
     icon: "✨",
-    accent: "rgba(140,90,30,0.40)",
+    accent: "rgba(140,90,30,0.34)",
     image: "/slide-formats.jpg",
   },
 ];
@@ -234,10 +234,11 @@ function BannerCarousel() {
         borderRadius: 28,
         background:
           "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
-        border: "1px solid rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.09)",
         boxShadow:
-          "0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+          "0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
         overflow: "hidden",
+        maxHeight: "52vh",
       }}
     >
       {/* фоновая фотография слайда (если задана) — без fade, появляется мгновенно */}
@@ -255,7 +256,7 @@ function BannerCarousel() {
         />
       )}
 
-      {/* тёмная вуаль: гарантирует читаемость текста на любой фотке */}
+      {/* тёмная вуаль: сильнее в нижней части, чтобы текст и точки не терялись */}
       {s.image && (
         <div
           aria-hidden
@@ -263,7 +264,7 @@ function BannerCarousel() {
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(8,5,8,0.30) 0%, rgba(8,5,8,0.55) 55%, rgba(8,5,8,0.90) 100%)",
+              "linear-gradient(180deg, rgba(8,5,8,0.35) 0%, rgba(8,5,8,0.65) 55%, rgba(8,5,8,0.95) 100%)",
             pointerEvents: "none",
           }}
         />
@@ -328,8 +329,8 @@ function BannerCarousel() {
           {s.subtitle}
         </div>
 
-        {/* dots — прижаты к низу карточки */}
-        <div style={{ marginTop: "auto", paddingTop: 18, display: "flex", gap: 6, justifyContent: "center" }}>
+        {/* dots — прижаты к низу, но с воздухом снизу */}
+        <div style={{ marginTop: "auto", paddingTop: 22, paddingBottom: 8, display: "flex", gap: 6, justifyContent: "center" }}>
           {SLIDES.map((_, i) => (
             <button
               key={i}
@@ -397,8 +398,8 @@ export default function HomeScreen() {
         zIndex: 0,
         pointerEvents: "none",
         background:
-          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.55) 0%, rgba(178,30,60,0) 55%)," +
-          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.40) 0%, rgba(96,18,80,0) 60%)," +
+          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.45) 0%, rgba(178,30,60,0) 55%)," +
+          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.32) 0%, rgba(96,18,80,0) 60%)," +
           "#0A0608",
       }}
     />
@@ -424,18 +425,20 @@ export default function HomeScreen() {
           zIndex: 1,
         }}
       >
-      {/* HEADER — отступ сверху рассчитан так, чтобы не цепляться за кнопку «Закрыть» Telegram */}
+      {/* HEADER — компактный, не съедает первый экран */}
       <header
         style={{
-          padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
+          padding: "max(calc(env(safe-area-inset-top) + 44px), 72px) 22px 0",
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-start",
-          gap: 6,
+          gap: 4,
         }}
       >
-        <LexLogo height={42} />
-        <span style={{ fontSize: 13, color: MUTED }}>Ваш контент-цех</span>
+        <LexLogo height={36} />
+        <span style={{ fontSize: 12, color: MUTED, letterSpacing: "0.01em" }}>
+          AI для контента
+        </span>
       </header>
 
       {/* CONTENT — статичный, без скролла */}
@@ -443,34 +446,34 @@ export default function HomeScreen() {
         style={{
           flex: 1,
           minHeight: 0,
-          padding: "22px 22px 16px",
+          padding: "16px 22px 12px",
           display: "flex",
           flexDirection: "column",
-          gap: 20,
+          gap: 16,
           overflow: "hidden",
         }}
       >
-        {/* HERO */}
+        {/* HERO — плотный, без растягивания верха */}
         <div>
           <h1
             style={{
               margin: 0,
-              fontSize: 28,
-              lineHeight: 1.02,
+              fontSize: 32,
+              lineHeight: 1,
               fontWeight: 800,
-              letterSpacing: "-0.01em",
+              letterSpacing: "-0.02em",
               textTransform: "uppercase",
             }}
           >
-            Создавайте контент
+            Контент
             <br />
-            без рутины
+            без&nbsp;рутины
           </h1>
           <p
             style={{
-              margin: "12px 0 0",
-              fontSize: 14,
-              lineHeight: 1.4,
+              margin: "10px 0 0",
+              fontSize: 13,
+              lineHeight: 1.35,
               color: MUTED,
             }}
           >
@@ -485,7 +488,7 @@ export default function HomeScreen() {
       {/* BOTTOM CTA — отступ снизу учитывает safe-area iPhone */}
       <div
         style={{
-          padding: "0 22px max(calc(env(safe-area-inset-bottom) + 128px), 144px)",
+          padding: "12px 22px max(calc(env(safe-area-inset-bottom) + 140px), 160px)",
           display: "flex",
           flexDirection: "column",
           gap: 14,
@@ -495,21 +498,22 @@ export default function HomeScreen() {
           onClick={() => hapticImpact("medium")}
           style={{
             width: "100%",
-            padding: "20px 0",
+            minHeight: 56,
+            padding: "18px 0",
             border: "none",
             borderRadius: 999,
             background: YELLOW,
             color: "#0A0608",
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: 800,
-            letterSpacing: "0.04em",
+            letterSpacing: "0.06em",
             textTransform: "uppercase",
             boxShadow:
-              "0 20px 50px rgba(245,231,10,0.25), 0 0 0 1px rgba(255,255,255,0.10) inset",
+              "0 22px 52px rgba(245,231,10,0.30), 0 0 0 1px rgba(255,255,255,0.12) inset",
             cursor: "pointer",
           }}
         >
-          Создать контент
+          Начать
         </button>
       </div>
     </div>
