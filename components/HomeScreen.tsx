@@ -8,17 +8,46 @@ const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
-function LexMark({ size = 30 }: { size?: number }) {
+function LexLogo({ height = 40 }: { height?: number }) {
+  // Inline-SVG логотип в стиле референса — жёлтый знак + "LEX AI" (LEX белый, AI жёлтый).
+  // Никаких файлов и mix-blend-mode, прозрачный задний фон по определению.
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden>
-      <path
-        d="M8 11 H22 C28 11 28 19 22 19 H14 C8 19 8 27 14 27 H30"
-        stroke={YELLOW}
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div
+      aria-label="LEX AI"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: height * 0.32,
+        height,
+        lineHeight: 1,
+      }}
+    >
+      <svg
+        viewBox="0 0 100 100"
+        style={{ height: "100%", width: "auto", overflow: "visible" }}
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d="M 18 26 H 62 C 78 26 78 44 62 44 H 40 C 24 44 24 62 40 62 H 84"
+          stroke={YELLOW}
+          strokeWidth="14"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div
+        style={{
+          fontSize: height * 0.62,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}
+      >
+        <span style={{ color: "#FFFFFF" }}>LEX </span>
+        <span style={{ color: YELLOW }}>AI</span>
+      </div>
+    </div>
   );
 }
 
@@ -100,13 +129,9 @@ export default function HomeScreen() {
           padding: "max(calc(env(safe-area-inset-top) + 56px), 88px) 22px 0",
           display: "flex",
           alignItems: "center",
-          gap: 10,
         }}
       >
-        <LexMark size={30} />
-        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.04em" }}>
-          LEX&nbsp;AI
-        </span>
+        <LexLogo height={40} />
       </header>
       <div style={{ padding: "4px 22px 0 62px", fontSize: 13, color: MUTED }}>
         Ваш контент-цех
