@@ -58,6 +58,7 @@ type Slide = {
   subtitle: string;
   icon: string; // эмодзи-иконка, лёгкий способ дать визуал без файлов
   accent: string; // подкрашиваем фон слайда
+  image?: string; // опц. фоновая фотография слайда
 };
 
 const SLIDES: Slide[] = [
@@ -67,6 +68,7 @@ const SLIDES: Slide[] = [
     subtitle: "Алина пишет, Михаил монтирует, Виктор публикует",
     icon: "🤝",
     accent: "rgba(178,30,60,0.35)",
+    image: "/slide-team.jpg",
   },
   {
     badge: "Авто-монтаж",
@@ -100,7 +102,7 @@ function BannerCarousel() {
 
   useEffect(() => {
     if (paused) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 7000);
+    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 5000);
     return () => clearInterval(t);
   }, [paused]);
 
@@ -157,6 +159,36 @@ function BannerCarousel() {
         overflow: "hidden",
       }}
     >
+      {/* фоновая фотография слайда (если задана) */}
+      {s.image && (
+        <div
+          key={`bg-${idx}`}
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `url(${s.image}) center / cover no-repeat`,
+            opacity: 0.85,
+            animation: "lex-bg-fade 600ms ease both",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* тёмная вуаль: гарантирует читаемость текста на любой фотке */}
+      {s.image && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(8,5,8,0.30) 0%, rgba(8,5,8,0.55) 55%, rgba(8,5,8,0.90) 100%)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
       {/* акцентный glow меняется со слайдом */}
       <div
         aria-hidden
@@ -247,6 +279,10 @@ function BannerCarousel() {
         @keyframes lex-slide-in {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lex-bg-fade {
+          0% { opacity: 0; }
+          100% { opacity: 0.85; }
         }
       `}</style>
     </div>
