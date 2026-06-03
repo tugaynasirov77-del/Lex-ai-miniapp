@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     if (error || !inserted) return Response.json({ error: error?.message || "insert failed" }, { status: 500 });
 
-    const { error: jobError } = await sb.from("reel_jobs").insert({
+    const { data: insertedJob, error: jobError } = await sb.from("reel_jobs").insert({
       draft_id: inserted.id,
       project_id: projectId,
       status: "pending",
@@ -110,12 +110,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       source_video_url: sourceVideoUrl,
       script: "",
       overlays: [],
-    });
-    if (jobError) {
-      return Response.json({ error: `draft created but queue failed: ${jobError.message}`, draft_id: inserted.id }, { status: 500 });
+    }).select("id").single();
+    if (jobError || !insertedJob) {
+      return Response.json({ error: `draft created but queue failed: ${jobError?.message}`, draft_id: inserted.id }, { status: 500 });
     }
     return Response.json({
       draft_id: inserted.id,
+      reel_job_id: insertedJob.id,
       queued: true,
       mode: "from_upload",
       cap_used: (usedThisMonth ?? 0) + 1,

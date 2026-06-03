@@ -114,10 +114,8 @@ export default function GenerateScreen({ onBack: _onBack }: Props) {
       return () => clearTimeout(t);
     }
     if (isAwaitingApproval) {
-      // TODO: когда появится reel-approve screen, навигейтить туда.
-      // Сейчас ведём на review, юзер увидит карточку с возможностью apprve.
       hapticNotify("success");
-      const t = setTimeout(() => actions.navigate("review"), 800);
+      const t = setTimeout(() => actions.navigate("reel-approve"), 800);
       return () => clearTimeout(t);
     }
     return undefined;

@@ -13,6 +13,7 @@ export type ScreenKey =
   | "project-brief"
   | "upload"
   | "generate"
+  | "reel-approve"
   | "review";
 
 /** Какой контент юзер выбрал на choose-format. */

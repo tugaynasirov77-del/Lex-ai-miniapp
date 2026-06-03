@@ -8,6 +8,8 @@ import ChooseFormatScreen from "./screens/ChooseFormatScreen";
 import ProjectBriefScreen from "./screens/ProjectBriefScreen";
 import UploadScreen from "./screens/UploadScreen";
 import GenerateScreen from "./screens/GenerateScreen";
+import ReviewScreen from "./screens/ReviewScreen";
+import ReelApproveScreen from "./screens/ReelApproveScreen";
 import { useFlow, useFlowActions, type ContentFormat } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
@@ -115,17 +117,16 @@ export default function AppFlow() {
           )}
           {currentScreen === "upload" && (
             <UploadScreen
-              onUploaded={() => {
-                // TODO: пробросить реальный reelJobId через actions.setIds.
-                goNext("generate");
-              }}
+              onUploaded={() => goNext("generate")}
               onBack={goBack}
             />
           )}
           {currentScreen === "generate" && <GenerateScreen onBack={goBack} />}
 
-          {/* review ещё не реализован как screen — render-fallback null. */}
-          {currentScreen === "review" && null}
+          {currentScreen === "reel-approve" && (
+            <ReelApproveScreen onBack={goBack} />
+          )}
+          {currentScreen === "review" && <ReviewScreen onBack={goBack} />}
         </motion.div>
       </AnimatePresence>
     </div>

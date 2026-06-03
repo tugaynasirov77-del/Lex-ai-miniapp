@@ -152,14 +152,109 @@ export function getWeeklyPlan(planId: string): Promise<WeeklyPlanDTO> {
 // ---------------------------------------------------------------------------
 
 export type CreateProjectPayload = {
-  format: ContentFormat;
-  brief?: Brief;
+  title: string;
+  platform?: "telegram" | "instagram";
 };
 
-export type CreateProjectResult = { projectId: string };
+export type CreateProjectResult = { project?: { id: string }; projectId?: string };
 
-export function createProject(payload: CreateProjectPayload): Promise<CreateProjectResult> {
-  return postJSON("/api/projects", payload);
+export async function createProject(payload: CreateProjectPayload): Promise<{ projectId: string }> {
+  const r = await postJSON<CreateProjectPayload, CreateProjectResult>("/api/projects", payload);
+  const id = r.projectId || r.project?.id;
+  if (!id) throw new ApiError(500, "projectId missing in response");
+  return { projectId: id };
+}
+
+// ---------------------------------------------------------------------------
+// reel upload (signed URL + proxy + create job)
+// ---------------------------------------------------------------------------
+
+export type SignUploadPayload = { size: number; duration: number; ext: string };
+export type SignUploadResult = {
+  proxy_url: string;
+  upload_token: string;
+  storage_path: string;
+  bucket: string;
+  source_video_url: string;
+  max_bytes: number;
+  max_duration_sec: number;
+};
+
+export function signReelUpload(
+  projectId: string,
+  payload: SignUploadPayload,
+): Promise<SignUploadResult> {
+  return postJSON(`/api/projects/${projectId}/ig/reels/upload-url`, payload);
+}
+
+export type CreateReelJobPayload = {
+  source_video_url: string;
+  source_video_size: number;
+  source_video_duration: number;
+  preset?: string;
+};
+
+export type CreateReelJobResult = {
+  draft_id: string;
+  reel_job_id: string;
+  queued: boolean;
+};
+
+export function createReelJob(
+  projectId: string,
+  payload: CreateReelJobPayload,
+): Promise<CreateReelJobResult> {
+  return postJSON(`/api/projects/${projectId}/ig/reels`, payload);
+}
+
+export type ReelAnimation = "slide_up" | "pop" | "fade";
+
+export type ApproveReelPayload = {
+  key_indices: number[];
+  animation: ReelAnimation;
+};
+
+export function approveReel(
+  projectId: string,
+  draftId: string,
+  payload: ApproveReelPayload,
+): Promise<{ ok: true; job_id: string }> {
+  return postJSON(`/api/projects/${projectId}/ig/reels/${draftId}/approve`, payload);
+}
+
+// ---------------------------------------------------------------------------
+// publish reel (IG Graph API через Виктор-публикатор)
+// ---------------------------------------------------------------------------
+
+export type PublishReelResult =
+  | { ok: true; media_id: string; permalink?: string | null }
+  | { ok: false; stub: true; message: string }
+  | { ok: false; error: string };
+
+/**
+ * POST /api/projects/[id]/ig/publish с {draft_id}.
+ *
+ * Эндпоинт возвращает 501 с `stub:true` если INSTAGRAM_ACCESS_TOKEN не настроен —
+ * это ожидаемое состояние MVP, обрабатываем graceful, без throw.
+ *
+ * Любые другие non-2xx — ApiError.
+ */
+export async function publishReel(
+  projectId: string,
+  draftId: string,
+): Promise<PublishReelResult> {
+  const r = await tgFetch(`/api/projects/${projectId}/ig/publish`, {
+    method: "POST",
+    body: JSON.stringify({ draft_id: draftId }),
+  });
+  const data = await r.json().catch(() => ({}) as any);
+  if (r.status === 501 && data?.stub) {
+    return { ok: false, stub: true, message: data.message || "Publish не настроен" };
+  }
+  if (!r.ok) {
+    throw new ApiError(r.status, data?.error || `HTTP ${r.status}`);
+  }
+  return data as PublishReelResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,4 +293,38 @@ export type ReelJobDTO = {
 
 export function getReelJob(jobId: string): Promise<ReelJobDTO> {
   return getJSON(`/api/ig/reel-jobs/${jobId}`);
+}
+
+// ---------------------------------------------------------------------------
+// review actions (approve / reject) — minimal contract, post/carousel/plan
+// ---------------------------------------------------------------------------
+
+export type ApproveDraftResult = {
+  ok: true;
+  scheduled_at?: string;
+  already?: boolean;
+};
+
+export function approveDraft(draftId: string): Promise<ApproveDraftResult> {
+  return postJSON(`/api/drafts/${draftId}/approve`, {});
+}
+
+export function rejectDraft(
+  draftId: string,
+  reason?: string,
+): Promise<{ ok: true; already?: boolean }> {
+  return postJSON(`/api/drafts/${draftId}/reject`, { reason });
+}
+
+export function approveWeeklyPlan(
+  planId: string,
+): Promise<{ ok: true; already?: boolean }> {
+  return postJSON(`/api/weekly-plans/${planId}/approve`, {});
+}
+
+export function rejectWeeklyPlan(
+  planId: string,
+  reason?: string,
+): Promise<{ ok: true; already?: boolean }> {
+  return postJSON(`/api/weekly-plans/${planId}/reject`, { reason });
 }
