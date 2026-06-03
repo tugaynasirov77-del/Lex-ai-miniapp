@@ -52,6 +52,66 @@ function LexLogo({ height = 40 }: { height?: number }) {
   );
 }
 
+function ProgressUpsell({ used, total }: { used: number; total: number }) {
+  const left = Math.max(0, total - used);
+  const pct = Math.min(100, Math.round((used / total) * 100));
+  const critical = left <= 1; // ≤1 осталось — подкручиваем мотивацию
+
+  return (
+    <Link
+      href="/billing"
+      onClick={() => hapticSelection()}
+      style={{
+        textDecoration: "none",
+        color: INK,
+        display: "block",
+        padding: "12px 16px",
+        borderRadius: 18,
+        background: "rgba(255,255,255,0.035)",
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 13,
+        }}
+      >
+        <span style={{ color: critical ? YELLOW : MUTED, fontWeight: critical ? 700 : 500 }}>
+          Free: {left} из {total} Reels осталось
+        </span>
+        <span style={{ color: MUTED, fontSize: 12, whiteSpace: "nowrap" }}>
+          Открой Pro →
+        </span>
+      </div>
+      <div
+        style={{
+          marginTop: 9,
+          height: 6,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.07)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: critical
+              ? `linear-gradient(90deg, ${YELLOW}, #FFB400)`
+              : `linear-gradient(90deg, ${YELLOW}, ${YELLOW})`,
+            transition: "width 400ms cubic-bezier(0.16,1,0.3,1)",
+            boxShadow: critical ? `0 0 12px ${YELLOW}66` : "none",
+          }}
+        />
+      </div>
+    </Link>
+  );
+}
+
 type Slide = {
   badge: string;
   title: string;
@@ -444,36 +504,7 @@ export default function HomeScreen() {
           Создать контент
         </button>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 12,
-            fontSize: 13,
-            color: MUTED,
-          }}
-        >
-          <span style={{ whiteSpace: "nowrap" }}>
-            Осталось{" "}
-            <span style={{ color: YELLOW, fontWeight: 700 }}>12 Reels</span>
-          </span>
-          <Link
-            href="/billing"
-            onClick={() => hapticSelection()}
-            style={{
-              textDecoration: "none",
-              background: YELLOW,
-              color: "#0A0608",
-              fontSize: 12,
-              fontWeight: 700,
-              padding: "6px 13px",
-              borderRadius: 999,
-            }}
-          >
-            Pro
-          </Link>
-        </div>
+        <ProgressUpsell used={1} total={3} />
       </div>
     </div>
     </>
