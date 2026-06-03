@@ -503,8 +503,6 @@ export default function HomeScreen() {
         >
           Создать контент
         </button>
-
-        <ProgressUpsell used={1} total={3} />
       </div>
     </div>
     </>
