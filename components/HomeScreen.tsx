@@ -36,6 +36,8 @@ function LexLogo({ height = 40 }: { height?: number }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+        {/* Белая точка-кончик на конце змейки */}
+        <circle cx="96" cy="70" r="6" fill="#FFFFFF" />
       </svg>
       <div
         style={{

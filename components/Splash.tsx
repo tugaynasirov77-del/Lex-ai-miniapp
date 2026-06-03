@@ -67,6 +67,18 @@ export default function Splash() {
             filter: `drop-shadow(0 0 18px ${YELLOW}66)`,
           }}
         />
+        {/* Белая точка-кончик на конце змейки, появляется после отрисовки */}
+        <circle
+          cx="96"
+          cy="70"
+          r="6"
+          fill="#FFFFFF"
+          style={{
+            opacity: 0,
+            animation: "lex-dot-in 280ms cubic-bezier(0.16,1,0.3,1) 720ms forwards",
+            transformOrigin: "96px 70px",
+          }}
+        />
       </svg>
 
       {/* WORDMARK */}
@@ -87,6 +99,10 @@ export default function Splash() {
       <style>{`
         @keyframes lex-mark-draw {
           to { stroke-dashoffset: 0; }
+        }
+        @keyframes lex-dot-in {
+          0% { opacity: 0; transform: scale(0); }
+          100% { opacity: 1; transform: scale(1); }
         }
         @keyframes lex-text-in {
           0% { opacity: 0; transform: translateX(-12px); filter: blur(6px); }
