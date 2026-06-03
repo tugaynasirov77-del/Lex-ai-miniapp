@@ -103,6 +103,16 @@ function BannerCarousel() {
   const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
 
+  // Прелоад всех фоновых картинок при монтировании, чтобы при смене слайда
+  // фон не подгружался с задержкой и не появлялся позже текста.
+  useEffect(() => {
+    SLIDES.forEach((sl) => {
+      if (!sl.image) return;
+      const i = new Image();
+      i.src = sl.image;
+    });
+  }, []);
+
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 5000);
@@ -162,17 +172,16 @@ function BannerCarousel() {
         overflow: "hidden",
       }}
     >
-      {/* фоновая фотография слайда (если задана) */}
+      {/* фоновая фотография слайда (если задана) — без fade, появляется мгновенно */}
       {s.image && (
         <div
-          key={`bg-${idx}`}
           aria-hidden
           style={{
             position: "absolute",
             inset: 0,
             background: `url(${s.image}) center / cover no-repeat`,
             opacity: 0.85,
-            animation: "lex-bg-fade 600ms ease both",
+            transition: "background 280ms ease",
             pointerEvents: "none",
           }}
         />
@@ -282,10 +291,6 @@ function BannerCarousel() {
         @keyframes lex-slide-in {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes lex-bg-fade {
-          0% { opacity: 0; }
-          100% { opacity: 0.85; }
         }
       `}</style>
     </div>
