@@ -12,6 +12,8 @@ import {
   attachChannel,
   updateProject,
   deleteProject,
+  runIgAnalysis,
+  runIgPlan,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -161,6 +163,16 @@ export default function ProjectScreen({ onBack }: Props) {
     actions.navigate("choose-format");
   };
 
+  const quickCreate = (
+    format: "post" | "carousel" | "reel" | "weekly-plan",
+  ) => {
+    hapticImpact("light");
+    actions.resetContent();
+    actions.setFormat(format);
+    // Reel требует upload, остальное — brief.
+    actions.navigate(format === "reel" ? "upload" : "project-brief");
+  };
+
   // unified feed для Content tab
   const feed: FeedItem[] | null = (() => {
     if (isIg) {
@@ -282,9 +294,11 @@ export default function ProjectScreen({ onBack }: Props) {
             feed={feed}
             error={error}
             refreshing={refreshing}
+            isIg={isIg}
             onRefresh={refresh}
             onNew={newContent}
             onOpen={openItem}
+            onQuick={quickCreate}
           />
         )}
         {tab === "scout" && (
@@ -295,6 +309,9 @@ export default function ProjectScreen({ onBack }: Props) {
             analysis={analysis}
             plan={plan}
             lastSnapshotAt={ig?.snapshots?.[0]?.snapshot_at ?? null}
+            onRefresh={refresh}
+            onQuickCarousel={() => quickCreate("carousel")}
+            onQuickPlan={() => quickCreate("weekly-plan")}
           />
         )}
         {tab === "settings" && (
@@ -371,20 +388,26 @@ function Header({
 // Content tab
 // =====================================================================
 
+type QuickFormat = "post" | "carousel" | "reel" | "weekly-plan";
+
 function ContentTab({
   feed,
   error,
   refreshing,
+  isIg,
   onRefresh,
   onNew,
   onOpen,
+  onQuick,
 }: {
   feed: FeedItem[] | null;
   error: string | null;
   refreshing: boolean;
+  isIg: boolean;
   onRefresh: () => void;
   onNew: () => void;
   onOpen: (it: FeedItem) => void;
+  onQuick: (f: QuickFormat) => void;
 }) {
   if (feed === null && !error) return <SkeletonList />;
   if (feed === null && error) {
@@ -414,14 +437,16 @@ function ContentTab({
           Создайте первый пост, карусель, Reel или недельный план — команда
           AI соберёт черновик за 30 секунд.
         </p>
-        <button onClick={onNew} style={{ ...primaryBtn, marginTop: 8 }}>
-          СОЗДАТЬ
+        <QuickFormatRow isIg={isIg} onQuick={onQuick} />
+        <button onClick={onNew} style={{ ...ghostBtn, marginTop: 4 }}>
+          выбрать формат →
         </button>
       </div>
     );
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <QuickFormatRow isIg={isIg} onQuick={onQuick} />
       <div
         style={{
           display: "flex",
@@ -461,6 +486,68 @@ function ContentTab({
       </div>
       {feed!.map((it) => (
         <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
+      ))}
+    </div>
+  );
+}
+
+function QuickFormatRow({
+  isIg,
+  onQuick,
+}: {
+  isIg: boolean;
+  onQuick: (f: QuickFormat) => void;
+}) {
+  // TG-проект → только post + plan. IG-проект → carousel + reel + plan.
+  // Post оставляем во всех (универсален).
+  const items: { key: QuickFormat; label: string; icon: string }[] = isIg
+    ? [
+        { key: "carousel", label: "Карусель", icon: "🖼" },
+        { key: "reel", label: "Reel", icon: "🎬" },
+        { key: "post", label: "Пост", icon: "✍️" },
+        { key: "weekly-plan", label: "План", icon: "🗓" },
+      ]
+    : [
+        { key: "post", label: "Пост", icon: "✍️" },
+        { key: "weekly-plan", label: "План", icon: "🗓" },
+      ];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
+        padding: "2px 0 6px",
+        marginBottom: 2,
+      }}
+    >
+      {items.map((it) => (
+        <button
+          key={it.key}
+          onClick={() => onQuick(it.key)}
+          style={{
+            appearance: "none",
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 12px",
+            borderRadius: 999,
+            border: `1px solid ${CARD_BORDER}`,
+            background: "rgba(255,255,255,0.04)",
+            color: INK,
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 14 }}>{it.icon}</span>
+          {it.label}
+        </button>
       ))}
     </div>
   );
@@ -559,6 +646,9 @@ function ScoutTab({
   analysis,
   plan,
   lastSnapshotAt,
+  onRefresh,
+  onQuickCarousel,
+  onQuickPlan,
 }: {
   projectId: string;
   isIg: boolean;
@@ -566,7 +656,59 @@ function ScoutTab({
   analysis: IgAnalysisDTO | null;
   plan: IgPlanDTO | null;
   lastSnapshotAt: string | null;
+  onRefresh: () => void;
+  onQuickCarousel: () => void;
+  onQuickPlan: () => void;
 }) {
+  const [analysisBusy, setAnalysisBusy] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [actionErr, setActionErr] = useState<string | null>(null);
+
+  const runAnalysis = async () => {
+    if (analysisBusy) return;
+    setAnalysisBusy(true);
+    setActionErr(null);
+    hapticImpact("medium");
+    try {
+      await runIgAnalysis(projectId);
+      hapticNotify("success");
+      onRefresh();
+    } catch (e) {
+      hapticNotify("error");
+      setActionErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Не получилось.",
+      );
+    } finally {
+      setAnalysisBusy(false);
+    }
+  };
+
+  const runPlan = async () => {
+    if (planBusy) return;
+    setPlanBusy(true);
+    setActionErr(null);
+    hapticImpact("medium");
+    try {
+      await runIgPlan(projectId);
+      hapticNotify("success");
+      onRefresh();
+    } catch (e) {
+      hapticNotify("error");
+      setActionErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Не получилось.",
+      );
+    } finally {
+      setPlanBusy(false);
+    }
+  };
   if (!isIg) {
     return (
       <Card>
@@ -703,9 +845,29 @@ function ScoutTab({
             )}
           </>
         )}
+        <button
+          onClick={runAnalysis}
+          disabled={analysisBusy || competitors.length === 0}
+          style={{
+            ...miniBtn,
+            marginTop: 10,
+            opacity: analysisBusy || competitors.length === 0 ? 0.5 : 1,
+          }}
+        >
+          {analysisBusy
+            ? "АННА АНАЛИЗИРУЕТ…"
+            : analysis
+              ? "ПЕРЕЗАПУСТИТЬ АНАЛИЗ"
+              : "ЗАПУСТИТЬ АНАЛИЗ"}
+        </button>
+        {competitors.length === 0 && (
+          <p style={{ margin: "6px 0 0", fontSize: 11, color: MUTED }}>
+            Сначала добавьте конкурентов.
+          </p>
+        )}
         <LegacyLink
           href={`${LEGACY_BASE}/${projectId}`}
-          label={analysis ? "Полный отчёт →" : "Запустить анализ →"}
+          label="Полный отчёт →"
         />
       </Card>
 
@@ -763,9 +925,50 @@ function ScoutTab({
             )}
           </div>
         )}
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button
+            onClick={runPlan}
+            disabled={planBusy || !analysis}
+            style={{
+              ...miniBtn,
+              flex: 1,
+              opacity: planBusy || !analysis ? 0.5 : 1,
+            }}
+          >
+            {planBusy
+              ? "АЛЕКСАНДР СОБИРАЕТ…"
+              : plan
+                ? "ОБНОВИТЬ ПЛАН"
+                : "СОБРАТЬ ПЛАН"}
+          </button>
+          {plan && (
+            <button
+              onClick={onQuickCarousel}
+              style={{
+                ...miniBtn,
+                flex: 1,
+                background: "transparent",
+                border: `1px solid ${YELLOW}`,
+                color: YELLOW,
+              }}
+            >
+              → КАРУСЕЛЬ
+            </button>
+          )}
+        </div>
+        {!analysis && (
+          <p style={{ margin: "6px 0 0", fontSize: 11, color: MUTED }}>
+            Сначала запустите анализ конкурентов.
+          </p>
+        )}
+        {actionErr && (
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#F39B40" }}>
+            {actionErr}
+          </p>
+        )}
         <LegacyLink
           href={`${LEGACY_BASE}/${projectId}`}
-          label={plan ? "Полный план →" : "Собрать план →"}
+          label="Полный план →"
         />
       </Card>
 
@@ -1597,6 +1800,16 @@ const inputStyle: React.CSSProperties = {
   fontFamily: "inherit",
   padding: "10px 12px",
   outline: "none",
+};
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: "rgba(255,255,255,0.58)",
+  fontSize: 13,
+  cursor: "pointer",
+  padding: "8px 0",
+  fontFamily: "inherit",
 };
 
 const miniBtn: React.CSSProperties = {

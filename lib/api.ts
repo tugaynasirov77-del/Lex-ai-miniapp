@@ -290,6 +290,20 @@ export function getProjectIgPlan(
   return getJSON(`/api/projects/${projectId}/ig/plan`);
 }
 
+// --- IG analyze / plan actions (для Scout actions) ---
+
+export function runIgAnalysis(
+  projectId: string,
+): Promise<{ ok: true; analysis?: IgAnalysisDTO; cost?: number }> {
+  return postJSON(`/api/projects/${projectId}/ig/analyze`, {});
+}
+
+export function runIgPlan(
+  projectId: string,
+): Promise<{ ok: true; plan?: IgPlanDTO; cost?: number }> {
+  return postJSON(`/api/projects/${projectId}/ig/plan`, {});
+}
+
 // --- attach IG (минимальный inline-flow в Settings) ---
 
 export function attachInstagram(
