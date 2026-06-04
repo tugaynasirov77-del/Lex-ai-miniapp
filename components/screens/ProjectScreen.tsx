@@ -238,6 +238,7 @@ export default function ProjectScreen({ onBack }: Props) {
       }
       for (const c of ig.carousels) {
         items.push({
+          error: c.error || null,
           id: c.id,
           kind: "carousel",
           preview: c.body?.slice(0, 120) || "Карусель",
@@ -259,6 +260,7 @@ export default function ProjectScreen({ onBack }: Props) {
       createdAt: d.created_at || "",
       permalink: null,
       publishedAt: d.published_message_id ? "" : null,
+      error: d.error || null,
     }));
   })();
 
@@ -2157,7 +2159,7 @@ function humanStatus(
       return { label: "опубликовано", tone: "ok", action: "Посмотреть" };
     case "approved":
     case "scheduled":
-      return { label: "запланировано", tone: "ok", action: "Открыть" };
+      return { label: "запланировано", tone: "ok", action: "Управлять" };
     case "ready":
     case "pending":
       return { label: "черновик", tone: "live", action: "Принять решение" };

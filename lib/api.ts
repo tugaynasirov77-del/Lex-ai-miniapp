@@ -194,7 +194,13 @@ export type IgAggregateReel = {
   created_at: string;
   ig_permalink?: string | null;
   published_at?: string | null;
-  job?: { id?: string; status?: string; phase?: string | null } | null;
+  error?: string | null;
+  job?: {
+    id?: string;
+    status?: string;
+    phase?: string | null;
+    error?: string | null;
+  } | null;
 };
 
 export type IgAggregateCarousel = {
@@ -206,6 +212,7 @@ export type IgAggregateCarousel = {
   created_at: string;
   ig_permalink?: string | null;
   published_at?: string | null;
+  error?: string | null;
 };
 
 export type IgAggregateCompetitor = {
@@ -242,6 +249,7 @@ export type TgDraftRow = {
   created_at?: string;
   content_type?: string;
   published_message_id?: number | null;
+  error?: string | null;
 };
 
 export function getProjectDrafts(

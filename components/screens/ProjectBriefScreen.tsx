@@ -86,6 +86,22 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: "biweek", label: "14 дней" },
 ];
 
+function humanizeBriefError(raw: string): string {
+  const s = raw.toLowerCase();
+  if (s.includes("quota") || s.includes("limit") || s.includes("лимит")) {
+    return "В прошлый раз упёрлись в лимит тарифа. Обновите тариф или дождитесь следующего месяца.";
+  }
+  if (s.includes("invalid json") || s.includes("writer")) {
+    return "Прошлая попытка не получилась — попробуйте сформулировать тему конкретнее.";
+  }
+  if (s.includes("timeout") || s.includes("502") || s.includes("503")) {
+    return "Сервер был перегружен. Попробуйте ещё раз.";
+  }
+  return raw.length > 100
+    ? "Прошлая попытка не удалась. Попробуйте другую формулировку темы."
+    : raw;
+}
+
 function mapErrorToHuman(e: ApiError): string {
   if (e.status === 402 || e.status === 403) return "Лимит тарифа исчерпан.";
   if (e.status === 401) return "Не удалось авторизоваться. Откройте через @Lex_app_bot.";
@@ -135,6 +151,12 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
     | undefined;
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const showIdeaBanner = !!ideaCtx?.topic && !bannerDismissed;
+
+  // Retry-banner: пришёл из failed карточки.
+  const retryCtx = state.screenMeta.retryContext as
+    | { kind: string; preview: string | null; error: string | null }
+    | undefined;
+  const showRetryBanner = !!retryCtx && retryCtx.kind !== "reel";
 
   // Backup brief в localStorage с debounce — back/close не теряет ввод.
   useDraftBackup(`lex.brief.${format}`, brief);
@@ -263,6 +285,36 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
           Пропустить →
         </button>
       </div>
+
+      {showRetryBanner && !showIdeaBanner && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 12,
+            background: "rgba(243,155,64,0.08)",
+            border: "1px solid rgba(243,155,64,0.35)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#F39B40",
+              fontWeight: 700,
+              marginBottom: 4,
+            }}
+          >
+            ⚠ Попробуем ещё раз
+          </div>
+          <div style={{ fontSize: 12, color: INK, lineHeight: 1.4 }}>
+            {retryCtx!.error
+              ? humanizeBriefError(retryCtx!.error)
+              : "Прошлая попытка не удалась. Попробуйте другую формулировку темы."}
+          </div>
+        </div>
+      )}
 
       {showIdeaBanner && (
         <div

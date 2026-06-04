@@ -17,14 +17,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     sb.from("projects").select("*").eq("id", id).eq("tg_id", v.user.id).maybeSingle(),
     sb
       .from("content_drafts")
-      .select("id,body,video_url,cover_url,status,scheduled_at,created_at,editor_score,needs_review,ig_media_id,ig_permalink,published_at")
+      .select("id,body,video_url,cover_url,status,scheduled_at,created_at,editor_score,needs_review,ig_media_id,ig_permalink,published_at,error")
       .eq("project_id", id)
       .eq("content_type", "reel")
       .order("created_at", { ascending: false })
       .limit(20),
     sb
       .from("content_drafts")
-      .select("id,body,media_urls,status,scheduled_at,created_at,editor_score,needs_review,ig_media_id,ig_permalink,published_at")
+      .select("id,body,media_urls,status,scheduled_at,created_at,editor_score,needs_review,ig_media_id,ig_permalink,published_at,error")
       .eq("project_id", id)
       .eq("content_type", "carousel")
       .order("created_at", { ascending: false })
