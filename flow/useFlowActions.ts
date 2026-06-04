@@ -24,6 +24,11 @@ export function useFlowActions() {
 
   const resetFlow = useCallback(() => dispatch({ type: "RESET_FLOW" }), [dispatch]);
 
+  const resetContent = useCallback(
+    () => dispatch({ type: "RESET_CONTENT" }),
+    [dispatch],
+  );
+
   const setFormat = useCallback(
     (format: ContentFormat) => dispatch({ type: "SET_FORMAT", format }),
     [dispatch],
@@ -50,7 +55,16 @@ export function useFlowActions() {
   );
 
   return useMemo(
-    () => ({ navigate, back, resetFlow, setFormat, setBrief, setIds, setScreenMeta }),
-    [navigate, back, resetFlow, setFormat, setBrief, setIds, setScreenMeta],
+    () => ({
+      navigate,
+      back,
+      resetFlow,
+      resetContent,
+      setFormat,
+      setBrief,
+      setIds,
+      setScreenMeta,
+    }),
+    [navigate, back, resetFlow, resetContent, setFormat, setBrief, setIds, setScreenMeta],
   );
 }

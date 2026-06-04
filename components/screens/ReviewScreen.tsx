@@ -144,8 +144,13 @@ export default function ReviewScreen({ onBack }: Props) {
           body="Не нашли активный черновик. Начните заново."
           ctaLabel="К ВЫБОРУ ФОРМАТА"
           onCta={() => {
-            actions.resetFlow();
-            actions.navigate("choose-format");
+            if (state.projectId) {
+              actions.resetContent();
+              actions.navigate("project");
+            } else {
+              actions.resetFlow();
+              actions.navigate("dashboard");
+            }
           }}
         />
       </ScreenWrap>
@@ -283,16 +288,21 @@ export default function ReviewScreen({ onBack }: Props) {
           </p>
           <button
             onClick={() => {
-              actions.resetFlow();
-              actions.navigate("home");
+              if (state.projectId) {
+                actions.resetContent();
+                actions.navigate("project");
+              } else {
+                actions.resetFlow();
+                actions.navigate("dashboard");
+              }
             }}
             style={primaryBtnStyle}
           >
-            НА ГЛАВНУЮ
+            {state.projectId ? "К ПРОЕКТУ" : "К ПРОЕКТАМ"}
           </button>
           <button
             onClick={() => {
-              actions.resetFlow();
+              actions.resetContent();
               actions.navigate("choose-format");
             }}
             style={ghostBtnStyle}
@@ -413,8 +423,13 @@ export default function ReviewScreen({ onBack }: Props) {
           }}
           onFinish={() => {
             hapticNotify("success");
-            actions.resetFlow();
-            actions.navigate("home");
+            if (state.projectId) {
+              actions.resetContent();
+              actions.navigate("project");
+            } else {
+              actions.resetFlow();
+              actions.navigate("dashboard");
+            }
           }}
         />
       ) : (

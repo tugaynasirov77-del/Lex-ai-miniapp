@@ -158,6 +158,28 @@ export type CreateProjectPayload = {
 
 export type CreateProjectResult = { project?: { id: string }; projectId?: string };
 
+export type ProjectDTO = {
+  id: string;
+  title: string;
+  platform: "telegram" | "instagram";
+  status?: string | null;
+  channel_username?: string | null;
+  channel_title?: string | null;
+  channel_subscribers?: number | null;
+  instagram_username?: string | null;
+  instagram_followers?: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function listProjects(): Promise<{ projects: ProjectDTO[] }> {
+  return getJSON("/api/projects");
+}
+
+export function getProject(projectId: string): Promise<{ project: ProjectDTO }> {
+  return getJSON(`/api/projects/${projectId}`);
+}
+
 export async function createProject(payload: CreateProjectPayload): Promise<{ projectId: string }> {
   const r = await postJSON<CreateProjectPayload, CreateProjectResult>("/api/projects", payload);
   const id = r.projectId || r.project?.id;

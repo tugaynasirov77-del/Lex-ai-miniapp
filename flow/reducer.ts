@@ -43,6 +43,20 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
       return INITIAL_STATE;
     }
 
+    case "RESET_CONTENT": {
+      // Сбрасываем только контентную сессию (format/brief/ids/meta),
+      // но СОХРАНЯЕМ projectId — юзер остаётся в контексте проекта.
+      return {
+        ...state,
+        format: null,
+        brief: null,
+        draftId: null,
+        reelJobId: null,
+        weeklyPlanId: null,
+        screenMeta: {},
+      };
+    }
+
     case "SET_FORMAT": {
       return { ...state, format: action.format };
     }

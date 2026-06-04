@@ -10,6 +10,9 @@ import UploadScreen from "./screens/UploadScreen";
 import GenerateScreen from "./screens/GenerateScreen";
 import ReviewScreen from "./screens/ReviewScreen";
 import ReelApproveScreen from "./screens/ReelApproveScreen";
+import DashboardScreen from "./screens/DashboardScreen";
+import ProjectScreen from "./screens/ProjectScreen";
+import CreateProjectScreen from "./screens/CreateProjectScreen";
 import { useFlow, useFlowActions, type ContentFormat } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
@@ -95,8 +98,15 @@ export default function AppFlow() {
           }}
         >
           {currentScreen === "home" && (
-            <HomeScreen onStart={() => goNext("choose-format")} />
+            <HomeScreen onStart={() => goNext("dashboard")} />
           )}
+          {currentScreen === "dashboard" && (
+            <DashboardScreen onBack={goBack} />
+          )}
+          {currentScreen === "create-project" && (
+            <CreateProjectScreen onBack={goBack} />
+          )}
+          {currentScreen === "project" && <ProjectScreen onBack={goBack} />}
           {currentScreen === "choose-format" && (
             <ChooseFormatScreen
               onPick={(format?: ContentFormat) => {

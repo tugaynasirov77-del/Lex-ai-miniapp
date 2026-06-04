@@ -9,6 +9,9 @@ import type { Dispatch } from "react";
 /** Все экраны единого pipeline после home. */
 export type ScreenKey =
   | "home"
+  | "dashboard"
+  | "create-project"
+  | "project"
   | "choose-format"
   | "project-brief"
   | "upload"
@@ -74,6 +77,7 @@ export type FlowAction =
   | { type: "NAVIGATE"; screen: ScreenKey }
   | { type: "BACK" }
   | { type: "RESET_FLOW" }
+  | { type: "RESET_CONTENT" }
   | { type: "SET_FORMAT"; format: ContentFormat }
   | { type: "SET_BRIEF"; brief: Brief }
   | {
