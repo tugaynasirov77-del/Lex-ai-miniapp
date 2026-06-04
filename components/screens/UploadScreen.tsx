@@ -209,6 +209,7 @@ export default function UploadScreen({ onUploaded, onBack: _onBack }: Props) {
         >
           MP4 или MOV, до 90 секунд, до 100 МБ.
         </p>
+        <IdeaContextBanner state={state} />
       </div>
 
       <input
@@ -489,6 +490,52 @@ function SuccessTick() {
       }}
     >
       ✓
+    </div>
+  );
+}
+
+function IdeaContextBanner({ state }: { state: ReturnType<typeof useFlow>["state"] }) {
+  const ideaCtx = state.screenMeta.fromPlanIdea as
+    | { topic: string; hook: string | null; format: string }
+    | undefined;
+  if (!ideaCtx?.topic) return null;
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: 12,
+        borderRadius: 12,
+        background: "rgba(245,231,10,0.08)",
+        border: "1px solid rgba(245,231,10,0.35)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "rgba(245,231,10,0.9)",
+          fontWeight: 700,
+          marginBottom: 4,
+        }}
+      >
+        ✨ Идея из плана
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          color: INK,
+          lineHeight: 1.4,
+          fontWeight: 500,
+        }}
+      >
+        {ideaCtx.topic}
+      </div>
+      {ideaCtx.hook && (
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>
+          Hook: {ideaCtx.hook}
+        </div>
+      )}
     </div>
   );
 }

@@ -129,6 +129,13 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // Context-banner: пришёл из недельного плана.
+  const ideaCtx = state.screenMeta.fromPlanIdea as
+    | { topic: string; hook: string | null; format: string }
+    | undefined;
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showIdeaBanner = !!ideaCtx?.topic && !bannerDismissed;
+
   // Backup brief в localStorage с debounce — back/close не теряет ввод.
   useDraftBackup(`lex.brief.${format}`, brief);
 
@@ -256,6 +263,92 @@ export default function ProjectBriefScreen({ onSubmit, onBack: _onBack }: Props)
           Пропустить →
         </button>
       </div>
+
+      {showIdeaBanner && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 14,
+            background: "rgba(245,231,10,0.08)",
+            border: "1px solid rgba(245,231,10,0.35)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "rgba(245,231,10,0.9)",
+              fontWeight: 700,
+              marginBottom: 6,
+            }}
+          >
+            ✨ Идея из недельного плана
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: INK,
+              lineHeight: 1.4,
+              marginBottom: 4,
+            }}
+          >
+            {ideaCtx!.topic}
+          </div>
+          {ideaCtx!.hook && (
+            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
+              Hook: {ideaCtx!.hook}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button
+              onClick={() => {
+                if (submitting) return;
+                handleSubmit();
+              }}
+              disabled={submitting}
+              style={{
+                appearance: "none",
+                flex: 1,
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: "none",
+                background: "#F5E70A",
+                color: "#0A0608",
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                cursor: submitting ? "default" : "pointer",
+                fontFamily: "inherit",
+                opacity: submitting ? 0.6 : 1,
+              }}
+            >
+              {submitting ? "СОБИРАЕМ…" : "Собрать сразу"}
+            </button>
+            <button
+              onClick={() => setBannerDismissed(true)}
+              disabled={submitting}
+              style={{
+                appearance: "none",
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "transparent",
+                color: INK,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Редактировать
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* HEADING */}
       <h1

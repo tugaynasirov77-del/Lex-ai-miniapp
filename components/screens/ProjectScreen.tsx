@@ -205,6 +205,12 @@ export default function ProjectScreen({ onBack }: Props) {
       tone: "confident",
       platform: isIg ? "instagram" : "telegram",
     });
+    // Маркер для banner'ов в brief/upload экранах.
+    actions.setScreenMeta("fromPlanIdea", {
+      topic,
+      hook: item.hook?.trim() || null,
+      format: fmt,
+    });
     actions.navigate(fmt === "reel" ? "upload" : "project-brief");
   };
 
