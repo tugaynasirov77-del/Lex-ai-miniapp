@@ -6,11 +6,18 @@ import {
   getProject,
   getProjectIg,
   getProjectDrafts,
+  getProjectIgAnalysis,
+  getProjectIgPlan,
+  attachInstagram,
+  ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
+  type IgAggregateCompetitor,
+  type IgAnalysisDTO,
+  type IgPlanDTO,
   type TgDraftRow,
 } from "../../lib/api";
-import { hapticImpact, hapticSelection } from "../../lib/telegram";
+import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -47,32 +54,57 @@ export default function ProjectScreen({ onBack }: Props) {
   // aggregate per platform
   const [ig, setIg] = useState<IgAggregateDTO | null>(null);
   const [tgDrafts, setTgDrafts] = useState<TgDraftRow[] | null>(null);
+  const [analysis, setAnalysis] = useState<IgAnalysisDTO | null>(null);
+  const [plan, setPlan] = useState<IgPlanDTO | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!projectId) return;
     let alive = true;
     setError(null);
+    if (refreshTick === 0) {
+      // initial load — показываем skeleton
+      setProject(null);
+      setIg(null);
+      setTgDrafts(null);
+    } else {
+      setRefreshing(true);
+    }
     (async () => {
       try {
         const r = await getProject(projectId);
         if (!alive) return;
         setProject(r.project);
-        // подтягиваем агрегат сразу по платформе
         if (r.project.platform === "instagram") {
-          const agg = await getProjectIg(projectId);
-          if (alive) setIg(agg);
+          const [agg, an, pl] = await Promise.all([
+            getProjectIg(projectId),
+            getProjectIgAnalysis(projectId).catch(() => ({ analysis: null })),
+            getProjectIgPlan(projectId).catch(() => ({ plan: null })),
+          ]);
+          if (!alive) return;
+          setIg(agg);
+          setAnalysis(an.analysis);
+          setPlan(pl.plan);
         } else {
           const d = await getProjectDrafts(projectId);
           if (alive) setTgDrafts(d.drafts || []);
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Не удалось загрузить");
+      } finally {
+        if (alive) setRefreshing(false);
       }
     })();
     return () => {
       alive = false;
     };
-  }, [projectId]);
+  }, [projectId, refreshTick]);
+
+  const refresh = () => {
+    hapticSelection();
+    setRefreshTick((t) => t + 1);
+  };
 
   if (!projectId) {
     return (
@@ -246,6 +278,8 @@ export default function ProjectScreen({ onBack }: Props) {
           <ContentTab
             feed={feed}
             error={error}
+            refreshing={refreshing}
+            onRefresh={refresh}
             onNew={newContent}
             onOpen={openItem}
           />
@@ -254,7 +288,9 @@ export default function ProjectScreen({ onBack }: Props) {
           <ScoutTab
             projectId={projectId}
             isIg={isIg}
-            competitorsCount={ig?.competitors.length ?? 0}
+            competitors={ig?.competitors ?? []}
+            analysis={analysis}
+            plan={plan}
             lastSnapshotAt={ig?.snapshots?.[0]?.snapshot_at ?? null}
           />
         )}
@@ -264,6 +300,10 @@ export default function ProjectScreen({ onBack }: Props) {
             isIg={isIg}
             handle={handle}
             attached={attached}
+            onAttached={(p) => {
+              setProject(p);
+              setRefreshTick((t) => t + 1);
+            }}
           />
         )}
       </div>
@@ -327,11 +367,15 @@ function Header({
 function ContentTab({
   feed,
   error,
+  refreshing,
+  onRefresh,
   onNew,
   onOpen,
 }: {
   feed: FeedItem[] | null;
   error: string | null;
+  refreshing: boolean;
+  onRefresh: () => void;
   onNew: () => void;
   onOpen: (it: FeedItem) => void;
 }) {
@@ -371,6 +415,43 @@ function ContentTab({
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 2px 4px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            color: MUTED,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+          }}
+        >
+          {feed!.length} {plural(feed!.length, "элемент", "элемента", "элементов")}
+        </span>
+        <button
+          onClick={onRefresh}
+          disabled={refreshing}
+          style={{
+            appearance: "none",
+            background: "transparent",
+            border: "none",
+            color: refreshing ? MUTED : YELLOW,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: refreshing ? "default" : "pointer",
+            padding: "4px 6px",
+            fontFamily: "inherit",
+          }}
+        >
+          {refreshing ? "обновляем…" : "↻ обновить"}
+        </button>
+      </div>
       {feed!.map((it) => (
         <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
       ))}
@@ -467,68 +548,267 @@ function StatusBadge({
 function ScoutTab({
   projectId,
   isIg,
-  competitorsCount,
+  competitors,
+  analysis,
+  plan,
   lastSnapshotAt,
 }: {
   projectId: string;
   isIg: boolean;
-  competitorsCount: number;
+  competitors: IgAggregateCompetitor[];
+  analysis: IgAnalysisDTO | null;
+  plan: IgPlanDTO | null;
   lastSnapshotAt: string | null;
 }) {
+  if (!isIg) {
+    return (
+      <Card>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+          Разведка канала
+        </div>
+        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          Конкуренты, статистика канала и стратегия — пока в полной версии.
+        </p>
+        <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть в полной версии →" />
+      </Card>
+    );
+  }
+
+  const themes = analysis?.result?.content_themes?.slice(0, 5) ?? [];
+  const hooks = analysis?.result?.hook_patterns?.slice(0, 4) ?? [];
+  const opportunities = analysis?.result?.opportunities?.slice(0, 3) ?? [];
+  const planItems = plan?.items?.slice(0, 4) ?? [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {isIg ? (
-        <>
-          <Card>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 28, fontWeight: 800, color: YELLOW }}>
-                {competitorsCount}
-              </span>
-              <span style={{ fontSize: 13, color: MUTED }}>
-                конкурент{plural(competitorsCount, "", "а", "ов")}
-              </span>
-            </div>
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: MUTED }}>
-              {competitorsCount === 0
-                ? "Добавьте 3–5 конкурентов, чтобы Анна собрала отчёт."
-                : "Анна анализирует темы, hooks, gaps."}
-            </p>
-            <LegacyLink
-              href={`${LEGACY_BASE}/${projectId}`}
-              label={competitorsCount === 0 ? "Добавить конкурентов →" : "Открыть анализ →"}
-            />
-          </Card>
-          <Card>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-              Недельный план
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-              Александр собирает 7 идей по неделям из отчёта Анны. Открыть и
-              согласовать план — в полной версии.
-            </p>
-            <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть план →" />
-          </Card>
-          <Card>
-            <div style={{ fontSize: 12, color: MUTED }}>
-              Последний снапшот:{" "}
-              <span style={{ color: INK }}>
-                {lastSnapshotAt ? formatDate(lastSnapshotAt) : "—"}
-              </span>
-            </div>
-          </Card>
-        </>
-      ) : (
-        <Card>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-            Разведка канала
-          </div>
-          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-            Конкуренты, статистика канала и стратегия — пока в полной версии
-            экрана проекта.
+      {/* Конкуренты */}
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Конкуренты</div>
+          <span style={{ fontSize: 12, color: MUTED }}>
+            {competitors.length}{" "}
+            {plural(competitors.length, "аккаунт", "аккаунта", "аккаунтов")}
+          </span>
+        </div>
+        {competitors.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+            Добавьте 3–5 конкурентов — Анна соберёт отчёт по нише.
           </p>
-          <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть в полной версии →" />
-        </Card>
-      )}
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {competitors.slice(0, 8).map((c) => (
+              <span
+                key={c.id}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  padding: "5px 10px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.06)",
+                  border: `1px solid ${CARD_BORDER}`,
+                  color: INK,
+                }}
+              >
+                @{c.username}
+              </span>
+            ))}
+            {competitors.length > 8 && (
+              <span style={{ fontSize: 12, color: MUTED, alignSelf: "center" }}>
+                +{competitors.length - 8}
+              </span>
+            )}
+          </div>
+        )}
+        <LegacyLink
+          href={`${LEGACY_BASE}/${projectId}`}
+          label={competitors.length === 0 ? "Добавить конкурентов →" : "Управлять →"}
+        />
+      </Card>
+
+      {/* Анализ Анны */}
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 6,
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Анализ Анны</div>
+          {analysis?.created_at && (
+            <span style={{ fontSize: 11, color: MUTED }}>
+              {formatDate(analysis.created_at)}
+            </span>
+          )}
+        </div>
+        {!analysis ? (
+          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+            Анализа пока нет. Запустите его в полной версии.
+          </p>
+        ) : (
+          <>
+            {analysis.result?.executive_summary && (
+              <p
+                style={{
+                  margin: "0 0 10px",
+                  fontSize: 13,
+                  color: "rgba(255,255,255,0.85)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {analysis.result.executive_summary}
+              </p>
+            )}
+            {themes.length > 0 && (
+              <SubBlock title="Темы ниши">
+                <ChipRow items={themes} />
+              </SubBlock>
+            )}
+            {hooks.length > 0 && (
+              <SubBlock title="Hook-паттерны">
+                <ChipRow items={hooks} />
+              </SubBlock>
+            )}
+            {opportunities.length > 0 && (
+              <SubBlock title="Возможности">
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 16,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.8)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {opportunities.map((o, i) => (
+                    <li key={i}>{o}</li>
+                  ))}
+                </ul>
+              </SubBlock>
+            )}
+          </>
+        )}
+        <LegacyLink
+          href={`${LEGACY_BASE}/${projectId}`}
+          label={analysis ? "Полный отчёт →" : "Запустить анализ →"}
+        />
+      </Card>
+
+      {/* Недельный план */}
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 6,
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Недельный план</div>
+          {plan?.week_start && (
+            <span style={{ fontSize: 11, color: MUTED }}>с {plan.week_start}</span>
+          )}
+        </div>
+        {!plan || planItems.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+            Планa пока нет. Сначала запустите анализ конкурентов.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {planItems.map((it, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  fontSize: 12,
+                  lineHeight: 1.4,
+                  color: "rgba(255,255,255,0.85)",
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 56,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: YELLOW,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  {it.format || "пост"}
+                </span>
+                <span style={{ flex: 1 }}>{it.topic || "—"}</span>
+              </div>
+            ))}
+            {(plan.items?.length ?? 0) > planItems.length && (
+              <span style={{ fontSize: 11, color: MUTED }}>
+                +{(plan.items?.length ?? 0) - planItems.length} ещё
+              </span>
+            )}
+          </div>
+        )}
+        <LegacyLink
+          href={`${LEGACY_BASE}/${projectId}`}
+          label={plan ? "Полный план →" : "Собрать план →"}
+        />
+      </Card>
+
+      {/* footer meta */}
+      <div style={{ fontSize: 11, color: MUTED, textAlign: "center", padding: "4px 0" }}>
+        {lastSnapshotAt
+          ? `Последний снапшот: ${formatDate(lastSnapshotAt)}`
+          : "Снапшотов пока нет"}
+      </div>
+    </div>
+  );
+}
+
+function SubBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: MUTED,
+          marginBottom: 4,
+          fontWeight: 600,
+        }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ChipRow({ items }: { items: string[] }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      {items.map((t, i) => (
+        <span
+          key={i}
+          style={{
+            fontSize: 11,
+            padding: "3px 8px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.06)",
+            color: "rgba(255,255,255,0.85)",
+          }}
+        >
+          {t}
+        </span>
+      ))}
     </div>
   );
 }
@@ -542,51 +822,56 @@ function SettingsTab({
   isIg,
   handle,
   attached,
+  onAttached,
 }: {
   projectId: string;
   isIg: boolean;
   handle: string | null;
   attached: boolean;
+  onAttached: (project: ProjectDTO) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 6,
-          }}
-        >
-          <div style={{ fontSize: 15, fontWeight: 700 }}>
-            {isIg ? "Instagram-аккаунт" : "Telegram-канал"}
-          </div>
-          <span
+      {/* Подключение */}
+      {isIg && !attached ? (
+        <IgAttachCard projectId={projectId} onAttached={onAttached} />
+      ) : (
+        <Card>
+          <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: attached ? "#5BD66B" : "#F39B40",
-              marginLeft: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 6,
             }}
           >
-            {attached ? "подключён" : "не подключён"}
-          </span>
-        </div>
-        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          {attached
-            ? `Подключён ${handle}. Можно публиковать.`
-            : isIg
-              ? "Без подключения Instagram нельзя публиковать карусели и Reel."
-              : "Без подключения канала нельзя публиковать посты."}
-        </p>
-        <LegacyLink
-          href={`${LEGACY_BASE}/${projectId}`}
-          label={attached ? "Управлять подключением →" : isIg ? "Подключить Instagram →" : "Подключить канал →"}
-        />
-      </Card>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>
+              {isIg ? "Instagram-аккаунт" : "Telegram-канал"}
+            </div>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: attached ? "#5BD66B" : "#F39B40",
+                marginLeft: "auto",
+              }}
+            >
+              {attached ? "подключён" : "не подключён"}
+            </span>
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+            {attached
+              ? `Подключён ${handle}. Можно публиковать.`
+              : "Подключите Telegram-канал, чтобы публиковать посты."}
+          </p>
+          <LegacyLink
+            href={`${LEGACY_BASE}/${projectId}`}
+            label={attached ? "Управлять подключением →" : "Подключить канал →"}
+          />
+        </Card>
+      )}
 
       <Card>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
@@ -599,12 +884,117 @@ function SettingsTab({
       </Card>
 
       <Card>
-        <div style={{ fontSize: 13, color: MUTED }}>
-          Управление проектом (переименование, удаление) — в полной версии.
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+          Управление проектом
         </div>
+        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          Переименование, удаление, расширенные настройки — в полной версии.
+        </p>
         <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть проект →" />
       </Card>
     </div>
+  );
+}
+
+function IgAttachCard({
+  projectId,
+  onAttached,
+}: {
+  projectId: string;
+  onAttached: (project: ProjectDTO) => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    const u = username.trim().replace(/^@/, "");
+    if (!u) return;
+    setBusy(true);
+    setErr(null);
+    hapticImpact("light");
+    try {
+      const r = await attachInstagram(projectId, {
+        username: u,
+        account_id: accountId.trim() || undefined,
+      });
+      hapticNotify("success");
+      onAttached(r.project);
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Не получилось.";
+      hapticNotify("error");
+      setErr(msg);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginBottom: 6,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Instagram-аккаунт</div>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "#F39B40",
+            marginLeft: "auto",
+          }}
+        >
+          не подключён
+        </span>
+      </div>
+      <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
+        Без подключения нельзя публиковать карусели и Reel. Введите @username
+        аккаунта. account_id — опционально (нужен для прямой публикации через
+        Graph API).
+      </p>
+      <input
+        value={username}
+        onChange={(e) => {
+          setUsername(e.target.value);
+          if (err) setErr(null);
+        }}
+        placeholder="@username"
+        maxLength={60}
+        style={inputStyle}
+      />
+      <input
+        value={accountId}
+        onChange={(e) => setAccountId(e.target.value)}
+        placeholder="IG account_id (можно позже)"
+        maxLength={32}
+        style={{ ...inputStyle, marginTop: 8 }}
+      />
+      {err && (
+        <p style={{ fontSize: 11, color: "#F39B40", margin: "8px 0 0" }}>{err}</p>
+      )}
+      <button
+        onClick={submit}
+        disabled={busy || !username.trim()}
+        style={{
+          ...miniBtn,
+          marginTop: 10,
+          opacity: busy || !username.trim() ? 0.5 : 1,
+        }}
+      >
+        {busy ? "ПОДКЛЮЧАЕМ…" : "ПОДКЛЮЧИТЬ"}
+      </button>
+      <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Подключить вручную →" />
+    </Card>
   );
 }
 
@@ -788,6 +1178,33 @@ function plural(n: number, one: string, few: string, many: string): string {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
   return many;
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  background: "rgba(255,255,255,0.04)",
+  border: `1px solid ${CARD_BORDER}`,
+  borderRadius: 12,
+  color: INK,
+  fontSize: 14,
+  fontFamily: "inherit",
+  padding: "10px 12px",
+  outline: "none",
+};
+
+const miniBtn: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 0",
+  border: "none",
+  borderRadius: 999,
+  background: YELLOW,
+  color: "#0A0608",
+  fontSize: 13,
+  fontWeight: 800,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
 
 const primaryBtn: React.CSSProperties = {
   width: "100%",

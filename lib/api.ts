@@ -250,6 +250,55 @@ export function getProjectDrafts(
   return getJSON(`/api/projects/${projectId}/drafts${q}`);
 }
 
+// --- IG analyze / plan (для Scout tab) ---
+
+export type IgAnalysisDTO = {
+  id: string;
+  result: {
+    executive_summary?: string;
+    content_themes?: string[];
+    hook_patterns?: string[];
+    opportunities?: string[];
+    content_gaps?: string[];
+  };
+  created_at: string;
+};
+
+export function getProjectIgAnalysis(
+  projectId: string,
+): Promise<{ analysis: IgAnalysisDTO | null }> {
+  return getJSON(`/api/projects/${projectId}/ig/analyze`);
+}
+
+export type IgPlanDTO = {
+  id: string;
+  week_start: string;
+  items: Array<{
+    day?: string;
+    format?: string;
+    topic?: string;
+    hook?: string;
+    priority?: string;
+  }>;
+  summary?: any;
+  created_at: string;
+};
+
+export function getProjectIgPlan(
+  projectId: string,
+): Promise<{ plan: IgPlanDTO | null }> {
+  return getJSON(`/api/projects/${projectId}/ig/plan`);
+}
+
+// --- attach IG (минимальный inline-flow в Settings) ---
+
+export function attachInstagram(
+  projectId: string,
+  payload: { username: string; account_id?: string; followers?: number },
+): Promise<{ project: ProjectDTO }> {
+  return postJSON(`/api/projects/${projectId}/attach-instagram`, payload);
+}
+
 export async function createProject(payload: CreateProjectPayload): Promise<{ projectId: string }> {
   const r = await postJSON<CreateProjectPayload, CreateProjectResult>("/api/projects", payload);
   const id = r.projectId || r.project?.id;
