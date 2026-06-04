@@ -180,6 +180,76 @@ export function getProject(projectId: string): Promise<{ project: ProjectDTO }> 
   return getJSON(`/api/projects/${projectId}`);
 }
 
+// --- aggregated content for ProjectScreen ---
+
+export type IgAggregateReel = {
+  id: string;
+  body?: string;
+  video_url?: string | null;
+  cover_url?: string | null;
+  status?: string;
+  scheduled_at?: string | null;
+  created_at: string;
+  ig_permalink?: string | null;
+  published_at?: string | null;
+  job?: { id?: string; status?: string; phase?: string | null } | null;
+};
+
+export type IgAggregateCarousel = {
+  id: string;
+  body?: string;
+  media_urls?: any[];
+  status?: string;
+  scheduled_at?: string | null;
+  created_at: string;
+  ig_permalink?: string | null;
+  published_at?: string | null;
+};
+
+export type IgAggregateCompetitor = {
+  id: string;
+  username: string;
+  followers?: number | null;
+  notes?: string | null;
+};
+
+export type IgAggregateSnapshot = {
+  followers?: number | null;
+  posts_count?: number | null;
+  reels_count?: number | null;
+  snapshot_at: string;
+};
+
+export type IgAggregateDTO = {
+  project: ProjectDTO;
+  reels: IgAggregateReel[];
+  carousels: IgAggregateCarousel[];
+  competitors: IgAggregateCompetitor[];
+  snapshots: IgAggregateSnapshot[];
+};
+
+export function getProjectIg(projectId: string): Promise<IgAggregateDTO> {
+  return getJSON(`/api/projects/${projectId}/ig`);
+}
+
+export type TgDraftRow = {
+  id: string;
+  body?: string;
+  status?: string;
+  scheduled_at?: string | null;
+  created_at?: string;
+  content_type?: string;
+  published_message_id?: number | null;
+};
+
+export function getProjectDrafts(
+  projectId: string,
+  status?: string,
+): Promise<{ drafts: TgDraftRow[] }> {
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  return getJSON(`/api/projects/${projectId}/drafts${q}`);
+}
+
 export async function createProject(payload: CreateProjectPayload): Promise<{ projectId: string }> {
   const r = await postJSON<CreateProjectPayload, CreateProjectResult>("/api/projects", payload);
   const id = r.projectId || r.project?.id;

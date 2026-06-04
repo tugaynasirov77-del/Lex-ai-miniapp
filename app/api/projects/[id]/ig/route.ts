@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .limit(20),
     sb.from("ig_competitors").select("*").eq("project_id", id).order("followers", { ascending: false, nullsFirst: false }).limit(10),
     sb.from("ig_snapshots").select("followers,posts_count,reels_count,snapshot_at").eq("project_id", id).order("snapshot_at", { ascending: false }).limit(14),
-    sb.from("reel_jobs").select("draft_id,status,phase,error,attempts,updated_at,transcript_words,user_selections").eq("project_id", id).order("updated_at", { ascending: false }).limit(50),
+    sb.from("reel_jobs").select("id,draft_id,status,phase,error,attempts,updated_at,transcript_words,user_selections").eq("project_id", id).order("updated_at", { ascending: false }).limit(50),
   ]);
 
   if (!project) return Response.json({ error: "not found" }, { status: 404 });
