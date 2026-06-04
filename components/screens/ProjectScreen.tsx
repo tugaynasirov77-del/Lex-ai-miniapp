@@ -130,8 +130,16 @@ export default function ProjectScreen({ onBack }: Props) {
       <ScreenWrap>
         <CenterMsg>
           <p style={{ color: MUTED, textAlign: "center" }}>{error}</p>
-          <button onClick={onBack} style={primaryBtn}>
-            НАЗАД
+          <button
+            onClick={() => {
+              // Сбрасываем projectId, иначе при back опять упрёмся в тот же
+              // битый проект. Уводим юзера на dashboard явно.
+              actions.resetFlow();
+              actions.navigate("dashboard");
+            }}
+            style={primaryBtn}
+          >
+            К ПРОЕКТАМ
           </button>
         </CenterMsg>
       </ScreenWrap>
@@ -268,16 +276,17 @@ export default function ProjectScreen({ onBack }: Props) {
     hapticImpact("light");
     actions.resetContent();
 
-    // 1. FAILED / REJECTED — честный retry-путь: новый flow с нуля.
+    // 1. FAILED / REJECTED — честный retry-путь.
+    // Reel → upload (новое видео). Post/carousel → сразу в brief с retry
+    // banner, не заставляем юзера выбирать формат заново.
     if (it.status === "failed" || it.status === "rejected") {
       actions.setFormat(it.kind === "reel" ? "reel" : it.kind);
-      // Сохраняем контекст для подсказки на новом экране.
       actions.setScreenMeta("retryContext", {
         kind: it.kind,
         preview: it.preview || null,
         error: it.error || null,
       });
-      actions.navigate(it.kind === "reel" ? "upload" : "choose-format");
+      actions.navigate(it.kind === "reel" ? "upload" : "project-brief");
       return;
     }
 
