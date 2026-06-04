@@ -290,6 +290,20 @@ export default function ProjectScreen({ onBack }: Props) {
         }
       />
 
+      <QuickHub
+        isIg={isIg}
+        feedEmpty={feed?.length === 0}
+        hasAnalysis={!!analysis}
+        hasPlan={!!plan && (plan.items?.length ?? 0) > 0}
+        topPlanIdea={plan?.items?.[0] ?? null}
+        onCreate={quickCreate}
+        onPickIdea={pickIdea}
+        onOpenTab={(t) => {
+          hapticSelection();
+          setTab(t);
+        }}
+      />
+
       <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
         {(["content", "scout", "settings"] as Tab[]).map((t) => {
           const on = tab === t;
@@ -529,6 +543,142 @@ function ContentTab({
       {feed!.map((it) => (
         <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
       ))}
+    </div>
+  );
+}
+
+function QuickHub({
+  isIg,
+  feedEmpty,
+  hasAnalysis,
+  hasPlan,
+  topPlanIdea,
+  onCreate,
+  onPickIdea,
+  onOpenTab,
+}: {
+  isIg: boolean;
+  feedEmpty: boolean;
+  hasAnalysis: boolean;
+  hasPlan: boolean;
+  topPlanIdea: { topic?: string; format?: string; hook?: string } | null;
+  onCreate: (f: QuickFormat) => void;
+  onPickIdea: (it: { topic?: string; format?: string; hook?: string }) => void;
+  onOpenTab: (t: Tab) => void;
+}) {
+  type Action = {
+    key: string;
+    label: string;
+    icon: string;
+    onTap: () => void;
+    primary?: boolean;
+  };
+
+  const actions: Action[] = [];
+
+  // 1. Если есть свежий план — приоритетный shortcut «Собрать из плана».
+  if (hasPlan && topPlanIdea?.topic) {
+    actions.push({
+      key: "from-plan",
+      label: "Из плана",
+      icon: "✨",
+      onTap: () => onPickIdea(topPlanIdea),
+      primary: true,
+    });
+  }
+
+  if (isIg) {
+    actions.push(
+      { key: "carousel", label: "Карусель", icon: "🖼", onTap: () => onCreate("carousel"), primary: !hasPlan },
+      { key: "reel", label: "Reel", icon: "🎬", onTap: () => onCreate("reel") },
+    );
+    if (!hasAnalysis) {
+      actions.push({ key: "scout", label: "Конкуренты", icon: "🔍", onTap: () => onOpenTab("scout") });
+    } else if (!hasPlan) {
+      actions.push({ key: "plan", label: "Собрать план", icon: "🗓", onTap: () => onCreate("weekly-plan") });
+    } else {
+      actions.push({ key: "scout", label: "Разведка", icon: "🔍", onTap: () => onOpenTab("scout") });
+    }
+  } else {
+    actions.push(
+      { key: "post", label: "Пост", icon: "✍️", onTap: () => onCreate("post"), primary: !hasPlan },
+      { key: "plan", label: "План недели", icon: "🗓", onTap: () => onCreate("weekly-plan") },
+      { key: "scout", label: "Разведка", icon: "🔍", onTap: () => onOpenTab("scout") },
+    );
+  }
+
+  // Когда лента пустая — делаем hub чуть заметнее.
+  const emphasized = feedEmpty;
+
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: emphasized ? 12 : 10,
+        borderRadius: 14,
+        background: emphasized ? "rgba(245,231,10,0.05)" : "rgba(255,255,255,0.03)",
+        border: `1px solid ${emphasized ? "rgba(245,231,10,0.25)" : CARD_BORDER}`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: MUTED,
+          fontWeight: 700,
+          marginBottom: 8,
+        }}
+      >
+        {emphasized ? "С чего начать" : "Быстрые действия"}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          padding: "0 0 2px",
+        }}
+      >
+        {actions.map((a) => {
+          const primary = a.primary;
+          return (
+            <button
+              key={a.key}
+              onClick={() => {
+                hapticImpact("light");
+                a.onTap();
+              }}
+              style={{
+                appearance: "none",
+                flex: "0 0 auto",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: primary
+                  ? "none"
+                  : `1px solid ${CARD_BORDER}`,
+                background: primary ? YELLOW : "rgba(255,255,255,0.04)",
+                color: primary ? "#0A0608" : INK,
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: primary ? 800 : 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                boxShadow: primary
+                  ? `0 8px 20px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`
+                  : "none",
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{a.icon}</span>
+              {a.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
