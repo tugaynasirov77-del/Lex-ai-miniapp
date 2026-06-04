@@ -319,8 +319,14 @@ export default function ReviewScreen({ onBack }: Props) {
   const reelDone = isReel && reelStatus === "done";
   const reelAwaiting = isReel && reelStatus === "awaiting_approval";
 
-  const title =
-    isReel && !reelDone && !reelAwaiting && reelStatus !== "failed"
+  // Read-only режим для уже опубликованных text-форматов: approve/reject row
+  // прячется, юзер видит контент в режиме просмотра.
+  const draftStatus = !isReel ? draftPoll.data?.status : null;
+  const isPublished = draftStatus === "published";
+
+  const title = isPublished
+    ? "Опубликовано"
+    : isReel && !reelDone && !reelAwaiting && reelStatus !== "failed"
       ? "Финальный монтаж готовится"
       : reelAwaiting
         ? "Нужны акценты"
@@ -423,6 +429,18 @@ export default function ReviewScreen({ onBack }: Props) {
           }}
           onFinish={() => {
             hapticNotify("success");
+            if (state.projectId) {
+              actions.resetContent();
+              actions.navigate("project");
+            } else {
+              actions.resetFlow();
+              actions.navigate("dashboard");
+            }
+          }}
+        />
+      ) : isPublished ? (
+        <PublishedReadOnly
+          onFinish={() => {
             if (state.projectId) {
               actions.resetContent();
               actions.navigate("project");
@@ -871,6 +889,32 @@ function ReelActions({
         }}
       >
         ФИНАЛ ГОТОВИТСЯ…
+      </button>
+    </div>
+  );
+}
+
+function PublishedReadOnly({ onFinish }: { onFinish: () => void }) {
+  return (
+    <div style={{ marginBottom: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          background: "rgba(91,214,107,0.08)",
+          border: `1px solid #5BD66B`,
+          borderRadius: 14,
+          padding: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span style={{ fontSize: 18, color: "#5BD66B" }}>✓</span>
+        <div style={{ fontSize: 13, color: INK, lineHeight: 1.4 }}>
+          Этот контент уже опубликован — редактирование недоступно.
+        </div>
+      </div>
+      <button onClick={onFinish} style={{ ...primaryBtnStyle, marginTop: 0 }}>
+        ЗАКРЫТЬ
       </button>
     </div>
   );

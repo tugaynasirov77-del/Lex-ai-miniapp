@@ -260,6 +260,24 @@ export default function ProjectScreen({ onBack }: Props) {
   const openItem = (it: FeedItem) => {
     hapticImpact("light");
     actions.resetContent();
+
+    // 1. FAILED — честный retry-путь: новый flow с нуля.
+    if (it.status === "failed" || it.status === "rejected") {
+      actions.setFormat(it.kind === "reel" ? "reel" : it.kind);
+      actions.navigate(it.kind === "reel" ? "upload" : "choose-format");
+      return;
+    }
+
+    // 2. AWAITING_APPROVAL reel — сразу в reel-approve, минуя review.
+    if (it.kind === "reel" && it.status === "awaiting_approval" && it.reelJobId) {
+      actions.setFormat("reel");
+      actions.setIds({ reelJobId: it.reelJobId });
+      actions.navigate("reel-approve");
+      return;
+    }
+
+    // 3. Всё остальное — review (для published/approved/done — read-only
+    //    режим определяется внутри ReviewScreen по статусу).
     if (it.kind === "reel" && it.reelJobId) {
       actions.setFormat("reel");
       actions.setIds({ reelJobId: it.reelJobId });
@@ -272,7 +290,7 @@ export default function ProjectScreen({ onBack }: Props) {
       actions.navigate("review");
       return;
     }
-    // reel без job id — открываем legacy
+    // reel без job id — fallback legacy.
     if (typeof window !== "undefined") {
       window.location.href = `${LEGACY_BASE}/${projectId}`;
     }
