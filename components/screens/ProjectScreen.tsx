@@ -9,6 +9,9 @@ import {
   getProjectIgAnalysis,
   getProjectIgPlan,
   attachInstagram,
+  attachChannel,
+  updateProject,
+  deleteProject,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -296,13 +299,17 @@ export default function ProjectScreen({ onBack }: Props) {
         )}
         {tab === "settings" && (
           <SettingsTab
-            projectId={projectId}
+            project={project}
             isIg={isIg}
             handle={handle}
             attached={attached}
-            onAttached={(p) => {
+            onProjectUpdated={(p) => {
               setProject(p);
               setRefreshTick((t) => t + 1);
+            }}
+            onDeleted={() => {
+              actions.resetFlow();
+              actions.navigate("dashboard");
             }}
           />
         )}
@@ -818,23 +825,29 @@ function ChipRow({ items }: { items: string[] }) {
 // =====================================================================
 
 function SettingsTab({
-  projectId,
+  project,
   isIg,
   handle,
   attached,
-  onAttached,
+  onProjectUpdated,
+  onDeleted,
 }: {
-  projectId: string;
+  project: ProjectDTO;
   isIg: boolean;
   handle: string | null;
   attached: boolean;
-  onAttached: (project: ProjectDTO) => void;
+  onProjectUpdated: (project: ProjectDTO) => void;
+  onDeleted: () => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Подключение */}
-      {isIg && !attached ? (
-        <IgAttachCard projectId={projectId} onAttached={onAttached} />
+      {!attached ? (
+        isIg ? (
+          <IgAttachCard projectId={project.id} onAttached={onProjectUpdated} />
+        ) : (
+          <TgAttachCard projectId={project.id} onAttached={onProjectUpdated} />
+        )
       ) : (
         <Card>
           <div
@@ -854,24 +867,24 @@ function SettingsTab({
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: attached ? "#5BD66B" : "#F39B40",
+                color: "#5BD66B",
                 marginLeft: "auto",
               }}
             >
-              {attached ? "подключён" : "не подключён"}
+              подключён
             </span>
           </div>
           <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-            {attached
-              ? `Подключён ${handle}. Можно публиковать.`
-              : "Подключите Telegram-канал, чтобы публиковать посты."}
+            Подключён {handle}. Можно публиковать.
           </p>
           <LegacyLink
-            href={`${LEGACY_BASE}/${projectId}`}
-            label={attached ? "Управлять подключением →" : "Подключить канал →"}
+            href={`${LEGACY_BASE}/${project.id}`}
+            label="Управлять подключением →"
           />
         </Card>
       )}
+
+      <RenameCard project={project} onUpdated={onProjectUpdated} />
 
       <Card>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
@@ -883,16 +896,411 @@ function SettingsTab({
         <LegacyLink href="/billing" label="Открыть биллинг →" />
       </Card>
 
+      <DeleteCard project={project} onDeleted={onDeleted} />
+    </div>
+  );
+}
+
+// --- TG attach (native) ---
+
+function TgAttachCard({
+  projectId,
+  onAttached,
+}: {
+  projectId: string;
+  onAttached: (project: ProjectDTO) => void;
+}) {
+  const [channel, setChannel] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ message: string; needAdmin?: boolean } | null>(null);
+
+  const submit = async () => {
+    const c = channel.trim();
+    if (!c) return;
+    setBusy(true);
+    setErr(null);
+    hapticImpact("light");
+    try {
+      const r = await attachChannel(projectId, { channel: c });
+      if (r && (r as any).project) {
+        hapticNotify("success");
+        onAttached((r as any).project as ProjectDTO);
+        return;
+      }
+      throw new ApiError(500, "Не получили данные канала.");
+    } catch (e) {
+      hapticNotify("error");
+      if (e instanceof ApiError) {
+        // backend возвращает message при bot_not_in_channel / bot_not_admin
+        const message = e.message || "Не получилось подключить.";
+        setErr({
+          message,
+          needAdmin: /админ|administrator|bot_not_in_channel|bot_not_admin/i.test(
+            message,
+          ),
+        });
+      } else {
+        setErr({ message: e instanceof Error ? e.message : "Не получилось." });
+      }
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginBottom: 6,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Telegram-канал</div>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "#F39B40",
+            marginLeft: "auto",
+          }}
+        >
+          не подключён
+        </span>
+      </div>
+      <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
+        Введите @username канала или ссылку t.me/.... Перед подключением
+        добавьте @Lex_app_bot в канал АДМИНОМ — без этого публикация не
+        заработает.
+      </p>
+      <input
+        value={channel}
+        onChange={(e) => {
+          setChannel(e.target.value);
+          if (err) setErr(null);
+        }}
+        placeholder="@my_channel"
+        maxLength={80}
+        style={inputStyle}
+      />
+      {err && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: "8px 10px",
+            background: "rgba(243,155,64,0.08)",
+            border: `1px solid rgba(243,155,64,0.3)`,
+            borderRadius: 10,
+            fontSize: 12,
+            color: "#F39B40",
+            lineHeight: 1.4,
+          }}
+        >
+          {err.message}
+          {err.needAdmin && (
+            <div style={{ marginTop: 4, color: MUTED }}>
+              Сделайте бота админом канала и нажмите «ПРОВЕРИТЬ ЕЩЁ РАЗ».
+            </div>
+          )}
+        </div>
+      )}
+      <button
+        onClick={submit}
+        disabled={busy || !channel.trim()}
+        style={{
+          ...miniBtn,
+          marginTop: 10,
+          opacity: busy || !channel.trim() ? 0.5 : 1,
+        }}
+      >
+        {busy ? "ПРОВЕРЯЕМ…" : err ? "ПРОВЕРИТЬ ЕЩЁ РАЗ" : "ПОДКЛЮЧИТЬ КАНАЛ"}
+      </button>
+      <LegacyLink
+        href={`${LEGACY_BASE}/${projectId}`}
+        label="Подключить вручную →"
+      />
+    </Card>
+  );
+}
+
+// --- Rename (inline) ---
+
+function RenameCard({
+  project,
+  onUpdated,
+}: {
+  project: ProjectDTO;
+  onUpdated: (p: ProjectDTO) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(project.title);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const canSave =
+    title.trim().length >= 2 &&
+    title.trim().length <= 80 &&
+    title.trim() !== project.title &&
+    !busy;
+
+  const save = async () => {
+    if (!canSave) return;
+    setBusy(true);
+    setErr(null);
+    hapticImpact("light");
+    try {
+      const r = await updateProject(project.id, { title: title.trim() });
+      hapticNotify("success");
+      onUpdated(r.project);
+      setEditing(false);
+    } catch (e) {
+      hapticNotify("error");
+      setErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Не получилось.",
+      );
+      setBusy(false);
+    }
+  };
+
+  const cancel = () => {
+    setTitle(project.title);
+    setErr(null);
+    setEditing(false);
+  };
+
+  return (
+    <Card>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+        Название проекта
+      </div>
+      {!editing ? (
+        <>
+          <div
+            style={{
+              fontSize: 14,
+              color: "rgba(255,255,255,0.85)",
+              marginBottom: 6,
+              wordBreak: "break-word",
+            }}
+          >
+            {project.title}
+          </div>
+          <button
+            onClick={() => {
+              hapticSelection();
+              setEditing(true);
+            }}
+            style={{
+              ...miniBtn,
+              background: "transparent",
+              border: `1px solid ${CARD_BORDER}`,
+              color: INK,
+            }}
+          >
+            Переименовать
+          </button>
+        </>
+      ) : (
+        <>
+          <input
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (err) setErr(null);
+            }}
+            maxLength={80}
+            style={inputStyle}
+            autoFocus
+          />
+          {err && (
+            <p style={{ fontSize: 11, color: "#F39B40", margin: "8px 0 0" }}>{err}</p>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button
+              onClick={cancel}
+              disabled={busy}
+              style={{
+                ...miniBtn,
+                background: "transparent",
+                border: `1px solid ${CARD_BORDER}`,
+                color: INK,
+                flex: 1,
+              }}
+            >
+              Отмена
+            </button>
+            <button
+              onClick={save}
+              disabled={!canSave}
+              style={{
+                ...miniBtn,
+                flex: 1,
+                opacity: canSave ? 1 : 0.5,
+              }}
+            >
+              {busy ? "СОХРАНЯЕМ…" : "СОХРАНИТЬ"}
+            </button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// --- Delete (double confirm) ---
+
+function DeleteCard({
+  project,
+  onDeleted,
+}: {
+  project: ProjectDTO;
+  onDeleted: () => void;
+}) {
+  const [stage, setStage] = useState<"idle" | "confirm" | "busy">("idle");
+  const [confirmText, setConfirmText] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  const expected = project.title.trim();
+  const canDelete = stage === "confirm" && confirmText.trim() === expected;
+
+  const triggerDelete = async () => {
+    if (!canDelete) return;
+    setStage("busy");
+    setErr(null);
+    hapticImpact("medium");
+    try {
+      await deleteProject(project.id);
+      hapticNotify("success");
+      onDeleted();
+    } catch (e) {
+      hapticNotify("error");
+      setErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "Не получилось удалить.",
+      );
+      setStage("confirm");
+    }
+  };
+
+  if (stage === "idle") {
+    return (
       <Card>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-          Управление проектом
+          Удалить проект
         </div>
         <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Переименование, удаление, расширенные настройки — в полной версии.
+          Безвозвратно удалит весь контент проекта: черновики, планы, разведку,
+          историю публикаций.
         </p>
-        <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть проект →" />
+        <button
+          onClick={() => {
+            hapticSelection();
+            setStage("confirm");
+          }}
+          style={{
+            ...miniBtn,
+            marginTop: 10,
+            background: "transparent",
+            border: `1px solid #F4496A`,
+            color: "#F4496A",
+          }}
+        >
+          Удалить проект
+        </button>
       </Card>
-    </div>
+    );
+  }
+
+  return (
+    <Card>
+      <div
+        style={{
+          fontSize: 15,
+          fontWeight: 700,
+          marginBottom: 4,
+          color: "#F4496A",
+        }}
+      >
+        Подтвердите удаление
+      </div>
+      <p
+        style={{
+          margin: "0 0 8px",
+          fontSize: 13,
+          color: "rgba(255,255,255,0.85)",
+          lineHeight: 1.5,
+        }}
+      >
+        Это действие нельзя отменить. Чтобы подтвердить, введите название
+        проекта точно как сейчас:
+      </p>
+      <p
+        style={{
+          margin: "0 0 8px",
+          fontSize: 13,
+          color: YELLOW,
+          fontWeight: 700,
+          wordBreak: "break-word",
+        }}
+      >
+        {expected}
+      </p>
+      <input
+        value={confirmText}
+        onChange={(e) => {
+          setConfirmText(e.target.value);
+          if (err) setErr(null);
+        }}
+        placeholder="Введите название проекта"
+        style={inputStyle}
+        autoFocus
+        disabled={stage === "busy"}
+      />
+      {err && (
+        <p style={{ fontSize: 11, color: "#F39B40", margin: "8px 0 0" }}>{err}</p>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button
+          onClick={() => {
+            setStage("idle");
+            setConfirmText("");
+            setErr(null);
+          }}
+          disabled={stage === "busy"}
+          style={{
+            ...miniBtn,
+            background: "transparent",
+            border: `1px solid ${CARD_BORDER}`,
+            color: INK,
+            flex: 1,
+          }}
+        >
+          Отмена
+        </button>
+        <button
+          onClick={triggerDelete}
+          disabled={!canDelete}
+          style={{
+            ...miniBtn,
+            background: canDelete ? "#F4496A" : "transparent",
+            border: `1px solid #F4496A`,
+            color: canDelete ? "#FFFFFF" : "#F4496A",
+            opacity: canDelete ? 1 : 0.5,
+            flex: 1,
+          }}
+        >
+          {stage === "busy" ? "УДАЛЯЕМ…" : "УДАЛИТЬ"}
+        </button>
+      </div>
+    </Card>
   );
 }
 

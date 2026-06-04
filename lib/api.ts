@@ -299,6 +299,26 @@ export function attachInstagram(
   return postJSON(`/api/projects/${projectId}/attach-instagram`, payload);
 }
 
+export function attachChannel(
+  projectId: string,
+  payload: { channel: string },
+): Promise<{ project: ProjectDTO } & Record<string, unknown>> {
+  return postJSON(`/api/projects/${projectId}/attach-channel`, payload);
+}
+
+export function updateProject(
+  projectId: string,
+  patch: { title?: string; publish_time?: string; publish_timezone?: string },
+): Promise<{ ok: true; project: ProjectDTO }> {
+  return patchJSON(`/api/projects/${projectId}`, patch);
+}
+
+export async function deleteProject(projectId: string): Promise<{ ok: true }> {
+  const r = await tgFetch(`/api/projects/${projectId}`, { method: "DELETE" });
+  if (!r.ok) throw new ApiError(r.status, await readError(r));
+  return (await r.json()) as { ok: true };
+}
+
 export async function createProject(payload: CreateProjectPayload): Promise<{ projectId: string }> {
   const r = await postJSON<CreateProjectPayload, CreateProjectResult>("/api/projects", payload);
   const id = r.projectId || r.project?.id;

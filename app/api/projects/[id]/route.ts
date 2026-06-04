@@ -119,12 +119,51 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (typeof body.publish_timezone === "string" && body.publish_timezone.length < 64) {
     update.publish_timezone = body.publish_timezone;
   }
+  if (typeof body.title === "string") {
+    const t = body.title.trim();
+    if (t.length < 2 || t.length > 80) {
+      return Response.json(
+        { error: "название должно быть от 2 до 80 символов" },
+        { status: 400 },
+      );
+    }
+    update.title = t;
+  }
   if (Object.keys(update).length === 0) {
     return Response.json({ error: "нет полей для обновления" }, { status: 400 });
   }
 
   const sb = getSupabase();
-  const { error } = await sb.from("projects").update(update).eq("id", id).eq("tg_id", tgId);
+  const { data: updated, error } = await sb
+    .from("projects")
+    .update(update)
+    .eq("id", id)
+    .eq("tg_id", tgId)
+    .select()
+    .single();
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (!updated) return Response.json({ error: "not found" }, { status: 404 });
+  return Response.json({ ok: true, project: updated });
+}
+
+// DELETE /api/projects/:id — удаление проекта.
+// Owner-check через tg_id; cascade на дочерние таблицы должен быть в схеме.
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const v = verifyInitData(req.headers.get("x-telegram-init-data"));
+  if (!v.ok || !v.user) return Response.json({ error: v.error ?? "unauthorized" }, { status: 401 });
+  const tgId = v.user.id;
+  const { id } = await ctx.params;
+
+  const sb = getSupabase();
+  const { data: existing } = await sb
+    .from("projects")
+    .select("id")
+    .eq("id", id)
+    .eq("tg_id", tgId)
+    .maybeSingle();
+  if (!existing) return Response.json({ error: "not found" }, { status: 404 });
+
+  const { error } = await sb.from("projects").delete().eq("id", id).eq("tg_id", tgId);
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });
 }
