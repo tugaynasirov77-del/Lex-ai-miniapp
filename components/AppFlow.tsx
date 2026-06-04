@@ -77,7 +77,7 @@ export default function AppFlow() {
         top: 0,
         left: 0,
         right: 0,
-        bottom: "calc(-1 * (env(safe-area-inset-bottom) + 78px))",
+        bottom: 0,
         overflow: "hidden",
       }}
     >
