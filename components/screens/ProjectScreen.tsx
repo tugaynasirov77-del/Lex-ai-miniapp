@@ -290,6 +290,8 @@ export default function ProjectScreen({ onBack }: Props) {
         }
       />
 
+      <FirstTimeTip />
+
       <QuickHub
         isIg={isIg}
         feedEmpty={feed?.length === 0}
@@ -335,13 +337,15 @@ export default function ProjectScreen({ onBack }: Props) {
         })}
       </div>
 
+      <TabHint tab={tab} />
+
       <div
         style={{
           flex: 1,
           minHeight: 0,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          marginTop: 14,
+          marginTop: 6,
         }}
       >
         {tab === "content" && (
@@ -543,6 +547,94 @@ function ContentTab({
       {feed!.map((it) => (
         <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
       ))}
+    </div>
+  );
+}
+
+const TIP_KEY = "lex.tip.project.v1";
+
+function FirstTimeTip() {
+  const [hidden, setHidden] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      setHidden(localStorage.getItem(TIP_KEY) === "1");
+    } catch {
+      setHidden(true);
+    }
+  }, []);
+
+  if (hidden !== false) return null;
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(TIP_KEY, "1");
+    } catch {
+      /* noop */
+    }
+    setHidden(true);
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        padding: 12,
+        borderRadius: 14,
+        background: "rgba(40,160,235,0.06)",
+        border: "1px solid rgba(40,160,235,0.25)",
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+      }}
+    >
+      <div style={{ fontSize: 18 }}>💡</div>
+      <div style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+        Это рабочее пространство проекта. Сверху — быстрые действия для старта.
+        В <b style={{ color: INK }}>Контенте</b> — история ваших постов и Reels.
+        В <b style={{ color: INK }}>Разведке</b> — конкуренты, анализ и план.
+        В <b style={{ color: INK }}>Настройках</b> — подключения и управление.
+      </div>
+      <button
+        onClick={dismiss}
+        style={{
+          appearance: "none",
+          background: "transparent",
+          border: "none",
+          color: MUTED,
+          fontSize: 18,
+          cursor: "pointer",
+          lineHeight: 1,
+          padding: 0,
+          fontFamily: "inherit",
+        }}
+        aria-label="Понятно"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function TabHint({ tab }: { tab: Tab }) {
+  const text =
+    tab === "content"
+      ? "История ваших постов, Reels и каруселей."
+      : tab === "scout"
+        ? "Конкуренты, анализ ниши и недельный план."
+        : "Подключения, тариф и управление проектом.";
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        color: MUTED,
+        textAlign: "center",
+        margin: "8px 0 2px",
+        letterSpacing: "0.01em",
+      }}
+    >
+      {text}
     </div>
   );
 }
@@ -758,48 +850,71 @@ function FeedCard({ item, onOpen }: { item: FeedItem; onOpen: () => void }) {
         background: CARD_BG,
         border: `1px solid ${CARD_BORDER}`,
         borderRadius: 14,
-        padding: 12,
+        padding: 14,
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
+        width: "100%",
       }}
     >
+      {/* Top row: type + date */}
       <div
         style={{
           display: "flex",
-          gap: 8,
           alignItems: "center",
-          marginBottom: 6,
-          fontSize: 11,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
+          marginBottom: 8,
         }}
       >
-        <span style={{ color: YELLOW, fontWeight: 700 }}>{kindLabel}</span>
-        <span style={{ color: MUTED }}>·</span>
-        <StatusBadge label={status.label} tone={status.tone} />
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: YELLOW,
+            fontWeight: 700,
+          }}
+        >
+          {kindLabel}
+        </span>
         <span style={{ marginLeft: "auto", color: MUTED, fontSize: 11 }}>
           {formatDate(item.createdAt)}
         </span>
       </div>
+
+      {/* Preview */}
       <div
         style={{
           fontSize: 13,
           lineHeight: 1.45,
-          color: "rgba(255,255,255,0.85)",
+          color: "rgba(255,255,255,0.9)",
           overflow: "hidden",
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
+          marginBottom: 10,
         }}
       >
         {item.preview || "(без текста)"}
+      </div>
+
+      {/* Bottom row: status pill + action hint */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <StatusPill label={status.label} tone={status.tone} />
+        <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED, fontWeight: 500 }}>
+          {status.action} →
+        </span>
       </div>
     </button>
   );
 }
 
-function StatusBadge({
+function StatusPill({
   label,
   tone,
 }: {
@@ -817,11 +932,29 @@ function StatusBadge({
   return (
     <span
       style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: 999,
+        border: `1px solid ${color}`,
+        background: `${color}1a`,
         color,
         fontWeight: 700,
         fontSize: 10,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
       }}
     >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: color,
+          display: "inline-block",
+        }}
+      />
       {label}
     </span>
   );
@@ -1946,28 +2079,31 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
 
 // --- helpers ---
 
-function humanStatus(s: string): { label: string; tone: "ok" | "warn" | "muted" | "live" } {
+function humanStatus(
+  s: string,
+): { label: string; tone: "ok" | "warn" | "muted" | "live"; action: string } {
   switch (s) {
     case "published":
-      return { label: "опубликовано", tone: "ok" };
+      return { label: "опубликовано", tone: "ok", action: "Посмотреть" };
     case "approved":
-      return { label: "запланировано", tone: "ok" };
+      return { label: "запланировано", tone: "ok", action: "Открыть" };
     case "ready":
     case "pending":
-      return { label: "черновик", tone: "live" };
+      return { label: "черновик", tone: "live", action: "Принять решение" };
     case "rejected":
+      return { label: "отклонено", tone: "warn", action: "Создать новый" };
     case "failed":
-      return { label: "отклонено", tone: "warn" };
+      return { label: "ошибка", tone: "warn", action: "Пересобрать" };
     case "done":
-      return { label: "готово", tone: "ok" };
+      return { label: "готово", tone: "ok", action: "Открыть" };
     case "awaiting_approval":
-      return { label: "нужны акценты", tone: "live" };
+      return { label: "нужны акценты", tone: "live", action: "Выбрать акценты" };
     case "rendering":
     case "claimed":
     case "generating":
-      return { label: "в работе", tone: "live" };
+      return { label: "в работе", tone: "live", action: "Смотреть прогресс" };
     default:
-      return { label: s || "—", tone: "muted" };
+      return { label: s || "—", tone: "muted", action: "Открыть" };
   }
 }
 
