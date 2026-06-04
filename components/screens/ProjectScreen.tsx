@@ -45,6 +45,7 @@ type FeedItem = {
   permalink?: string | null;
   reelJobId?: string | null;
   publishedAt?: string | null;
+  error?: string | null;
 };
 
 export default function ProjectScreen({ onBack }: Props) {
@@ -220,15 +221,19 @@ export default function ProjectScreen({ onBack }: Props) {
       if (!ig) return null;
       const items: FeedItem[] = [];
       for (const r of ig.reels) {
+        const jobErr = (r.job as any)?.error || null;
+        // job.status более актуален (rendering/failed/done), берём его в приоритете.
+        const effStatus = (r.job as any)?.status || r.status || "pending";
         items.push({
           id: r.id,
           kind: "reel",
           preview: r.body?.slice(0, 120) || "Reel",
-          status: r.status || "pending",
+          status: effStatus,
           createdAt: r.created_at,
           permalink: r.ig_permalink,
           reelJobId: r.job?.id || null,
           publishedAt: r.published_at,
+          error: jobErr,
         });
       }
       for (const c of ig.carousels) {
@@ -261,9 +266,15 @@ export default function ProjectScreen({ onBack }: Props) {
     hapticImpact("light");
     actions.resetContent();
 
-    // 1. FAILED — честный retry-путь: новый flow с нуля.
+    // 1. FAILED / REJECTED — честный retry-путь: новый flow с нуля.
     if (it.status === "failed" || it.status === "rejected") {
       actions.setFormat(it.kind === "reel" ? "reel" : it.kind);
+      // Сохраняем контекст для подсказки на новом экране.
+      actions.setScreenMeta("retryContext", {
+        kind: it.kind,
+        preview: it.preview || null,
+        error: it.error || null,
+      });
       actions.navigate(it.kind === "reel" ? "upload" : "choose-format");
       return;
     }
@@ -909,11 +920,28 @@ function FeedCard({ item, onOpen }: { item: FeedItem; onOpen: () => void }) {
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
-          marginBottom: 10,
+          marginBottom: 8,
         }}
       >
         {item.preview || "(без текста)"}
       </div>
+
+      {(item.status === "failed" || item.status === "rejected") && item.error && (
+        <div
+          style={{
+            fontSize: 11,
+            color: "#F39B40",
+            lineHeight: 1.4,
+            marginBottom: 8,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          ⚠ {humanizeError(item.error)}
+        </div>
+      )}
 
       {/* Bottom row: status pill + action hint */}
       <div
@@ -2097,6 +2125,30 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
 
 // --- helpers ---
 
+function humanizeError(raw: string): string {
+  const s = raw.toLowerCase();
+  if (s.includes("whisper") || s.includes("transcribe")) {
+    return "Не удалось расшифровать аудио. Попробуйте другой файл.";
+  }
+  if (s.includes("ffmpeg") || s.includes("render")) {
+    return "Не удалось собрать видео. Попробуйте загрузить заново.";
+  }
+  if (s.includes("download") || s.includes("source") || s.includes("storage")) {
+    return "Не удалось скачать видео. Попробуйте загрузить заново.";
+  }
+  if (s.includes("timeout")) {
+    return "Слишком долго. Попробуйте ещё раз.";
+  }
+  if (s.includes("audio")) {
+    return "В видео не нашли голос — нужна речь.";
+  }
+  if (s.includes("quota") || s.includes("limit")) {
+    return "Достигнут лимит — обновите тариф.";
+  }
+  // Длинные технические — сокращаем.
+  return raw.length > 80 ? "Что-то пошло не так. Попробуйте ещё раз." : raw;
+}
+
 function humanStatus(
   s: string,
 ): { label: string; tone: "ok" | "warn" | "muted" | "live"; action: string } {
@@ -2104,6 +2156,7 @@ function humanStatus(
     case "published":
       return { label: "опубликовано", tone: "ok", action: "Посмотреть" };
     case "approved":
+    case "scheduled":
       return { label: "запланировано", tone: "ok", action: "Открыть" };
     case "ready":
     case "pending":

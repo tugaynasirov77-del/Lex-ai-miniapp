@@ -29,7 +29,7 @@ const POLL_MAX = 5000;
 const POLL_HIDDEN = 15000;
 const POLL_ERROR = 4000;
 
-const TERMINAL_OK = new Set(["ready", "published"]);
+const TERMINAL_OK = new Set(["ready", "scheduled", "published"]);
 const TERMINAL_FAIL = new Set(["failed"]);
 
 function isTerminalStatus(s: string | undefined): boolean {

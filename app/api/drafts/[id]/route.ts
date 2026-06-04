@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { data: draft } = await sb
     .from("content_drafts")
     .select(
-      "id,project_id,content_type,status,body,caption,media_urls,decided_at,published_message_id,created_at,projects!inner(tg_id)",
+      "id,project_id,content_type,status,body,caption,media_urls,decided_at,scheduled_at,error,published_message_id,created_at,projects!inner(tg_id)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -38,16 +38,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // Для flow polling: pending→generating, ready→ready, approved→ready (юзер уже approve'нул),
   // published→published, rejected→failed.
   // Sync-генерация в POST /api/drafts кладёт status='pending', контент уже готов.
-  // Маппим pending → ready чтобы polling в Mini App сразу видел terminal-success.
+  // Маппим:
+  //   pending/ready → 'ready'  (черновик ждёт решения)
+  //   approved      → 'scheduled' (запланировано, ещё не опубликовано)
+  //   published     → 'published'
+  //   rejected      → 'failed'
   const rawStatus = String((draft as any).status || "");
   const dtoStatus =
     rawStatus === "rejected"
       ? "failed"
       : rawStatus === "published"
         ? "published"
-        : rawStatus === "approved" || rawStatus === "ready" || rawStatus === "pending"
-          ? "ready"
-          : "generating";
+        : rawStatus === "approved"
+          ? "scheduled"
+          : rawStatus === "ready" || rawStatus === "pending"
+            ? "ready"
+            : "generating";
 
   // Слайды карусели лежат в media_urls jsonb с полями из carouselWriter:
   // {index, title, body, ...}. Мап в DTO-формат {idx, text}.
@@ -71,7 +77,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       contentType === "carousel"
         ? (draft as any).caption || (draft as any).body || ""
         : undefined,
-    error: null,
+    scheduled_at: (draft as any).scheduled_at ?? null,
+    error: (draft as any).error ?? null,
     updated_at: (draft as any).decided_at || (draft as any).created_at,
   });
 }

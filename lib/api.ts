@@ -89,6 +89,7 @@ export type DraftStatus =
   | "generating"
   | "reviewing"
   | "ready"
+  | "scheduled"
   | "published"
   | "failed";
 
@@ -102,6 +103,7 @@ export type DraftDTO = {
   text?: string;
   slides?: Array<{ idx: number; text: string }>;
   caption?: string;
+  scheduled_at?: string | null;
   review_log?: unknown[];
   error?: string | null;
   updated_at: string;

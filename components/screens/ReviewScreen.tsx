@@ -322,15 +322,21 @@ export default function ReviewScreen({ onBack }: Props) {
   // Read-only режим для уже опубликованных text-форматов: approve/reject row
   // прячется, юзер видит контент в режиме просмотра.
   const draftStatus = !isReel ? draftPoll.data?.status : null;
+  const draftScheduledAt = !isReel
+    ? (draftPoll.data as any)?.scheduled_at ?? null
+    : null;
   const isPublished = draftStatus === "published";
+  const isScheduled = draftStatus === "scheduled";
 
   const title = isPublished
     ? "Опубликовано"
-    : isReel && !reelDone && !reelAwaiting && reelStatus !== "failed"
-      ? "Финальный монтаж готовится"
-      : reelAwaiting
-        ? "Нужны акценты"
-        : "Готово к публикации";
+    : isScheduled
+      ? "Запланировано"
+      : isReel && !reelDone && !reelAwaiting && reelStatus !== "failed"
+        ? "Финальный монтаж готовится"
+        : reelAwaiting
+          ? "Нужны акценты"
+          : "Готово к публикации";
 
   return (
     <ScreenWrap>
@@ -441,6 +447,23 @@ export default function ReviewScreen({ onBack }: Props) {
       ) : isPublished ? (
         <PublishedReadOnly
           onFinish={() => {
+            if (state.projectId) {
+              actions.resetContent();
+              actions.navigate("project");
+            } else {
+              actions.resetFlow();
+              actions.navigate("dashboard");
+            }
+          }}
+        />
+      ) : isScheduled ? (
+        <ScheduledView
+          scheduledAt={draftScheduledAt}
+          onCancel={handleReject}
+          cancelling={
+            actionState.kind === "submitting" && actionState.which === "reject"
+          }
+          onClose={() => {
             if (state.projectId) {
               actions.resetContent();
               actions.navigate("project");
@@ -889,6 +912,57 @@ function ReelActions({
         }}
       >
         ФИНАЛ ГОТОВИТСЯ…
+      </button>
+    </div>
+  );
+}
+
+function ScheduledView({
+  scheduledAt,
+  onCancel,
+  cancelling,
+  onClose,
+}: {
+  scheduledAt: string | null;
+  onCancel: () => void;
+  cancelling: boolean;
+  onClose: () => void;
+}) {
+  const when = formatSchedule(scheduledAt ?? undefined) || "скоро";
+  return (
+    <div style={{ marginBottom: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          background: "rgba(245,231,10,0.06)",
+          border: `1px solid ${YELLOW}`,
+          borderRadius: 14,
+          padding: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span style={{ fontSize: 18, color: YELLOW }}>🗓</span>
+        <div style={{ fontSize: 13, color: INK, lineHeight: 1.4 }}>
+          Опубликуем <b>{when}</b>. До этого можно отменить.
+        </div>
+      </div>
+      <button onClick={onClose} style={{ ...primaryBtnStyle, marginTop: 0 }}>
+        ЗАКРЫТЬ
+      </button>
+      <button
+        onClick={onCancel}
+        disabled={cancelling}
+        style={{
+          ...secondaryBtnStyle,
+          marginTop: 0,
+          width: "100%",
+          opacity: cancelling ? 0.6 : 1,
+          color: "#F4496A",
+          borderColor: "rgba(244,73,106,0.4)",
+        }}
+      >
+        {cancelling ? "ОТМЕНЯЕМ…" : "ОТМЕНИТЬ ПУБЛИКАЦИЮ"}
       </button>
     </div>
   );

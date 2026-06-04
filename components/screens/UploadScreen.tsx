@@ -209,6 +209,7 @@ export default function UploadScreen({ onUploaded, onBack: _onBack }: Props) {
         >
           MP4 или MOV, до 90 секунд, до 100 МБ.
         </p>
+        <RetryContextBanner state={state} />
         <IdeaContextBanner state={state} />
       </div>
 
@@ -492,6 +493,55 @@ function SuccessTick() {
       ✓
     </div>
   );
+}
+
+function RetryContextBanner({ state }: { state: ReturnType<typeof useFlow>["state"] }) {
+  const ctx = state.screenMeta.retryContext as
+    | { kind: string; preview: string | null; error: string | null }
+    | undefined;
+  if (!ctx || ctx.kind !== "reel") return null;
+  const hint = ctx.error
+    ? humanizeReelError(ctx.error)
+    : "Прошлая попытка не удалась. Попробуйте другой файл.";
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: 12,
+        borderRadius: 12,
+        background: "rgba(243,155,64,0.08)",
+        border: "1px solid rgba(243,155,64,0.35)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "#F39B40",
+          fontWeight: 700,
+          marginBottom: 4,
+        }}
+      >
+        ⚠ Попробуем ещё раз
+      </div>
+      <div style={{ fontSize: 12, color: INK, lineHeight: 1.4 }}>{hint}</div>
+    </div>
+  );
+}
+
+function humanizeReelError(raw: string): string {
+  const s = raw.toLowerCase();
+  if (s.includes("whisper") || s.includes("audio")) {
+    return "В прошлом видео не нашли чистый голос. Попробуйте файл с чёткой речью.";
+  }
+  if (s.includes("ffmpeg") || s.includes("render")) {
+    return "Не получилось собрать. Попробуйте файл попроще или другой формат.";
+  }
+  if (s.includes("timeout")) {
+    return "В прошлый раз слишком долго. Попробуйте файл поменьше.";
+  }
+  return "Прошлая попытка не удалась. Попробуйте другой файл.";
 }
 
 function IdeaContextBanner({ state }: { state: ReturnType<typeof useFlow>["state"] }) {
