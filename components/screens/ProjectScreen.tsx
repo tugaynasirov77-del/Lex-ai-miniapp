@@ -173,6 +173,41 @@ export default function ProjectScreen({ onBack }: Props) {
     actions.navigate(format === "reel" ? "upload" : "project-brief");
   };
 
+  // Маппинг "reel-tutorial"/"carousel-checklist"/etc → ContentFormat.
+  const mapIdeaFormat = (raw?: string): "post" | "carousel" | "reel" => {
+    const s = (raw || "").toLowerCase();
+    if (s.includes("reel") || s.includes("video")) return "reel";
+    if (s.includes("carousel") || s.includes("карус")) return "carousel";
+    return "post";
+  };
+
+  const pickIdea = (item: {
+    topic?: string;
+    format?: string;
+    hook?: string;
+  }) => {
+    const topic = (item.topic || "").trim();
+    if (!topic) {
+      // Идея без темы — fallback на обычный brief.
+      quickCreate("post");
+      return;
+    }
+    const fmt = mapIdeaFormat(item.format);
+    hapticImpact("medium");
+    actions.resetContent();
+    actions.setFormat(fmt);
+    // Прокидываем topic (+ hook склеиваем в подсказку через перенос).
+    const enrichedTopic = item.hook
+      ? `${topic}\n\nHook: ${item.hook.trim()}`
+      : topic;
+    actions.setBrief({
+      topic: enrichedTopic,
+      tone: "confident",
+      platform: isIg ? "instagram" : "telegram",
+    });
+    actions.navigate(fmt === "reel" ? "upload" : "project-brief");
+  };
+
   // unified feed для Content tab
   const feed: FeedItem[] | null = (() => {
     if (isIg) {
@@ -312,6 +347,7 @@ export default function ProjectScreen({ onBack }: Props) {
             onRefresh={refresh}
             onQuickCarousel={() => quickCreate("carousel")}
             onQuickPlan={() => quickCreate("weekly-plan")}
+            onPickIdea={pickIdea}
           />
         )}
         {tab === "settings" && (
@@ -649,6 +685,7 @@ function ScoutTab({
   onRefresh,
   onQuickCarousel,
   onQuickPlan,
+  onPickIdea,
 }: {
   projectId: string;
   isIg: boolean;
@@ -659,6 +696,7 @@ function ScoutTab({
   onRefresh: () => void;
   onQuickCarousel: () => void;
   onQuickPlan: () => void;
+  onPickIdea: (item: { topic?: string; format?: string; hook?: string }) => void;
 }) {
   const [analysisBusy, setAnalysisBusy] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
@@ -893,14 +931,24 @@ function ScoutTab({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {planItems.map((it, i) => (
-              <div
+              <button
                 key={i}
+                onClick={() => onPickIdea(it)}
                 style={{
+                  appearance: "none",
+                  textAlign: "left",
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${CARD_BORDER}`,
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                  color: "rgba(255,255,255,0.85)",
+                  fontFamily: "inherit",
+                  cursor: "pointer",
                   display: "flex",
+                  alignItems: "center",
                   gap: 8,
                   fontSize: 12,
                   lineHeight: 1.4,
-                  color: "rgba(255,255,255,0.85)",
                 }}
               >
                 <span
@@ -916,11 +964,22 @@ function ScoutTab({
                   {it.format || "пост"}
                 </span>
                 <span style={{ flex: 1 }}>{it.topic || "—"}</span>
-              </div>
+                <span style={{ color: MUTED, fontSize: 16, fontWeight: 700 }}>›</span>
+              </button>
             ))}
+            <p
+              style={{
+                margin: "4px 0 0",
+                fontSize: 11,
+                color: MUTED,
+                textAlign: "center",
+              }}
+            >
+              Тапните идею — соберём контент по ней
+            </p>
             {(plan.items?.length ?? 0) > planItems.length && (
-              <span style={{ fontSize: 11, color: MUTED }}>
-                +{(plan.items?.length ?? 0) - planItems.length} ещё
+              <span style={{ fontSize: 11, color: MUTED, textAlign: "center" }}>
+                +{(plan.items?.length ?? 0) - planItems.length} ещё в полном плане
               </span>
             )}
           </div>
