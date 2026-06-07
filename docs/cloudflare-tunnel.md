@@ -7,7 +7,7 @@
 | Hostname | `https://upload.lex-zavod.ru` |
 | Tunnel name | `lex-upload` |
 | Tunnel UUID | `30a9226f-e275-4fa9-9c8b-4999346530f3` |
-| VPS | `85.239.42.100` (Timeweb) |
+| VPS | `5.42.97.203` (Timeweb) |
 | Local target | `http://localhost:8080` (lex-upload service / upload_proxy.py) |
 | Provider | Cloudflare Free plan, зона `lex-zavod.ru` |
 | Vercel env | `UPLOAD_PROXY_URL=https://upload.lex-zavod.ru` |
@@ -58,19 +58,19 @@ WantedBy=multi-user.target
 
 ```bash
 # Статус
-ssh root@85.239.42.100 'systemctl is-active lex-tunnel'
+ssh root@5.42.97.203 'systemctl is-active lex-tunnel'
 
 # Логи
-ssh root@85.239.42.100 'journalctl -u lex-tunnel -n 50 --no-pager'
+ssh root@5.42.97.203 'journalctl -u lex-tunnel -n 50 --no-pager'
 
 # Рестарт
-ssh root@85.239.42.100 'systemctl restart lex-tunnel'
+ssh root@5.42.97.203 'systemctl restart lex-tunnel'
 
 # Список tunnels
-ssh root@85.239.42.100 'cloudflared tunnel list'
+ssh root@5.42.97.203 'cloudflared tunnel list'
 
 # Список DNS-маршрутов tunnel'а
-ssh root@85.239.42.100 'cloudflared tunnel route ip show; cloudflared tunnel info lex-upload'
+ssh root@5.42.97.203 'cloudflared tunnel route ip show; cloudflared tunnel info lex-upload'
 
 # Проверить публичный URL
 curl -sI https://upload.lex-zavod.ru/
@@ -87,22 +87,22 @@ curl -sI https://upload.lex-zavod.ru/
 
 ### Tunnel перестал отвечать (HTTP timeout)
 ```bash
-ssh root@85.239.42.100 'systemctl restart lex-tunnel; journalctl -u lex-tunnel -n 20'
+ssh root@5.42.97.203 'systemctl restart lex-tunnel; journalctl -u lex-tunnel -n 20'
 ```
 
 ### Credentials повреждены / удалены
 ```bash
-ssh root@85.239.42.100 'cloudflared tunnel login'           # повторно авторизоваться
+ssh root@5.42.97.203 'cloudflared tunnel login'           # повторно авторизоваться
 # при authorize выбрать зону lex-zavod.ru → cert.pem скачается
-ssh root@85.239.42.100 'cloudflared tunnel create lex-upload-v2'   # если старый ID потерян
+ssh root@5.42.97.203 'cloudflared tunnel create lex-upload-v2'   # если старый ID потерян
 # обновить /etc/cloudflared/config.yml с новым UUID + json-файлом
-ssh root@85.239.42.100 'cloudflared tunnel route dns lex-upload-v2 upload.lex-zavod.ru'
-ssh root@85.239.42.100 'systemctl restart lex-tunnel'
+ssh root@5.42.97.203 'cloudflared tunnel route dns lex-upload-v2 upload.lex-zavod.ru'
+ssh root@5.42.97.203 'systemctl restart lex-tunnel'
 ```
 
 ### Нужно удалить tunnel
 ```bash
-ssh root@85.239.42.100 'cloudflared tunnel delete lex-upload'
+ssh root@5.42.97.203 'cloudflared tunnel delete lex-upload'
 ```
 
 ## Health-check

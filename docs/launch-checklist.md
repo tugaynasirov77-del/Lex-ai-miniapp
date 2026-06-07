@@ -19,7 +19,7 @@
 - [ ] `WORKER_SECRET` — совпадает с `/etc/lex-reels.env` на VPS
 - [ ] `UPLOAD_PROXY_URL=https://upload.lex-zavod.ru`
 
-### VPS (`85.239.42.100`)
+### VPS (`5.42.97.203`)
 - [ ] `systemctl is-active lexagents lex-reels lex-upload lex-tunnel` → все 4 `active`
 - [ ] `df -h /` — свободно >5 ГБ
 - [ ] `free -m` — RAM не в свопе устойчиво
@@ -68,7 +68,7 @@
 5. **Запустить дымовой тест** на проде с личного аккаунта (полный IG+TG flow).
 6. **Открыть мониторинг-окна:**
    - Vercel Logs (live)
-   - `ssh root@85.239.42.100 'journalctl -fu lex-reels lex-upload lex-tunnel'`
+   - `ssh root@5.42.97.203 'journalctl -fu lex-reels lex-upload lex-tunnel'`
    - Supabase Logs + Storage usage
 7. **GO/NO-GO решение:**
    - ✅ GO: дымовой тест прошёл, все 4 systemd active, ошибок в логах нет за 10 мин.
@@ -103,7 +103,7 @@
 
 ### Upload-proxy недоступен (юзер не может загрузить видео)
 1. `curl https://upload.lex-zavod.ru/health` → если 5xx/timeout:
-2. `ssh root@85.239.42.100 'systemctl status lex-upload lex-tunnel'`
+2. `ssh root@5.42.97.203 'systemctl status lex-upload lex-tunnel'`
 3. Если `lex-upload` failed → `journalctl -u lex-upload -n 100` → `systemctl restart lex-upload`
 4. Если `lex-tunnel` failed → `systemctl restart lex-tunnel`, проверить `journalctl -u lex-tunnel -n 50` на `connection registered`
 5. Если оба ок но не работает — Cloudflare dashboard → Tunnels → status
@@ -193,7 +193,7 @@
 ---
 
 ## Контакты / доступы
-- VPS: `ssh root@85.239.42.100`
+- VPS: `ssh root@5.42.97.203`
 - Supabase: проект `oawpgchdoshuqjvafgvt`
 - Vercel: `tugaynasirov77-del`
 - Repo: https://github.com/tugaynasirov77-del/Lex-ai-miniapp
