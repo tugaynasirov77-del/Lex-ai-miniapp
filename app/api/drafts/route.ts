@@ -17,7 +17,7 @@ async function markFailed(draftId: string, reason: string) {
   await sb
     .from("content_drafts")
     .update({
-      status: "failed",
+      status: "rejected", // 'failed' нет в CHECK; используем 'rejected' для fail-state
       error: reason.slice(0, 500),
       updated_at: new Date().toISOString(),
     })
@@ -84,11 +84,10 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "ANTHROPIC_API_KEY missing" }, { status: 500 });
   }
 
-  // 1) Сразу создаём placeholder-row в status='generating'. Это гарантирует,
-  //    что у клиента будет draftId, даже если AI-генерация позже упадёт по
-  //    таймауту функции (Hobby = 10s). Polling всё увидит — либо переход в
-  //    'pending'/'ready', либо в 'failed' (через orphan-detector cron'а
-  //    publish-scheduled, который ловит застрявшие >3 мин).
+  // 1) Сразу создаём placeholder-row. В schema CHECK constraint
+  //    пропускает только pending|ready|approved|rejected|published|failed —
+  //    'generating' нет, поэтому используем status='pending' + пустой
+  //    body как маркер «в процессе». GET-маппер отличает по body.
   const { data: placeholder, error: insErr } = await sb
     .from("content_drafts")
     .insert({
@@ -97,7 +96,7 @@ export async function POST(req: NextRequest) {
       content_type: format,
       body: "",
       source: "manual",
-      status: "generating",
+      status: "pending",
     })
     .select("id")
     .single();

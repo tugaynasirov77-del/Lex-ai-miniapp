@@ -44,8 +44,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   //   published     → 'published'
   //   rejected      → 'failed'
   const rawStatus = String((draft as any).status || "");
-  const dtoStatus =
-    rawStatus === "rejected" || rawStatus === "failed"
+  const rawBody = String((draft as any).body || "");
+  // pending + пустой body = placeholder в процессе генерации.
+  // pending + заполненный body = реально готовый draft.
+  const isPlaceholder = rawStatus === "pending" && rawBody.trim().length === 0;
+  const dtoStatus = isPlaceholder
+    ? "generating"
+    : rawStatus === "rejected" || rawStatus === "failed"
       ? "failed"
       : rawStatus === "published"
         ? "published"

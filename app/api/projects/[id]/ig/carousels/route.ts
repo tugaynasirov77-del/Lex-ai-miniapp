@@ -79,9 +79,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return Response.json({ error: "topic too short (<8 chars)" }, { status: 400 });
   }
 
-  // 1) Сразу placeholder в 'generating' — клиент получает draft_id без
-  //    ожидания AI. Тяжёлая работа Алина+Аркадий+retry уезжает в after().
-  //    Зависание >3 мин ловит orphan-detector из cron'а publish-scheduled.
+  // 1) Placeholder с status='pending' + body='' (CHECK constraint
+  //    не разрешает 'generating'). Тяжёлая работа Алина+Аркадий+retry
+  //    в after(). Зависание >3 мин ловит orphan-detector.
   const { data: placeholder, error: insErr } = await sb
     .from("content_drafts")
     .insert({
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       plan_id: planId || null,
       plan_day: planDay || null,
       body: "",
-      status: "generating",
+      status: "pending",
       writer_prompt_version: ALINA_CAROUSEL_PROMPT_VERSION,
     })
     .select("id")
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await sb2
         .from("content_drafts")
         .update({
-          status: "failed",
+          status: "rejected", // 'failed' нет в CHECK
           error: reason.slice(0, 500),
           updated_at: new Date().toISOString(),
         })

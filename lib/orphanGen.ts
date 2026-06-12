@@ -25,20 +25,29 @@ export async function orphanGeneratingDrafts(): Promise<{
     Date.now() - ORPHAN_AGE_MINUTES * 60_000,
   ).toISOString();
 
+  // Placeholder = status='pending' AND body='' (CHECK не разрешает
+  // 'generating'). Дополнительно ловим прямые 'generating' на случай
+  // легаси-данных.
   const { data: stuck } = await sb
     .from("content_drafts")
-    .select("id")
-    .eq("status", "generating")
+    .select("id,status,body")
+    .in("status", ["pending", "generating"])
     .lt("updated_at", cutoffIso)
-    .limit(50);
+    .limit(100);
 
-  const ids = (stuck ?? []).map((r) => r.id as string);
+  const ids = (stuck ?? [])
+    .filter(
+      (r) =>
+        (r.status as string) === "generating" ||
+        String((r as { body?: string }).body || "").trim().length === 0,
+    )
+    .map((r) => (r as { id: string }).id);
   if (ids.length === 0) return { reclaimed: 0, ids: [] };
 
   await sb
     .from("content_drafts")
     .update({
-      status: "failed",
+      status: "rejected", // 'failed' нет в CHECK; 'rejected' маппится в DTO 'failed'
       error: `generation timeout (>${ORPHAN_AGE_MINUTES}m)`,
       updated_at: new Date().toISOString(),
     })
