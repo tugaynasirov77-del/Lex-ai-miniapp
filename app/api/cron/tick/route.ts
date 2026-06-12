@@ -47,33 +47,39 @@ export async function GET(req: Request) {
   if (!authOk(req)) return new Response("forbidden", { status: 403 });
 
   const secret = process.env.CRON_SECRET!;
+  // VERCEL_URL даёт per-deployment URL который может требовать
+  // дополнительную аутентификацию. Используем публичный prod URL.
   const base =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+    process.env.NEXT_PUBLIC_APP_URL || "https://lex-ai-miniapp.vercel.app";
 
-  // Fire-and-forget каждого cron'а. Используем POST? Нет — все наши
-  // crons экспортируют только GET. Передаём secret в query, так делает
-  // и UptimeRobot для прямого пинга.
-  const results = await Promise.allSettled(
-    PIPELINE.map(async (name) => {
-      try {
-        const res = await fetch(`${base}/api/cron/${name}?secret=${secret}`, {
-          method: "GET",
-          headers: { "x-cron-secret": secret },
-          cache: "no-store",
-        });
-        return { name, status: res.status, ok: res.ok };
-      } catch (e: any) {
-        return { name, error: String(e?.message || e) };
-      }
-    }),
-  );
+  // True fire-and-forget — НЕ ждём ответа cron'ов. Каждый cron получит
+  // свой собственный maxDuration в его serverless-контексте; orchestrator
+  // же возвращается мгновенно. Если бы мы ждали — превысили бы наш
+  // собственный 60s бюджет на сумме медленных cron'ов.
+  //
+  // Этот pattern работает на Vercel: fetch() с AbortController +
+  // короткий timeout заставляет request уйти "по сети", серверный
+  // обработчик стартует, и нам уже неважно что мы прервёмся клиентски.
+  const triggered: string[] = [];
+  for (const name of PIPELINE) {
+    const url = `${base}/api/cron/${name}?secret=${encodeURIComponent(secret)}`;
+    // .catch чтобы unhandled promise rejection не убил функцию
+    fetch(url, {
+      method: "GET",
+      headers: { "x-cron-secret": secret },
+      cache: "no-store",
+      // Прерываем клиентскую часть быстро — серверная продолжит
+      signal: AbortSignal.timeout(1500),
+    }).catch(() => {
+      /* ожидаемо: timeout прерывает наш fetch, но сервер уже работает */
+    });
+    triggered.push(name);
+  }
 
   return Response.json({
     ok: true,
-    triggered: PIPELINE.length,
-    results: results.map((r) => (r.status === "fulfilled" ? r.value : r.reason)),
+    triggered: triggered.length,
+    names: triggered,
+    base,
   });
 }
