@@ -55,10 +55,26 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const sb = getSupabase();
 
-  const { data: competitors } = await sb
-    .from("ig_competitors")
-    .select("id,username,profile_url,notes")
-    .eq("project_id", id);
+  // Retry SELECT 3 раза с паузой 500мс — Supabase replica иногда
+  // не успевает закоммитить INSERT'ы из AddCompetitorsScreen к моменту,
+  // когда auto-start дёргает analyze. Без этого получаем ложный 400.
+  let competitors: Array<{
+    id: string;
+    username: string;
+    profile_url?: string;
+    notes?: string;
+  }> | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data } = await sb
+      .from("ig_competitors")
+      .select("id,username,profile_url,notes")
+      .eq("project_id", id);
+    if (data && data.length > 0) {
+      competitors = data;
+      break;
+    }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 500));
+  }
   if (!competitors || competitors.length === 0) {
     return Response.json(
       { error: "no competitors added (POST /competitors first)" },

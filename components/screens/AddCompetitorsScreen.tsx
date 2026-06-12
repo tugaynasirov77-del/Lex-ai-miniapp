@@ -133,6 +133,10 @@ export default function AddCompetitorsScreen({ onBack: _onBack }: Props) {
       hapticNotify("success");
       // Очищаем onboarding-метку. Идём в проект.
       actions.setScreenMeta("onboardingPlatform", undefined);
+      // Даём Supabase replica зафиксировать INSERT'ы конкурентов перед
+      // тем как Анна полезет их SELECT'ить. Без этого встречается race:
+      // analyze видит пустую таблицу → 400 "no competitors added".
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       // Ставим маркер для useAutoStartAgents в ProjectScreen — он
       // подхватит и параллельно запустит analyze + plan.
       markAutoStart(state.projectId);

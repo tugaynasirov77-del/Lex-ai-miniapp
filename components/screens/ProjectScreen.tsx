@@ -1026,10 +1026,21 @@ function AutoStartBanner({
               fontSize: 12,
               color: "#F39B40",
               lineHeight: 1.4,
-              marginBottom: 8,
+              marginBottom: 4,
             }}
           >
             Не дозвонились до агентов. Проверьте интернет и попробуйте снова.
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: MUTED,
+              lineHeight: 1.4,
+              marginBottom: 8,
+              wordBreak: "break-word",
+            }}
+          >
+            {error}
           </div>
           <button
             onClick={onRetry}
