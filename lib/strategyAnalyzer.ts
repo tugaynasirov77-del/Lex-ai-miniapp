@@ -6,7 +6,8 @@ import { buildAgentSystem } from "./agents";
 import { sanitizeForAnthropic } from "./sanitize";
 
 // Strategy Analyzer = Николай (аналитик из команды 7 агентов)
-const ANALYZER_MODEL = "claude-sonnet-4-6";
+// Haiku для Hobby. На Vercel Pro вернуть Sonnet.
+const ANALYZER_MODEL = "claude-haiku-4-5-20251001";
 
 const ANALYZER_TASK = `ЗАДАЧА: проанализировать корпус постов топ-5 каналов одной ниши с количеством просмотров и найти ВЫИГРЫШНЫЕ паттерны — что общего у постов с большими просмотрами, что отличает их от обычных.
 

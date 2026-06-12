@@ -6,7 +6,9 @@ import { buildAgentSystem } from "./agents";
 import { sanitizeForAnthropic } from "./sanitize";
 
 // Strategist = Александр (стратег из команды 7 агентов)
-const STRATEGIST_MODEL = "claude-sonnet-4-6";
+// Haiku для Hobby (10s) — Sonnet не помещался; план на 7 дней Haiku
+// собирает за ~5s. На Vercel Pro вернуть Sonnet.
+const STRATEGIST_MODEL = "claude-haiku-4-5-20251001";
 
 const STRATEGIST_TASK = `ЗАДАЧА: составить недельный контент-план для Telegram-канала.
 

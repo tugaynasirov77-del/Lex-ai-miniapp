@@ -9,7 +9,11 @@ import { reviewDraft, ARKADIY_MODEL, type DraftJSON } from "./arkadiyEditor";
 
 // Writer = Алина (копирайтер)
 // Editor = Аркадий (критик-редактор): оценивает 1-10 + чистит. <7 → 1 retry к Алине.
-const WRITER_MODEL = "claude-sonnet-4-6";
+//
+// На Vercel Hobby (10s ceiling) Sonnet + Editor не помещается в writer-cron
+// (504 timeout, посты не пишутся). Haiku 4.5 ~3× быстрее, для коротких
+// TG-постов даёт приемлемое качество. На Vercel Pro (60s) — вернуть Sonnet.
+const WRITER_MODEL = "claude-haiku-4-5-20251001";
 const EDITOR_MODEL = ARKADIY_MODEL;
 
 const WRITER_TASK = `ЗАДАЧА: пост для Telegram-канала.
