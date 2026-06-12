@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { hapticSelection } from "../../lib/telegram";
+import { useFlow, useFlowActions } from "../../flow";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -24,6 +26,21 @@ type Props = {
 };
 
 export default function ChooseFormatScreen({ onPick, onBack: _onBack }: Props) {
+  const { state } = useFlow();
+  const actions = useFlowActions();
+
+  // Review-only режим: ручной выбор формата отключён. Если юзер сюда
+  // попал (старый deep-link, resume из localStorage от предыдущей версии)
+  // — мягкий редирект на проект (если есть) или на dashboard.
+  useEffect(() => {
+    if (state.projectId) {
+      actions.navigate("project");
+    } else {
+      actions.navigate("dashboard");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div
       style={{

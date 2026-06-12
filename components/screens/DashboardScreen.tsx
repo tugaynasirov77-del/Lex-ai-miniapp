@@ -121,7 +121,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
       {data && data.length > 0 && (
         <button onClick={goCreate} style={primaryBtn}>
-          + НОВЫЙ ПРОЕКТ
+          + ПОДКЛЮЧИТЬ КАНАЛ
         </button>
       )}
     </ScreenWrap>
@@ -298,14 +298,14 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
     >
       <div style={{ fontSize: 44 }}>🗂️</div>
       <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>
-        Создайте первый проект
+        Подключите первый канал
       </h2>
       <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 280, lineHeight: 1.45 }}>
-        Проект — это Telegram-канал или Instagram-аккаунт, который мы ведём:
-        пишем контент, следим за конкурентами, собираем недельный план.
+        За 2 шага: выберите платформу — подключите канал. Дальше агенты сами
+        соберут план и предложат посты.
       </p>
       <button onClick={onCreate} style={{ ...primaryBtn, marginTop: 10 }}>
-        СОЗДАТЬ ПРОЕКТ
+        НАЧАТЬ
       </button>
     </div>
   );

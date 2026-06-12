@@ -49,6 +49,26 @@ export function showBackButton(onClick: () => void): () => void {
   };
 }
 
+/**
+ * Открыть t.me/... ссылку. В Telegram WebApp используем нативный
+ * `openTelegramLink` (открывается внутри клиента, без выхода в браузер).
+ * Вне WebApp — fallback в `location.href`.
+ */
+export function openTelegramLink(url: string): void {
+  const w = tg();
+  if (w?.openTelegramLink) {
+    try {
+      w.openTelegramLink(url);
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  if (typeof window !== "undefined") {
+    window.location.href = url;
+  }
+}
+
 export function tgFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("x-telegram-init-data", getInitData());

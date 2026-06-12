@@ -280,7 +280,15 @@ export function getProjectIgAnalysis(
   return getJSON(`/api/projects/${projectId}/ig/analyze`);
 }
 
-export type IgPlanDTO = {
+/**
+ * Унифицированный план недели для IG и TG. Структура `items` совпадает:
+ * IG (igPlanner) и TG (strategist) пишут в одну таблицу `content_plans`
+ * с одинаковым набором полей у каждой идеи. format-значения отличаются:
+ *   IG: "post" | "carousel" | "reel"
+ *   TG: "text" | "poll" | "quiz"
+ * UI решает их к бейджу формата через mapIdeaFormat.
+ */
+export type PlanDTO = {
   id: string;
   week_start: string;
   items: Array<{
@@ -289,15 +297,26 @@ export type IgPlanDTO = {
     topic?: string;
     hook?: string;
     priority?: string;
+    /** TG-strategist дополнительно прокидывает type (insight|case|...) */
+    type?: string;
   }>;
   summary?: any;
   created_at: string;
 };
 
+/** Backward-compat alias. */
+export type IgPlanDTO = PlanDTO;
+
 export function getProjectIgPlan(
   projectId: string,
-): Promise<{ plan: IgPlanDTO | null }> {
+): Promise<{ plan: PlanDTO | null }> {
   return getJSON(`/api/projects/${projectId}/ig/plan`);
+}
+
+export function getProjectTgPlan(
+  projectId: string,
+): Promise<{ plan: PlanDTO | null }> {
+  return getJSON(`/api/projects/${projectId}/plan`);
 }
 
 // --- IG analyze / plan actions (для Scout actions) ---
@@ -312,6 +331,32 @@ export function runIgPlan(
   projectId: string,
 ): Promise<{ ok: true; plan?: IgPlanDTO; cost?: number }> {
   return postJSON(`/api/projects/${projectId}/ig/plan`, {});
+}
+
+// --- TG analyze / plan actions (auto-start после добавления конкурентов) ---
+
+export function runTgAnalysis(projectId: string): Promise<unknown> {
+  return postJSON(`/api/projects/${projectId}/niche-strategy`, {});
+}
+
+export function runTgPlan(projectId: string): Promise<unknown> {
+  return postJSON(`/api/projects/${projectId}/plan`, {});
+}
+
+// --- competitors (onboarding step 3a) ---
+
+export function addTgCompetitor(
+  projectId: string,
+  payload: { username: string },
+): Promise<unknown> {
+  return postJSON(`/api/projects/${projectId}/competitors`, payload);
+}
+
+export function addIgCompetitor(
+  projectId: string,
+  payload: { handle: string; notes?: string },
+): Promise<unknown> {
+  return postJSON(`/api/projects/${projectId}/ig/competitors`, payload);
 }
 
 // --- attach IG (минимальный inline-flow в Settings) ---

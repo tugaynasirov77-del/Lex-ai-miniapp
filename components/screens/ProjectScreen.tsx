@@ -8,12 +8,12 @@ import {
   getProjectDrafts,
   getProjectIgAnalysis,
   getProjectIgPlan,
-  attachInstagram,
-  attachChannel,
+  getProjectTgPlan,
   updateProject,
   deleteProject,
   runIgAnalysis,
   runIgPlan,
+  createDraft,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -23,6 +23,7 @@ import {
   type TgDraftRow,
 } from "../../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
+import { useAutoStartAgents } from "../../hooks/useAutoStartAgents";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -65,6 +66,14 @@ export default function ProjectScreen({ onBack }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  // Auto-start агентов после onboarding (флаг ставится в AddCompetitorsScreen).
+  // По завершении обоих вызовов перечитываем данные проекта.
+  const autoStart = useAutoStartAgents(
+    projectId,
+    project?.platform ?? null,
+    () => setRefreshTick((t) => t + 1),
+  );
+
   useEffect(() => {
     if (!projectId) return;
     let alive = true;
@@ -82,19 +91,29 @@ export default function ProjectScreen({ onBack }: Props) {
         const r = await getProject(projectId);
         if (!alive) return;
         setProject(r.project);
+        // Plan-fetch унифицирован: тот же state, разный endpoint по платформе.
+        const planFetch =
+          r.project.platform === "instagram"
+            ? getProjectIgPlan(projectId)
+            : getProjectTgPlan(projectId);
         if (r.project.platform === "instagram") {
           const [agg, an, pl] = await Promise.all([
             getProjectIg(projectId),
             getProjectIgAnalysis(projectId).catch(() => ({ analysis: null })),
-            getProjectIgPlan(projectId).catch(() => ({ plan: null })),
+            planFetch.catch(() => ({ plan: null })),
           ]);
           if (!alive) return;
           setIg(agg);
           setAnalysis(an.analysis);
           setPlan(pl.plan);
         } else {
-          const d = await getProjectDrafts(projectId);
-          if (alive) setTgDrafts(d.drafts || []);
+          const [d, pl] = await Promise.all([
+            getProjectDrafts(projectId),
+            planFetch.catch(() => ({ plan: null })),
+          ]);
+          if (!alive) return;
+          setTgDrafts(d.drafts || []);
+          setPlan(pl.plan);
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Не удалось загрузить");
@@ -166,12 +185,6 @@ export default function ProjectScreen({ onBack }: Props) {
       : null;
   const attached = !!handle;
 
-  const newContent = () => {
-    hapticImpact("light");
-    actions.resetContent();
-    actions.navigate("choose-format");
-  };
-
   const quickCreate = (
     format: "post" | "carousel" | "reel" | "weekly-plan",
   ) => {
@@ -221,6 +234,51 @@ export default function ProjectScreen({ onBack }: Props) {
       format: fmt,
     });
     actions.navigate(fmt === "reel" ? "upload" : "project-brief");
+  };
+
+  /**
+   * «Собрать» из идеи плана — без захода в Brief.
+   * Для post/carousel: createDraft с brief из идеи, навигация в generate.
+   * Для reel: брифа нет (видео нужно загрузить) → upload с pre-filled темой.
+   */
+  const assembleIdea = async (item: {
+    topic?: string;
+    format?: string;
+    hook?: string;
+  }) => {
+    const topic = (item.topic || "").trim();
+    if (!topic || !projectId) return;
+    const fmt = mapIdeaFormat(item.format);
+    hapticImpact("medium");
+    actions.resetContent();
+    actions.setFormat(fmt);
+    const enrichedTopic = item.hook
+      ? `${topic}\n\nHook: ${item.hook.trim()}`
+      : topic;
+    const brief = {
+      topic: enrichedTopic,
+      tone: "confident" as const,
+      platform: (isIg ? "instagram" : "telegram") as "instagram" | "telegram",
+    };
+    actions.setBrief(brief);
+
+    if (fmt === "reel") {
+      // Reel требует загрузку видео — Brief по нему всё равно не нужен,
+      // ведём сразу на upload (тема уже в state).
+      actions.navigate("upload");
+      return;
+    }
+
+    // post / carousel — сразу создаём draft и идём в generate.
+    try {
+      const r = await createDraft({ format: fmt, brief, projectId });
+      actions.setIds({ draftId: r.draftId });
+      actions.navigate("generate");
+    } catch (e) {
+      hapticNotify("error");
+      // Фолбэк — открываем brief, если что-то пошло не так с прямым созданием.
+      actions.navigate("project-brief");
+    }
   };
 
   // unified feed для Content tab
@@ -332,6 +390,16 @@ export default function ProjectScreen({ onBack }: Props) {
 
       <FirstTimeTip />
 
+      {autoStart.active && (
+        <AutoStartBanner
+          analysisRunning={autoStart.analysisRunning}
+          planRunning={autoStart.planRunning}
+          analysisDone={autoStart.analysisDone}
+          planDone={autoStart.planDone}
+          error={autoStart.error}
+        />
+      )}
+
       <QuickHub
         isIg={isIg}
         feedEmpty={feed?.length === 0}
@@ -394,10 +462,11 @@ export default function ProjectScreen({ onBack }: Props) {
             error={error}
             refreshing={refreshing}
             isIg={isIg}
+            plan={plan}
             onRefresh={refresh}
-            onNew={newContent}
             onOpen={openItem}
-            onQuick={quickCreate}
+            onAssemble={assembleIdea}
+            onAdjust={pickIdea}
           />
         )}
         {tab === "scout" && (
@@ -420,6 +489,11 @@ export default function ProjectScreen({ onBack }: Props) {
             isIg={isIg}
             handle={handle}
             attached={attached}
+            onContinueSetup={() => {
+              // Возврат в единый onboarding. projectId уже в стейте,
+              // CreateProjectScreen auto-resume прыгнет на шаг 2 (attach).
+              actions.navigate("create-project");
+            }}
             onProjectUpdated={(p) => {
               setProject(p);
               setRefreshTick((t) => t + 1);
@@ -432,11 +506,6 @@ export default function ProjectScreen({ onBack }: Props) {
         )}
       </div>
 
-      {tab === "content" && (
-        <button onClick={newContent} style={primaryBtn}>
-          + НОВЫЙ КОНТЕНТ
-        </button>
-      )}
     </ScreenWrap>
   );
 }
@@ -494,21 +563,26 @@ function ContentTab({
   feed,
   error,
   refreshing,
-  isIg,
+  isIg: _isIg,
+  plan,
   onRefresh,
-  onNew,
   onOpen,
-  onQuick,
+  onAssemble,
+  onAdjust,
 }: {
   feed: FeedItem[] | null;
   error: string | null;
   refreshing: boolean;
   isIg: boolean;
+  plan: IgPlanDTO | null;
   onRefresh: () => void;
-  onNew: () => void;
   onOpen: (it: FeedItem) => void;
-  onQuick: (f: QuickFormat) => void;
+  onAssemble: (item: { topic?: string; format?: string; hook?: string }) => void;
+  onAdjust: (item: { topic?: string; format?: string; hook?: string }) => void;
 }) {
+  const planItems = plan?.items ?? [];
+  const hasPlan = planItems.length > 0;
+
   if (feed === null && !error) return <SkeletonList />;
   if (feed === null && error) {
     return (
@@ -519,40 +593,60 @@ function ContentTab({
   }
   if (feed!.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          textAlign: "center",
-          gap: 14,
-          padding: "10px 8px",
-        }}
-      >
-        <div style={{ fontSize: 44 }}>📝</div>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
-          Здесь пока пусто
-        </h2>
-        <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 280, lineHeight: 1.45 }}>
-          Создайте первый пост, карусель, Reel или недельный план — команда
-          AI соберёт черновик за 30 секунд.
-        </p>
-        <QuickFormatRow isIg={isIg} onQuick={onQuick} />
-        <button onClick={onNew} style={{ ...ghostBtn, marginTop: 4 }}>
-          выбрать формат →
-        </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {hasPlan ? (
+          <PlanIdeas
+            items={planItems}
+            onAssemble={onAssemble}
+            onAdjust={onAdjust}
+          />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: 12,
+              padding: "16px 8px",
+            }}
+          >
+            <div style={{ fontSize: 36 }}>🗓</div>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+              План готовится
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: MUTED,
+                maxWidth: 280,
+                lineHeight: 1.45,
+              }}
+            >
+              Александр собирает идеи на неделю. Как только готово — здесь
+              появятся карточки с темами, нужно будет только одобрить.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <QuickFormatRow isIg={isIg} onQuick={onQuick} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {hasPlan && (
+        <PlanIdeas
+          items={planItems}
+          onAssemble={onAssemble}
+          onAdjust={onAdjust}
+        />
+      )}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 2px 4px",
+          padding: "8px 2px 4px",
         }}
       >
         <span
@@ -564,7 +658,8 @@ function ContentTab({
             fontWeight: 600,
           }}
         >
-          {feed!.length} {plural(feed!.length, "элемент", "элемента", "элементов")}
+          Готовое · {feed!.length}{" "}
+          {plural(feed!.length, "элемент", "элемента", "элементов")}
         </span>
         <button
           onClick={onRefresh}
@@ -587,6 +682,185 @@ function ContentTab({
       {feed!.map((it) => (
         <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
       ))}
+    </div>
+  );
+}
+
+// --- План: карточки идей с «Собрать» / «Корректировать» ---
+function PlanIdeas({
+  items,
+  onAssemble,
+  onAdjust,
+}: {
+  items: Array<{
+    topic?: string;
+    format?: string;
+    hook?: string;
+    cta?: string;
+    priority?: string;
+  }>;
+  onAssemble: (item: { topic?: string; format?: string; hook?: string }) => void;
+  onAdjust: (item: { topic?: string; format?: string; hook?: string }) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 2px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            color: YELLOW,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 800,
+          }}
+        >
+          План недели
+        </span>
+        <span style={{ fontSize: 11, color: MUTED }}>
+          · {items.length} идей · только одобрить
+        </span>
+      </div>
+      {items.map((it, idx) => (
+        <PlanIdeaCard
+          key={idx}
+          item={it}
+          onAssemble={() => onAssemble(it)}
+          onAdjust={() => onAdjust(it)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PlanIdeaCard({
+  item,
+  onAssemble,
+  onAdjust,
+}: {
+  item: { topic?: string; format?: string; hook?: string };
+  onAssemble: () => void;
+  onAdjust: () => void;
+}) {
+  const fmt = (item.format || "post").toLowerCase();
+  const fmtLabel = /reel|video/.test(fmt)
+    ? "Reel"
+    : /carousel|карус/.test(fmt)
+      ? "Карусель"
+      : "Пост";
+  const fmtColor = /reel|video/.test(fmt)
+    ? "#E1306C"
+    : /carousel|карус/.test(fmt)
+      ? "#28A0EB"
+      : YELLOW;
+
+  return (
+    <div
+      style={{
+        background: CARD_BG,
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: 14,
+        padding: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: fmtColor,
+            padding: "3px 8px",
+            borderRadius: 999,
+            border: `1px solid ${fmtColor}66`,
+            background: `${fmtColor}14`,
+          }}
+        >
+          {fmtLabel}
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.35,
+          marginBottom: item.hook ? 4 : 10,
+        }}
+      >
+        {item.topic || "Без темы"}
+      </div>
+      {item.hook && (
+        <div
+          style={{
+            fontSize: 12,
+            color: MUTED,
+            lineHeight: 1.4,
+            marginBottom: 10,
+          }}
+        >
+          Hook: {item.hook}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => {
+            hapticImpact("light");
+            onAssemble();
+          }}
+          style={{
+            appearance: "none",
+            flex: 1,
+            padding: "10px 12px",
+            border: "none",
+            borderRadius: 999,
+            background: YELLOW,
+            color: "#0A0608",
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+            boxShadow: `0 8px 20px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
+          }}
+        >
+          Собрать
+        </button>
+        <button
+          onClick={() => {
+            hapticSelection();
+            onAdjust();
+          }}
+          style={{
+            appearance: "none",
+            padding: "10px 14px",
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 999,
+            background: "transparent",
+            color: INK,
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Корректировать
+        </button>
+      </div>
     </div>
   );
 }
@@ -679,6 +953,109 @@ function TabHint({ tab }: { tab: Tab }) {
   );
 }
 
+// --- Auto-start agents progress banner (видим в обоих табах: Контент/Разведка) ---
+
+function AutoStartBanner({
+  analysisRunning,
+  planRunning,
+  analysisDone,
+  planDone,
+  error,
+}: {
+  analysisRunning: boolean;
+  planRunning: boolean;
+  analysisDone: boolean;
+  planDone: boolean;
+  error: string | null;
+}) {
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: 12,
+        borderRadius: 14,
+        background: "rgba(245,231,10,0.06)",
+        border: `1px solid rgba(245,231,10,0.3)`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: YELLOW,
+          fontWeight: 800,
+          marginBottom: 8,
+        }}
+      >
+        Агенты работают
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <AgentRow
+          icon="🔍"
+          name="Анна"
+          task="разбирает конкурентов"
+          running={analysisRunning}
+          done={analysisDone}
+        />
+        <AgentRow
+          icon="🗓"
+          name="Александр"
+          task="собирает план недели"
+          running={planRunning}
+          done={planDone}
+        />
+      </div>
+      {error && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 11,
+            color: "#F39B40",
+            lineHeight: 1.4,
+          }}
+        >
+          Часть агентов не дозвонилась — попробуйте позже из «Разведки».
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentRow({
+  icon,
+  name,
+  task,
+  running,
+  done,
+}: {
+  icon: string;
+  name: string;
+  task: string;
+  running: boolean;
+  done: boolean;
+}) {
+  const status = running ? "…" : done ? "✓" : "—";
+  const color = done ? "#5BD66B" : running ? YELLOW : MUTED;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      <span style={{ fontWeight: 700 }}>{name}</span>
+      <span style={{ color: MUTED }}>{task}</span>
+      <span
+        style={{
+          marginLeft: "auto",
+          color,
+          fontWeight: 800,
+          fontSize: 14,
+        }}
+      >
+        {status}
+      </span>
+    </div>
+  );
+}
+
 function QuickHub({
   isIg,
   feedEmpty,
@@ -708,7 +1085,10 @@ function QuickHub({
 
   const actions: Action[] = [];
 
-  // 1. Если есть свежий план — приоритетный shortcut «Собрать из плана».
+  // Review-only режим: юзер не выбирает формат руками.
+  // Если план есть — primary действие «Из плана» (топ-идея).
+  // Если нет — единственная подсказка «Разведка» (там добавить конкурентов /
+  // дождаться анализатора).
   if (hasPlan && topPlanIdea?.topic) {
     actions.push({
       key: "from-plan",
@@ -718,26 +1098,25 @@ function QuickHub({
       primary: true,
     });
   }
-
-  if (isIg) {
-    actions.push(
-      { key: "carousel", label: "Карусель", icon: "🖼", onTap: () => onCreate("carousel"), primary: !hasPlan },
-      { key: "reel", label: "Reel", icon: "🎬", onTap: () => onCreate("reel") },
-    );
-    if (!hasAnalysis) {
-      actions.push({ key: "scout", label: "Конкуренты", icon: "🔍", onTap: () => onOpenTab("scout") });
-    } else if (!hasPlan) {
-      actions.push({ key: "plan", label: "Собрать план", icon: "🗓", onTap: () => onCreate("weekly-plan") });
-    } else {
-      actions.push({ key: "scout", label: "Разведка", icon: "🔍", onTap: () => onOpenTab("scout") });
-    }
+  if (!hasAnalysis) {
+    actions.push({
+      key: "scout",
+      label: "Конкуренты",
+      icon: "🔍",
+      onTap: () => onOpenTab("scout"),
+      primary: !hasPlan,
+    });
   } else {
-    actions.push(
-      { key: "post", label: "Пост", icon: "✍️", onTap: () => onCreate("post"), primary: !hasPlan },
-      { key: "plan", label: "План недели", icon: "🗓", onTap: () => onCreate("weekly-plan") },
-      { key: "scout", label: "Разведка", icon: "🔍", onTap: () => onOpenTab("scout") },
-    );
+    actions.push({
+      key: "scout",
+      label: "Разведка",
+      icon: "🔍",
+      onTap: () => onOpenTab("scout"),
+    });
   }
+  // Anti-warning: onCreate ещё используется ScoutTab.onQuickCarousel/Plan.
+  void onCreate;
+  void isIg;
 
   // Когда лента пустая — делаем hub чуть заметнее.
   const emphasized = feedEmpty;
@@ -811,68 +1190,6 @@ function QuickHub({
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function QuickFormatRow({
-  isIg,
-  onQuick,
-}: {
-  isIg: boolean;
-  onQuick: (f: QuickFormat) => void;
-}) {
-  // TG-проект → только post + plan. IG-проект → carousel + reel + plan.
-  // Post оставляем во всех (универсален).
-  const items: { key: QuickFormat; label: string; icon: string }[] = isIg
-    ? [
-        { key: "carousel", label: "Карусель", icon: "🖼" },
-        { key: "reel", label: "Reel", icon: "🎬" },
-        { key: "post", label: "Пост", icon: "✍️" },
-        { key: "weekly-plan", label: "План", icon: "🗓" },
-      ]
-    : [
-        { key: "post", label: "Пост", icon: "✍️" },
-        { key: "weekly-plan", label: "План", icon: "🗓" },
-      ];
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
-        WebkitOverflowScrolling: "touch",
-        padding: "2px 0 6px",
-        marginBottom: 2,
-      }}
-    >
-      {items.map((it) => (
-        <button
-          key={it.key}
-          onClick={() => onQuick(it.key)}
-          style={{
-            appearance: "none",
-            flex: "0 0 auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "8px 12px",
-            borderRadius: 999,
-            border: `1px solid ${CARD_BORDER}`,
-            background: "rgba(255,255,255,0.04)",
-            color: INK,
-            fontFamily: "inherit",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <span style={{ fontSize: 14 }}>{it.icon}</span>
-          {it.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -1437,6 +1754,7 @@ function SettingsTab({
   isIg,
   handle,
   attached,
+  onContinueSetup,
   onProjectUpdated,
   onDeleted,
 }: {
@@ -1444,6 +1762,7 @@ function SettingsTab({
   isIg: boolean;
   handle: string | null;
   attached: boolean;
+  onContinueSetup: () => void;
   onProjectUpdated: (project: ProjectDTO) => void;
   onDeleted: () => void;
 }) {
@@ -1451,11 +1770,7 @@ function SettingsTab({
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Подключение */}
       {!attached ? (
-        isIg ? (
-          <IgAttachCard projectId={project.id} onAttached={onProjectUpdated} />
-        ) : (
-          <TgAttachCard projectId={project.id} onAttached={onProjectUpdated} />
-        )
+        <FinishSetupCard isIg={isIg} onContinue={onContinueSetup} />
       ) : (
         <Card>
           <div
@@ -1483,12 +1798,16 @@ function SettingsTab({
             </span>
           </div>
           <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-            Подключён {handle}. Можно публиковать.
+            {isIg ? (
+              <>
+                Привязан {handle}. Агенты используют его для разведки и
+                подсказок. <b style={{ color: INK }}>Публикация пока вручную</b>{" "}
+                — мы готовим карусели/Reels, вы публикуете с телефона.
+              </>
+            ) : (
+              <>Подключён {handle}. Можно публиковать.</>
+            )}
           </p>
-          <LegacyLink
-            href={`${LEGACY_BASE}/${project.id}`}
-            label="Управлять подключением →"
-          />
         </Card>
       )}
 
@@ -1509,61 +1828,21 @@ function SettingsTab({
   );
 }
 
-// --- TG attach (native) ---
+// --- Finish setup banner (единая точка возврата в onboarding) ---
 
-function TgAttachCard({
-  projectId,
-  onAttached,
+function FinishSetupCard({
+  isIg,
+  onContinue,
 }: {
-  projectId: string;
-  onAttached: (project: ProjectDTO) => void;
+  isIg: boolean;
+  onContinue: () => void;
 }) {
-  const [channel, setChannel] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<{ message: string; needAdmin?: boolean } | null>(null);
-
-  const submit = async () => {
-    const c = channel.trim();
-    if (!c) return;
-    setBusy(true);
-    setErr(null);
-    hapticImpact("light");
-    try {
-      const r = await attachChannel(projectId, { channel: c });
-      if (r && (r as any).project) {
-        hapticNotify("success");
-        onAttached((r as any).project as ProjectDTO);
-        return;
-      }
-      throw new ApiError(500, "Не получили данные канала.");
-    } catch (e) {
-      hapticNotify("error");
-      if (e instanceof ApiError) {
-        // backend возвращает message при bot_not_in_channel / bot_not_admin
-        const message = e.message || "Не получилось подключить.";
-        setErr({
-          message,
-          needAdmin: /админ|administrator|bot_not_in_channel|bot_not_admin/i.test(
-            message,
-          ),
-        });
-      } else {
-        setErr({ message: e instanceof Error ? e.message : "Не получилось." });
-      }
-      setBusy(false);
-    }
-  };
-
   return (
     <Card>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginBottom: 6,
-        }}
-      >
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Telegram-канал</div>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>
+          {isIg ? "Instagram-аккаунт" : "Telegram-канал"}
+        </div>
         <span
           style={{
             fontSize: 10,
@@ -1577,57 +1856,34 @@ function TgAttachCard({
           не подключён
         </span>
       </div>
-      <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
-        Введите @username канала или ссылку t.me/.... Перед подключением
-        добавьте @Lex_app_bot в канал АДМИНОМ — без этого публикация не
-        заработает.
+      <p style={{ margin: "0 0 12px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+        {isIg ? (
+          <>
+            Без аккаунта Анна не понимает вашу нишу — анализ и план получатся
+            обобщёнными. Подключение занимает минуту, это просто @username.{" "}
+            <b style={{ color: INK }}>Публикация в IG пока вручную</b> — авто
+            добавим позже.
+          </>
+        ) : (
+          <>
+            Без подключения агенты не смогут публиковать. Завершите подключение
+            — займёт минуту.
+          </>
+        )}
       </p>
-      <input
-        value={channel}
-        onChange={(e) => {
-          setChannel(e.target.value);
-          if (err) setErr(null);
-        }}
-        placeholder="@my_channel"
-        maxLength={80}
-        style={inputStyle}
-      />
-      {err && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: "8px 10px",
-            background: "rgba(243,155,64,0.08)",
-            border: `1px solid rgba(243,155,64,0.3)`,
-            borderRadius: 10,
-            fontSize: 12,
-            color: "#F39B40",
-            lineHeight: 1.4,
-          }}
-        >
-          {err.message}
-          {err.needAdmin && (
-            <div style={{ marginTop: 4, color: MUTED }}>
-              Сделайте бота админом канала и нажмите «ПРОВЕРИТЬ ЕЩЁ РАЗ».
-            </div>
-          )}
-        </div>
-      )}
       <button
-        onClick={submit}
-        disabled={busy || !channel.trim()}
+        onClick={() => {
+          hapticImpact("light");
+          onContinue();
+        }}
         style={{
           ...miniBtn,
-          marginTop: 10,
-          opacity: busy || !channel.trim() ? 0.5 : 1,
+          background: YELLOW,
+          color: "#0A0608",
         }}
       >
-        {busy ? "ПРОВЕРЯЕМ…" : err ? "ПРОВЕРИТЬ ЕЩЁ РАЗ" : "ПОДКЛЮЧИТЬ КАНАЛ"}
+        {isIg ? "ПОДКЛЮЧИТЬ INSTAGRAM →" : "ЗАВЕРШИТЬ ПОДКЛЮЧЕНИЕ →"}
       </button>
-      <LegacyLink
-        href={`${LEGACY_BASE}/${projectId}`}
-        label="Подключить вручную →"
-      />
     </Card>
   );
 }
@@ -1908,108 +2164,6 @@ function DeleteCard({
           {stage === "busy" ? "УДАЛЯЕМ…" : "УДАЛИТЬ"}
         </button>
       </div>
-    </Card>
-  );
-}
-
-function IgAttachCard({
-  projectId,
-  onAttached,
-}: {
-  projectId: string;
-  onAttached: (project: ProjectDTO) => void;
-}) {
-  const [username, setUsername] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const submit = async () => {
-    const u = username.trim().replace(/^@/, "");
-    if (!u) return;
-    setBusy(true);
-    setErr(null);
-    hapticImpact("light");
-    try {
-      const r = await attachInstagram(projectId, {
-        username: u,
-        account_id: accountId.trim() || undefined,
-      });
-      hapticNotify("success");
-      onAttached(r.project);
-    } catch (e) {
-      const msg =
-        e instanceof ApiError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Не получилось.";
-      hapticNotify("error");
-      setErr(msg);
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginBottom: 6,
-        }}
-      >
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Instagram-аккаунт</div>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "#F39B40",
-            marginLeft: "auto",
-          }}
-        >
-          не подключён
-        </span>
-      </div>
-      <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
-        Без подключения нельзя публиковать карусели и Reel. Введите @username
-        аккаунта. account_id — опционально (нужен для прямой публикации через
-        Graph API).
-      </p>
-      <input
-        value={username}
-        onChange={(e) => {
-          setUsername(e.target.value);
-          if (err) setErr(null);
-        }}
-        placeholder="@username"
-        maxLength={60}
-        style={inputStyle}
-      />
-      <input
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-        placeholder="IG account_id (можно позже)"
-        maxLength={32}
-        style={{ ...inputStyle, marginTop: 8 }}
-      />
-      {err && (
-        <p style={{ fontSize: 11, color: "#F39B40", margin: "8px 0 0" }}>{err}</p>
-      )}
-      <button
-        onClick={submit}
-        disabled={busy || !username.trim()}
-        style={{
-          ...miniBtn,
-          marginTop: 10,
-          opacity: busy || !username.trim() ? 0.5 : 1,
-        }}
-      >
-        {busy ? "ПОДКЛЮЧАЕМ…" : "ПОДКЛЮЧИТЬ"}
-      </button>
-      <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Подключить вручную →" />
     </Card>
   );
 }

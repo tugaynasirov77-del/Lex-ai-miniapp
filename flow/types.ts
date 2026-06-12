@@ -11,6 +11,7 @@ export type ScreenKey =
   | "home"
   | "dashboard"
   | "create-project"
+  | "add-competitors"
   | "project"
   | "choose-format"
   | "project-brief"

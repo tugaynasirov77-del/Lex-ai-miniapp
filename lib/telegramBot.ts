@@ -1,3 +1,24 @@
+/** Username бота LEX AI (без @). */
+export const LEX_BOT_USERNAME = "Lex_app_bot";
+
+/**
+ * Deep-link для добавления бота админом в канал.
+ * Telegram открывает chooser: юзер тапает канал → бот сразу становится
+ * админом с указанными правами. Никакого ручного захода в «Управление».
+ *
+ * Дефолтные права — минимум для нашего pipeline публикации:
+ *   post_messages   — публиковать
+ *   edit_messages   — править уже опубликованное
+ *   delete_messages — удалять неудачные публикации
+ */
+export function addBotToChannelLink(
+  botUsername: string = LEX_BOT_USERNAME,
+  rights: string[] = ["post_messages", "edit_messages", "delete_messages"],
+): string {
+  const r = rights.join("+");
+  return `https://t.me/${botUsername}?startchannel&admin=${r}`;
+}
+
 const TOKEN = () => process.env.TELEGRAM_BOT_TOKEN;
 const BASE = () => `https://api.telegram.org/bot${TOKEN()}`;
 
