@@ -57,6 +57,33 @@ export default function BillingPage() {
     load();
   }, [load]);
 
+  // Telegram BackButton → возврат назад к Mini App.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tg = (window as any).Telegram?.WebApp;
+    const bb = tg?.BackButton;
+    if (!bb) return;
+    const onBack = () => {
+      // Возвращаемся на предыдущую страницу истории, если она в нашем
+      // origin'е; иначе — на корень Mini App.
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = "/";
+      }
+    };
+    bb.onClick(onBack);
+    bb.show();
+    return () => {
+      try {
+        bb.offClick(onBack);
+        bb.hide();
+      } catch {
+        /* noop */
+      }
+    };
+  }, []);
+
   const upgrade = async (tier: "pro" | "business") => {
     setBusy(true);
     setError(null);

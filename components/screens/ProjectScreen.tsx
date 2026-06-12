@@ -1848,12 +1848,27 @@ function SettingsTab({
 
       <Card>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-          Тариф и квоты
+          Тариф и подписка
         </div>
-        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Free / Pro / Business — управление подпиской и лимитами. Скоро
-          переедет сюда.
+        <p style={{ margin: "0 0 10px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          Free / Pro / Business — лимиты на Reels, карусели, планы и анализы.
+          Оплата картой ₽ или Telegram Stars.
         </p>
+        <button
+          onClick={() => {
+            hapticImpact("light");
+            if (typeof window !== "undefined") {
+              window.location.href = "/billing";
+            }
+          }}
+          style={{
+            ...miniBtn,
+            background: YELLOW,
+            color: "#0A0608",
+          }}
+        >
+          ОТКРЫТЬ ПОДПИСКУ →
+        </button>
       </Card>
 
       <DeleteCard project={project} onDeleted={onDeleted} />
