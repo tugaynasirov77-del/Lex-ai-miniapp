@@ -91,6 +91,43 @@ export default function BillingScreen({ onBack: _onBack }: Props) {
   const upgrade = async (tier: "pro" | "business") => {
     setBusy(tier);
     setError(null);
+
+    // 1. Сначала пробуем ЮKassa (рубли через карту).
+    //    Если backend вернёт 503 — ЮKassa ещё не подключена, fallback на Stars.
+    try {
+      const r = await fetch("/api/billing/yookassa-checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-telegram-init-data": initData(),
+        },
+        body: JSON.stringify({ tier }),
+      });
+      const d = await r.json();
+
+      if (r.ok && d.confirmation_url) {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.openLink) {
+          tg.openLink(d.confirmation_url);
+        } else {
+          window.open(d.confirmation_url, "_blank");
+        }
+        setBusy(null);
+        return;
+      }
+
+      // 503 = ЮKassa не настроена → молча падаем на Stars.
+      // Иные ошибки тоже не показываем — пытаемся Stars.
+      if (r.status !== 503) {
+        // Логируем для дебага, но юзеру показываем «Stars».
+        console.warn("[billing] yookassa-checkout failed, fallback to Stars:", d);
+      }
+    } catch (e) {
+      // Сеть упала — даём шанс Stars.
+      console.warn("[billing] yookassa-checkout threw, fallback:", e);
+    }
+
+    // 2. Fallback: Telegram Stars (старый /api/billing/upgrade).
     try {
       const r = await fetch("/api/billing/upgrade", {
         method: "POST",
