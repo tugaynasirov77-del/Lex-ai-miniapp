@@ -5,6 +5,7 @@ type TierConfig = {
   tier: "free" | "pro" | "business";
   label: string;
   priceStars: number;
+  priceRub: number;
   reelsPerMonth: number;
   carouselsPerMonth: number;
   plansPerWeek: number;
@@ -156,7 +157,7 @@ export default function BillingPage() {
         </section>
 
         <p className="text-[10px] text-zinc-600 text-center">
-          Оплата через Telegram Stars (XTR). Подписка на 30 дней без автопродления.
+          Оплата картой ₽ (ЮKassa) или Telegram Stars. Подписка на 30 дней без автопродления.
         </p>
       </main>
     </div>
@@ -200,8 +201,16 @@ function TierCard({
       <div className="flex items-baseline justify-between mb-2">
         <h3 className="text-base font-semibold">{tier.label}</h3>
         <div className="text-right">
-          {tier.priceStars > 0 ? (
-            <span className="text-sm">⭐ {tier.priceStars} <span className="text-[10px] text-zinc-500">/ 30 дн</span></span>
+          {tier.priceRub > 0 ? (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-base font-semibold">
+                {tier.priceRub} ₽
+                <span className="text-[10px] text-zinc-500 font-normal"> / 30 дн</span>
+              </span>
+              <span className="text-[10px] text-zinc-500">
+                или ⭐ {tier.priceStars}
+              </span>
+            </div>
           ) : (
             <span className="text-xs text-zinc-500">бесплатно</span>
           )}
@@ -219,7 +228,7 @@ function TierCard({
           onClick={onUpgrade}
           className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium disabled:opacity-50"
         >
-          {busy ? "Открываю Telegram…" : `Оплатить ${tier.priceStars} ⭐`}
+          {busy ? "Открываю оплату…" : `Оплатить ${tier.priceRub} ₽`}
         </button>
       )}
     </div>

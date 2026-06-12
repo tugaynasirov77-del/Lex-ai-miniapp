@@ -8,7 +8,8 @@ export type Tier = "free" | "pro" | "business";
 export type TierConfig = {
   tier: Tier;
   label: string;
-  priceStars: number;          // 0 для free
+  priceStars: number;          // запасной способ оплаты (Telegram Stars)
+  priceRub: number;            // primary способ оплаты через ЮKassa, рубли
   reelsPerMonth: number;
   carouselsPerMonth: number;
   plansPerWeek: number;         // регенерация content_plan
@@ -23,6 +24,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     tier: "free",
     label: "Free",
     priceStars: 0,
+    priceRub: 0,
     reelsPerMonth: 3,
     carouselsPerMonth: 5,
     plansPerWeek: 1,
@@ -40,7 +42,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   pro: {
     tier: "pro",
     label: "Pro",
-    priceStars: 250,
+    priceStars: 350,           // Stars-эквивалент ≈ 690₽
+    priceRub: 690,
     reelsPerMonth: 30,
     carouselsPerMonth: 30,
     plansPerWeek: 4,
@@ -59,7 +62,8 @@ export const TIERS: Record<Tier, TierConfig> = {
   business: {
     tier: "business",
     label: "Business",
-    priceStars: 1000,
+    priceStars: 1000,          // Stars-эквивалент ≈ 1980₽
+    priceRub: 1980,
     reelsPerMonth: 100,
     carouselsPerMonth: 100,
     plansPerWeek: 999,
