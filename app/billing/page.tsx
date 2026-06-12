@@ -328,7 +328,8 @@ const ORIGINAL_PRICE: Record<string, number> = {
 
 const TIER_PITCH: Record<string, { line: string; pill?: string }> = {
   free: {
-    line: "Хватит только на пробу. Кончится за неделю активной работы.",
+    line: "Попробуйте, как работают агенты. Соберите первые посты и Reel — без оплаты.",
+    pill: "ПОПРОБОВАТЬ",
   },
   pro: {
     line: "Окупается с первого поста. Полный цикл от плана до публикации.",
@@ -442,12 +443,12 @@ function TierCard({
   const isHero = isPro;
 
   const cardBg = isFree
-    ? "rgba(255,255,255,0.02)"
+    ? CARD_BG
     : isHero
       ? "linear-gradient(180deg, rgba(245,231,10,0.12) 0%, rgba(245,231,10,0.04) 100%)"
       : CARD_BG;
   const cardBorder = isFree
-    ? "rgba(255,255,255,0.05)"
+    ? CARD_BORDER
     : isHero
       ? YELLOW
       : "rgba(245,231,10,0.25)";
@@ -455,7 +456,7 @@ function TierCard({
   const cardShadow = isHero
     ? `0 24px 56px ${YELLOW}22, 0 0 0 1px rgba(255,255,255,0.04) inset`
     : "none";
-  const cardOpacity = isFree ? 0.78 : 1;
+  const cardOpacity = 1;
 
   return (
     <div
@@ -530,7 +531,7 @@ function TierCard({
               fontSize: isHero ? 26 : 22,
               fontWeight: 800,
               letterSpacing: "-0.02em",
-              color: isFree ? MUTED : INK,
+              color: INK,
             }}
           >
             {tier.label}
@@ -613,12 +614,11 @@ function TierCard({
           style={{
             margin: "0 0 14px",
             fontSize: 12,
-            color: isFree ? WARN : MUTED,
+            color: MUTED,
             lineHeight: 1.5,
-            fontStyle: isFree ? "normal" : "italic",
+            fontStyle: "italic",
           }}
         >
-          {isFree && "⚠️ "}
           {pitch.line}
         </p>
       )}
@@ -640,7 +640,7 @@ function TierCard({
             key={i}
             style={{
               fontSize: 13,
-              color: isFree ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.85)",
+              color: "rgba(255,255,255,0.85)",
               lineHeight: 1.45,
               paddingLeft: 18,
               position: "relative",
@@ -651,15 +651,11 @@ function TierCard({
                 position: "absolute",
                 left: 0,
                 top: 1,
-                color: isFree
-                  ? "rgba(243,155,64,0.6)"
-                  : isHero
-                    ? YELLOW
-                    : OK,
+                color: isHero ? YELLOW : OK,
                 fontWeight: 800,
               }}
             >
-              {isFree ? "−" : "✓"}
+              ✓
             </span>
             {f}
           </li>
