@@ -290,13 +290,20 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
     <div
       style={{
         minHeight: "100vh",
-        background: "#0A0608",
+        position: "relative",
+        background:
+          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.45) 0%, rgba(178,30,60,0) 55%)," +
+          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.32) 0%, rgba(96,18,80,0) 60%)," +
+          "radial-gradient(80% 50% at 50% 0%, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0) 70%)," +
+          "#0A0608",
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           maxWidth: 540,
           margin: "0 auto",
           padding:
@@ -311,6 +318,27 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+// Скидочные «зачёркнутые» цены — маркетинговый якорь.
+// Скидка ≈ 30% от «полной» цены.
+const ORIGINAL_PRICE: Record<string, number> = {
+  pro: 990,
+  business: 2900,
+};
+
+const TIER_PITCH: Record<string, { line: string; pill?: string }> = {
+  free: {
+    line: "Хватит только на пробу. Кончится за неделю активной работы.",
+  },
+  pro: {
+    line: "Окупается с первого поста. Полный цикл от плана до публикации.",
+    pill: "ХИТ · −30%",
+  },
+  business: {
+    line: "Для агентств и команд: ведём 10 проектов параллельно.",
+    pill: "−32%",
+  },
+};
 
 function Card({
   children,
@@ -403,17 +431,50 @@ function TierCard({
   anyBusy: boolean;
 }) {
   const isFree = tier.priceRub === 0;
+  const isPro = tier.tier === "pro";
+  const pitch = TIER_PITCH[tier.tier];
+  const originalPrice = ORIGINAL_PRICE[tier.tier];
+  const savings = originalPrice ? originalPrice - tier.priceRub : 0;
+
+  // Free — приглушённый, дискомфортный вид. Чтобы юзер чувствовал что «мало».
+  // Pro — яркий hero с glow и большим бейджем скидки. Best-deal.
+  // Business — стандартный premium.
+  const isHero = isPro;
+
+  const cardBg = isFree
+    ? "rgba(255,255,255,0.02)"
+    : isHero
+      ? "linear-gradient(180deg, rgba(245,231,10,0.12) 0%, rgba(245,231,10,0.04) 100%)"
+      : CARD_BG;
+  const cardBorder = isFree
+    ? "rgba(255,255,255,0.05)"
+    : isHero
+      ? YELLOW
+      : "rgba(245,231,10,0.25)";
+  const cardBorderWidth = isHero ? 2 : 1.5;
+  const cardShadow = isHero
+    ? `0 24px 56px ${YELLOW}22, 0 0 0 1px rgba(255,255,255,0.04) inset`
+    : "none";
+  const cardOpacity = isFree ? 0.78 : 1;
+
   return (
     <div
       style={{
-        background: current ? "rgba(245,231,10,0.06)" : CARD_BG,
-        border: `1.5px solid ${current ? YELLOW : CARD_BORDER}`,
+        background: cardBg,
+        border: `${cardBorderWidth}px solid ${cardBorder}`,
         borderRadius: 18,
-        padding: 18,
+        padding: isHero ? 20 : 18,
         position: "relative",
+        boxShadow: cardShadow,
+        opacity: cardOpacity,
+        // Pro чуть приподнят
+        transform: isHero ? "scale(1.02)" : "none",
+        marginTop: isHero ? 6 : 0,
+        marginBottom: isHero ? 6 : 0,
       }}
     >
-      {current && (
+      {/* Pill сверху: либо «ваш тариф», либо marketing pill */}
+      {current ? (
         <span
           style={{
             position: "absolute",
@@ -431,38 +492,77 @@ function TierCard({
         >
           Ваш тариф
         </span>
-      )}
+      ) : pitch?.pill ? (
+        <span
+          style={{
+            position: "absolute",
+            top: -10,
+            left: 16,
+            fontSize: 10,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 800,
+            color: "#0A0608",
+            background: YELLOW,
+            padding: "5px 12px",
+            borderRadius: 999,
+            boxShadow: `0 8px 20px ${YELLOW}44`,
+          }}
+        >
+          {pitch.pill}
+        </span>
+      ) : null}
 
+      {/* Header: имя + цена */}
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 12,
-          marginBottom: 14,
+          marginBottom: 10,
         }}
       >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 22,
-            fontWeight: 800,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {tier.label}
-        </h3>
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: isHero ? 26 : 22,
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              color: isFree ? MUTED : INK,
+            }}
+          >
+            {tier.label}
+          </h3>
+        </div>
         <div style={{ textAlign: "right" }}>
           {isFree ? (
-            <span style={{ fontSize: 13, color: MUTED }}>бесплатно</span>
+            <span style={{ fontSize: 13, color: MUTED, fontWeight: 600 }}>
+              0 ₽
+            </span>
           ) : (
             <>
+              {originalPrice && (
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: MUTED,
+                    textDecoration: "line-through",
+                    lineHeight: 1,
+                    marginBottom: 4,
+                  }}
+                >
+                  {originalPrice} ₽
+                </div>
+              )}
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: isHero ? 30 : 24,
                   fontWeight: 800,
-                  letterSpacing: "-0.01em",
+                  letterSpacing: "-0.02em",
                   lineHeight: 1,
+                  color: isHero ? YELLOW : INK,
                 }}
               >
                 {tier.priceRub} ₽
@@ -484,6 +584,46 @@ function TierCard({
         </div>
       </div>
 
+      {/* Скидка-плашка под ценой */}
+      {savings > 0 && (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            color: isHero ? "#0A0608" : YELLOW,
+            background: isHero ? YELLOW : "rgba(245,231,10,0.12)",
+            padding: "5px 10px",
+            borderRadius: 999,
+            marginBottom: 12,
+            border: isHero ? "none" : `1px solid rgba(245,231,10,0.3)`,
+          }}
+        >
+          Экономия {savings} ₽/мес
+        </div>
+      )}
+
+      {/* Pitch-строчка */}
+      {pitch?.line && (
+        <p
+          style={{
+            margin: "0 0 14px",
+            fontSize: 12,
+            color: isFree ? WARN : MUTED,
+            lineHeight: 1.5,
+            fontStyle: isFree ? "normal" : "italic",
+          }}
+        >
+          {isFree && "⚠️ "}
+          {pitch.line}
+        </p>
+      )}
+
+      {/* Features list */}
       <ul
         style={{
           margin: 0,
@@ -491,8 +631,8 @@ function TierCard({
           listStyle: "none",
           display: "flex",
           flexDirection: "column",
-          gap: 6,
-          marginBottom: canUpgrade || current ? 14 : 0,
+          gap: 7,
+          marginBottom: canUpgrade || current ? 16 : 0,
         }}
       >
         {tier.features.map((f, i) => (
@@ -500,9 +640,9 @@ function TierCard({
             key={i}
             style={{
               fontSize: 13,
-              color: "rgba(255,255,255,0.78)",
+              color: isFree ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.85)",
               lineHeight: 1.45,
-              paddingLeft: 16,
+              paddingLeft: 18,
               position: "relative",
             }}
           >
@@ -511,11 +651,15 @@ function TierCard({
                 position: "absolute",
                 left: 0,
                 top: 1,
-                color: current ? YELLOW : MUTED,
+                color: isFree
+                  ? "rgba(243,155,64,0.6)"
+                  : isHero
+                    ? YELLOW
+                    : OK,
                 fontWeight: 800,
               }}
             >
-              ·
+              {isFree ? "−" : "✓"}
             </span>
             {f}
           </li>
@@ -549,17 +693,23 @@ function TierCard({
             background: YELLOW,
             color: "#0A0608",
             fontFamily: "inherit",
-            fontSize: 14,
+            fontSize: isHero ? 15 : 14,
             fontWeight: 800,
             letterSpacing: "0.05em",
             textTransform: "uppercase",
-            padding: "14px 0",
+            padding: isHero ? "16px 0" : "14px 0",
             cursor: anyBusy ? "not-allowed" : "pointer",
             opacity: anyBusy && !busy ? 0.4 : 1,
-            boxShadow: `0 12px 28px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
+            boxShadow: isHero
+              ? `0 18px 36px ${YELLOW}55, 0 0 0 1px rgba(255,255,255,0.16) inset`
+              : `0 12px 28px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
           }}
         >
-          {busy ? "Открываем оплату…" : `Оплатить ${tier.priceRub} ₽`}
+          {busy
+            ? "Открываем оплату…"
+            : isHero
+              ? `Забрать ${tier.label} за ${tier.priceRub} ₽`
+              : `Оплатить ${tier.priceRub} ₽`}
         </button>
       )}
     </div>
