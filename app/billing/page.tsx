@@ -28,6 +28,15 @@ type BillingState = {
   available_tiers: TierConfig[];
 };
 
+// --- design tokens (в одну линейку с остальным Mini App) ---
+const YELLOW = "#F5E70A";
+const INK = "#FFFFFF";
+const MUTED = "rgba(255,255,255,0.58)";
+const WARN = "#F39B40";
+const OK = "#5BD66B";
+const CARD_BG = "rgba(255,255,255,0.04)";
+const CARD_BORDER = "rgba(255,255,255,0.08)";
+
 function initData(): string {
   if (typeof window === "undefined") return "";
   return (window as any).Telegram?.WebApp?.initData || "";
@@ -35,16 +44,22 @@ function initData(): string {
 
 export default function BillingPage() {
   const [state, setState] = useState<BillingState | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<null | "pro" | "business">(null);
   const [error, setError] = useState<string | null>(null);
 
-  const projectId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("project_id") : null;
+  const projectId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("project_id")
+      : null;
 
   const load = useCallback(async () => {
     setError(null);
     try {
       const url = projectId ? `/api/billing?project_id=${projectId}` : "/api/billing";
-      const r = await fetch(url, { headers: { "x-telegram-init-data": initData() }, cache: "no-store" });
+      const r = await fetch(url, {
+        headers: { "x-telegram-init-data": initData() },
+        cache: "no-store",
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "fail");
       setState(d);
@@ -64,8 +79,6 @@ export default function BillingPage() {
     const bb = tg?.BackButton;
     if (!bb) return;
     const onBack = () => {
-      // Возвращаемся на предыдущую страницу истории, если она в нашем
-      // origin'е; иначе — на корень Mini App.
       if (window.history.length > 1) {
         window.history.back();
       } else {
@@ -85,12 +98,15 @@ export default function BillingPage() {
   }, []);
 
   const upgrade = async (tier: "pro" | "business") => {
-    setBusy(true);
+    setBusy(tier);
     setError(null);
     try {
       const r = await fetch("/api/billing/upgrade", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-telegram-init-data": initData() },
+        headers: {
+          "content-type": "application/json",
+          "x-telegram-init-data": initData(),
+        },
         body: JSON.stringify({ tier }),
       });
       const d = await r.json();
@@ -98,9 +114,8 @@ export default function BillingPage() {
 
       const tg = (window as any).Telegram?.WebApp;
       if (!tg?.openInvoice) {
-        // fallback — открываем ссылку напрямую
         window.open(d.invoice_url, "_blank");
-        setBusy(false);
+        setBusy(null);
         return;
       }
       tg.openInvoice(d.invoice_url, async (status: string) => {
@@ -108,7 +123,10 @@ export default function BillingPage() {
           try {
             await fetch("/api/billing/confirm", {
               method: "POST",
-              headers: { "content-type": "application/json", "x-telegram-init-data": initData() },
+              headers: {
+                "content-type": "application/json",
+                "x-telegram-init-data": initData(),
+              },
               body: JSON.stringify({ payload: d.payload }),
             });
             await load();
@@ -117,22 +135,22 @@ export default function BillingPage() {
           }
         } else if (status === "failed") {
           setError("Платёж не прошёл");
-        } else if (status === "cancelled") {
-          /* silent */
         }
-        setBusy(false);
+        setBusy(null);
       });
     } catch (e: any) {
       setError(e.message);
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   if (!state) {
     return (
-      <div className="min-h-screen bg-black p-4 text-white">
-        {error ? <div className="text-rose-300 text-sm">{error}</div> : <div className="text-zinc-500 text-sm">Загружаю…</div>}
-      </div>
+      <ScreenWrap>
+        <div style={{ color: MUTED, fontSize: 13, textAlign: "center" }}>
+          {error || "Загружаем…"}
+        </div>
+      </ScreenWrap>
     );
   }
 
@@ -141,69 +159,228 @@ export default function BillingPage() {
   const sub = state.subscription;
 
   return (
-    <div className="min-h-screen bg-black pb-24 text-white">
-      <header className="sticky top-0 z-10 border-b border-zinc-800 bg-black/95 px-4 py-3 backdrop-blur">
-        <h1 className="text-lg font-semibold">Подписка</h1>
-        <p className="text-xs text-zinc-400 mt-0.5">Текущий тариф: <b>{cur.label}</b></p>
-      </header>
-
-      <main className="px-4 py-3 space-y-4">
-        {error && (
-          <div className="rounded bg-rose-500/10 p-3 text-sm text-rose-300">{error}</div>
-        )}
-
-        {sub && sub.expires_at && (
-          <div className="rounded bg-zinc-900 p-3 text-xs">
-            <div>Статус: <b>{sub.status}</b></div>
-            <div>До: {new Date(sub.expires_at).toLocaleDateString("ru-RU")}</div>
-            {sub.amount_stars > 0 && <div>Оплачено: ⭐ {sub.amount_stars}</div>}
-          </div>
-        )}
-
-        {usage && (
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 space-y-2">
-            <h2 className="text-sm font-semibold mb-2">Использование</h2>
-            <UsageRow label="Reels (мес)" used={usage.reels} limit={cur.reelsPerMonth} />
-            <UsageRow label="Карусели (мес)" used={usage.carousels} limit={cur.carouselsPerMonth} />
-            <UsageRow label="Планы (нед)" used={usage.plans_this_week} limit={cur.plansPerWeek} />
-            <UsageRow label="Анализы (мес)" used={usage.analyses} limit={cur.analysesPerMonth} />
-          </section>
-        )}
-
-        <section className="space-y-3">
-          {state.available_tiers.map((t) => (
-            <TierCard
-              key={t.tier}
-              tier={t}
-              current={t.tier === state.tier}
-              canUpgrade={t.tier !== "free" && t.tier !== state.tier}
-              onUpgrade={() => upgrade(t.tier as "pro" | "business")}
-              busy={busy}
-            />
-          ))}
-        </section>
-
-        <p className="text-[10px] text-zinc-600 text-center">
-          Оплата картой ₽ (ЮKassa) или Telegram Stars. Подписка на 30 дней без автопродления.
+    <ScreenWrap>
+      {/* Header */}
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            color: MUTED,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+          }}
+        >
+          Подписка
+        </div>
+        <h1
+          style={{
+            margin: "10px 0 0",
+            fontSize: 30,
+            lineHeight: 1.02,
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            textTransform: "uppercase",
+          }}
+        >
+          Тариф
+          <br />и квоты
+        </h1>
+        <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          Текущий тариф: <b style={{ color: INK }}>{cur.label}</b>
+          {sub?.expires_at && (
+            <>
+              {" "}
+              · до {new Date(sub.expires_at).toLocaleDateString("ru-RU")}
+            </>
+          )}
         </p>
-      </main>
+      </div>
+
+      {error && (
+        <Card style={{ marginTop: 16, borderColor: "rgba(243,155,64,0.4)" }}>
+          <p style={{ margin: 0, fontSize: 13, color: WARN }}>{error}</p>
+        </Card>
+      )}
+
+      {/* Usage */}
+      {usage && (
+        <Card style={{ marginTop: 18 }}>
+          <div
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: MUTED,
+              fontWeight: 700,
+              marginBottom: 12,
+            }}
+          >
+            Использование в этом периоде
+          </div>
+          <UsageRow label="Reels" used={usage.reels} limit={cur.reelsPerMonth} />
+          <UsageRow
+            label="Карусели"
+            used={usage.carousels}
+            limit={cur.carouselsPerMonth}
+          />
+          <UsageRow
+            label="Планы"
+            used={usage.plans_this_week}
+            limit={cur.plansPerWeek}
+          />
+          <UsageRow
+            label="Анализы"
+            used={usage.analyses}
+            limit={cur.analysesPerMonth}
+          />
+        </Card>
+      )}
+
+      {/* Tiers */}
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: MUTED,
+          fontWeight: 700,
+          marginTop: 22,
+          marginBottom: 10,
+        }}
+      >
+        Тарифы
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {state.available_tiers.map((t) => (
+          <TierCard
+            key={t.tier}
+            tier={t}
+            current={t.tier === state.tier}
+            canUpgrade={t.tier !== "free" && t.tier !== state.tier}
+            onUpgrade={() => upgrade(t.tier as "pro" | "business")}
+            busy={busy === t.tier}
+            anyBusy={busy !== null}
+          />
+        ))}
+      </div>
+
+      <p
+        style={{
+          margin: "18px 4px 0",
+          fontSize: 11,
+          color: MUTED,
+          textAlign: "center",
+          lineHeight: 1.5,
+        }}
+      >
+        Оплата картой ₽ через ЮKassa или Telegram Stars. Подписка на 30 дней,
+        без автопродления.
+      </p>
+    </ScreenWrap>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pieces
+// ---------------------------------------------------------------------------
+
+function ScreenWrap({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0A0608",
+        color: INK,
+        fontFamily: "'Inter', system-ui, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 540,
+          margin: "0 auto",
+          padding:
+            "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
+            "max(calc(env(safe-area-inset-bottom) + 32px), 48px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
 
-function UsageRow({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-  const over = used >= limit;
+function Card({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-zinc-300">{label}</span>
-        <span className={over ? "text-rose-400" : "text-zinc-400"}>{used}/{limit >= 999 ? "∞" : limit}</span>
+    <div
+      style={{
+        background: CARD_BG,
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: 16,
+        padding: 16,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function UsageRow({
+  label,
+  used,
+  limit,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+}) {
+  const unlimited = limit >= 999;
+  const pct = unlimited ? 0 : limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  const over = !unlimited && used >= limit;
+  const barColor = over ? WARN : YELLOW;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 13,
+          marginBottom: 6,
+        }}
+      >
+        <span style={{ color: INK }}>{label}</span>
+        <span style={{ color: over ? WARN : MUTED, fontWeight: 600 }}>
+          {used}
+          <span style={{ color: MUTED }}>
+            {" "}
+            / {unlimited ? "∞" : limit}
+          </span>
+        </span>
       </div>
-      <div className="h-1 rounded bg-zinc-800 overflow-hidden">
+      <div
+        style={{
+          height: 4,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.06)",
+          overflow: "hidden",
+        }}
+      >
         <div
-          className={`h-full transition-all ${over ? "bg-rose-500" : "bg-emerald-500"}`}
-          style={{ width: `${pct}%` }}
+          style={{
+            height: "100%",
+            width: unlimited ? "100%" : `${pct}%`,
+            background: unlimited ? "rgba(245,231,10,0.3)" : barColor,
+            transition: "width 0.3s ease",
+          }}
         />
       </div>
     </div>
@@ -216,46 +393,173 @@ function TierCard({
   canUpgrade,
   onUpgrade,
   busy,
+  anyBusy,
 }: {
   tier: TierConfig;
   current: boolean;
   canUpgrade: boolean;
   onUpgrade: () => void;
   busy: boolean;
+  anyBusy: boolean;
 }) {
+  const isFree = tier.priceRub === 0;
   return (
-    <div className={`rounded-xl border p-4 ${current ? "border-emerald-500/40 bg-emerald-500/5" : "border-zinc-800 bg-zinc-900"}`}>
-      <div className="flex items-baseline justify-between mb-2">
-        <h3 className="text-base font-semibold">{tier.label}</h3>
-        <div className="text-right">
-          {tier.priceRub > 0 ? (
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="text-base font-semibold">
-                {tier.priceRub} ₽
-                <span className="text-[10px] text-zinc-500 font-normal"> / 30 дн</span>
-              </span>
-              <span className="text-[10px] text-zinc-500">
-                или ⭐ {tier.priceStars}
-              </span>
-            </div>
+    <div
+      style={{
+        background: current ? "rgba(245,231,10,0.06)" : CARD_BG,
+        border: `1.5px solid ${current ? YELLOW : CARD_BORDER}`,
+        borderRadius: 18,
+        padding: 18,
+        position: "relative",
+      }}
+    >
+      {current && (
+        <span
+          style={{
+            position: "absolute",
+            top: -10,
+            left: 16,
+            fontSize: 10,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 800,
+            color: "#0A0608",
+            background: YELLOW,
+            padding: "4px 10px",
+            borderRadius: 999,
+          }}
+        >
+          Ваш тариф
+        </span>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {tier.label}
+        </h3>
+        <div style={{ textAlign: "right" }}>
+          {isFree ? (
+            <span style={{ fontSize: 13, color: MUTED }}>бесплатно</span>
           ) : (
-            <span className="text-xs text-zinc-500">бесплатно</span>
+            <>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
+                }}
+              >
+                {tier.priceRub} ₽
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: MUTED,
+                  marginTop: 4,
+                  lineHeight: 1.4,
+                }}
+              >
+                / 30 дн
+                <br />
+                или ⭐ {tier.priceStars}
+              </div>
+            </>
           )}
         </div>
       </div>
-      <ul className="space-y-1 mb-3">
+
+      <ul
+        style={{
+          margin: 0,
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          marginBottom: canUpgrade || current ? 14 : 0,
+        }}
+      >
         {tier.features.map((f, i) => (
-          <li key={i} className="text-xs text-zinc-300">· {f}</li>
+          <li
+            key={i}
+            style={{
+              fontSize: 13,
+              color: "rgba(255,255,255,0.78)",
+              lineHeight: 1.45,
+              paddingLeft: 16,
+              position: "relative",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 1,
+                color: current ? YELLOW : MUTED,
+                fontWeight: 800,
+              }}
+            >
+              ·
+            </span>
+            {f}
+          </li>
         ))}
       </ul>
-      {current && <div className="text-xs text-emerald-400">✓ Текущий тариф</div>}
+
+      {current && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            color: OK,
+            fontWeight: 700,
+          }}
+        >
+          ✓ Активен
+        </div>
+      )}
+
       {canUpgrade && (
         <button
-          disabled={busy}
+          disabled={anyBusy}
           onClick={onUpgrade}
-          className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium disabled:opacity-50"
+          style={{
+            appearance: "none",
+            width: "100%",
+            border: "none",
+            borderRadius: 999,
+            background: YELLOW,
+            color: "#0A0608",
+            fontFamily: "inherit",
+            fontSize: 14,
+            fontWeight: 800,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            padding: "14px 0",
+            cursor: anyBusy ? "not-allowed" : "pointer",
+            opacity: anyBusy && !busy ? 0.4 : 1,
+            boxShadow: `0 12px 28px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
+          }}
         >
-          {busy ? "Открываю оплату…" : `Оплатить ${tier.priceRub} ₽`}
+          {busy ? "Открываем оплату…" : `Оплатить ${tier.priceRub} ₽`}
         </button>
       )}
     </div>
