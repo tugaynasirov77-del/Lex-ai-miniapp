@@ -62,6 +62,8 @@ export function useAutoStartAgents(
   projectId: string | null,
   platform: Platform | null,
   onComplete?: () => void,
+  /** Передай новый счётчик, чтобы forсировать перезапуск (для retry-кнопки). */
+  retryKey: number = 0,
 ): AutoStartState {
   const [state, setState] = useState<AutoStartState>(INITIAL);
   const startedRef = useRef(false);
@@ -131,7 +133,15 @@ export function useAutoStartAgents(
       if (onComplete) onComplete();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, platform]);
+  }, [projectId, platform, retryKey]);
+
+  // При retryKey change — обнуляем startedRef, чтобы useEffect отработал.
+  useEffect(() => {
+    if (retryKey > 0) {
+      startedRef.current = false;
+      setState(INITIAL);
+    }
+  }, [retryKey]);
 
   return state;
 }

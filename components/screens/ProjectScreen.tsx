@@ -23,7 +23,7 @@ import {
   type TgDraftRow,
 } from "../../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
-import { useAutoStartAgents } from "../../hooks/useAutoStartAgents";
+import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgents";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -34,7 +34,6 @@ const CARD_BORDER = "rgba(255,255,255,0.08)";
 type Props = { onBack: () => void };
 type Tab = "content" | "scout" | "settings";
 
-const LEGACY_BASE = "/projects";
 
 // --- унифицированная карточка ленты ---
 type FeedItem = {
@@ -68,11 +67,19 @@ export default function ProjectScreen({ onBack }: Props) {
 
   // Auto-start агентов после onboarding (флаг ставится в AddCompetitorsScreen).
   // По завершении обоих вызовов перечитываем данные проекта.
+  const [autoStartRetry, setAutoStartRetry] = useState(0);
   const autoStart = useAutoStartAgents(
     projectId,
     project?.platform ?? null,
     () => setRefreshTick((t) => t + 1),
+    autoStartRetry,
   );
+  const retryAutoStart = () => {
+    if (!projectId) return;
+    hapticImpact("light");
+    markAutoStart(projectId);
+    setAutoStartRetry((k) => k + 1);
+  };
 
   useEffect(() => {
     if (!projectId) return;
@@ -370,10 +377,8 @@ export default function ProjectScreen({ onBack }: Props) {
       actions.navigate("review");
       return;
     }
-    // reel без job id — fallback legacy.
-    if (typeof window !== "undefined") {
-      window.location.href = `${LEGACY_BASE}/${projectId}`;
-    }
+    // reel без job id — невалидное состояние, тихо игнорируем
+    // (никакого редиректа в legacy: единый flow остаётся в Mini App).
   };
 
   return (
@@ -390,13 +395,15 @@ export default function ProjectScreen({ onBack }: Props) {
 
       <FirstTimeTip />
 
-      {autoStart.active && (
+      {(autoStart.active ||
+        (autoStart.error && !(autoStart.analysisDone && autoStart.planDone))) && (
         <AutoStartBanner
           analysisRunning={autoStart.analysisRunning}
           planRunning={autoStart.planRunning}
           analysisDone={autoStart.analysisDone}
           planDone={autoStart.planDone}
           error={autoStart.error}
+          onRetry={retryAutoStart}
         />
       )}
 
@@ -454,6 +461,10 @@ export default function ProjectScreen({ onBack }: Props) {
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
           marginTop: 6,
+          // Запас под safe-area-bottom и iOS-клавиатуру, чтобы последняя
+          // карточка (DeleteCard в Settings) реально доскролливалась.
+          paddingBottom:
+            "max(calc(env(safe-area-inset-bottom) + 32px), 48px)",
         }}
       >
         {tab === "content" && (
@@ -961,12 +972,14 @@ function AutoStartBanner({
   analysisDone,
   planDone,
   error,
+  onRetry,
 }: {
   analysisRunning: boolean;
   planRunning: boolean;
   analysisDone: boolean;
   planDone: boolean;
   error: string | null;
+  onRetry: () => void;
 }) {
   return (
     <div
@@ -1007,15 +1020,36 @@ function AutoStartBanner({
         />
       </div>
       {error && (
-        <div
-          style={{
-            marginTop: 8,
-            fontSize: 11,
-            color: "#F39B40",
-            lineHeight: 1.4,
-          }}
-        >
-          Часть агентов не дозвонилась — попробуйте позже из «Разведки».
+        <div style={{ marginTop: 10 }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#F39B40",
+              lineHeight: 1.4,
+              marginBottom: 8,
+            }}
+          >
+            Не дозвонились до агентов. Проверьте интернет и попробуйте снова.
+          </div>
+          <button
+            onClick={onRetry}
+            style={{
+              appearance: "none",
+              border: "none",
+              borderRadius: 999,
+              background: YELLOW,
+              color: "#0A0608",
+              fontFamily: "inherit",
+              fontSize: 12,
+              fontWeight: 800,
+              padding: "8px 16px",
+              cursor: "pointer",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Попробовать снова
+          </button>
         </div>
       )}
     </div>
@@ -1417,9 +1451,9 @@ function ScoutTab({
           Разведка канала
         </div>
         <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Конкуренты, статистика канала и стратегия — пока в полной версии.
+          Здесь скоро появится статистика канала и подробная стратегия от
+          Михаила. Пока — добавьте конкурентов и дождитесь анализа Анны.
         </p>
-        <LegacyLink href={`${LEGACY_BASE}/${projectId}`} label="Открыть в полной версии →" />
       </Card>
     );
   }
@@ -1476,10 +1510,6 @@ function ScoutTab({
             )}
           </div>
         )}
-        <LegacyLink
-          href={`${LEGACY_BASE}/${projectId}`}
-          label={competitors.length === 0 ? "Добавить конкурентов →" : "Управлять →"}
-        />
       </Card>
 
       {/* Анализ Анны */}
@@ -1566,10 +1596,6 @@ function ScoutTab({
             Сначала добавьте конкурентов.
           </p>
         )}
-        <LegacyLink
-          href={`${LEGACY_BASE}/${projectId}`}
-          label="Полный отчёт →"
-        />
       </Card>
 
       {/* Недельный план */}
@@ -1688,10 +1714,6 @@ function ScoutTab({
             {actionErr}
           </p>
         )}
-        <LegacyLink
-          href={`${LEGACY_BASE}/${projectId}`}
-          label="Полный план →"
-        />
       </Card>
 
       {/* footer meta */}
@@ -1818,9 +1840,9 @@ function SettingsTab({
           Тариф и квоты
         </div>
         <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Free / Pro / Business — управление подпиской и лимитами.
+          Free / Pro / Business — управление подпиской и лимитами. Скоро
+          переедет сюда.
         </p>
-        <LegacyLink href="/billing" label="Открыть биллинг →" />
       </Card>
 
       <DeleteCard project={project} onDeleted={onDeleted} />
@@ -2204,26 +2226,6 @@ function SkeletonList() {
         />
       ))}
     </div>
-  );
-}
-
-function LegacyLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      target="_self"
-      rel="noreferrer"
-      style={{
-        display: "inline-block",
-        marginTop: 10,
-        color: YELLOW,
-        fontSize: 13,
-        fontWeight: 600,
-        textDecoration: "none",
-      }}
-    >
-      {label}
-    </a>
   );
 }
 
