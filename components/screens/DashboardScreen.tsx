@@ -37,6 +37,16 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
   const goCreate = () => {
     hapticImpact("light");
+    // Чистим состояние: иначе CreateProjectScreen примет тапнутый projectId
+    // существующего проекта за resume и прыгнет обратно в него.
+    actions.resetContent();
+    actions.setIds({
+      projectId: null,
+      draftId: null,
+      reelJobId: null,
+      weeklyPlanId: null,
+    });
+    actions.setScreenMeta("onboardingPlatform", undefined);
     actions.navigate("create-project");
   };
 

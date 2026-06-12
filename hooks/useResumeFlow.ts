@@ -62,7 +62,15 @@ export function useResumeFlow() {
       if (Object.keys(ids).length) actions.setIds(ids);
 
       // Навигация в самом конце — экран сразу видит весь подгруженный state.
+      // Восстанавливаем разумный history-стек: для всех «глубоких» экранов
+      // (project / create-project / add-competitors / любые рабочие)
+      // сначала вставляем dashboard, чтобы back-кнопка вела туда, а не на
+      // home. Без этого Telegram BackButton на ProjectScreen прыгает на
+      // home и юзер чувствует «back не работает».
       if (p.currentScreen && p.currentScreen !== "home") {
+        if (p.currentScreen !== "dashboard") {
+          actions.navigate("dashboard");
+        }
         actions.navigate(p.currentScreen);
       }
     } catch {
