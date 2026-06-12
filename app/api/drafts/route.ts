@@ -10,7 +10,11 @@ import { sanitizeForAnthropic } from "../../../lib/sanitize";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-const POST_WRITER_MODEL = "claude-sonnet-4-6";
+// На Vercel Hobby (10s ceiling) Sonnet почти не успевает дописать пост
+// в after() → юзер ждёт orphan-timeout. Haiku 4.5 примерно в 3× быстрее
+// и для коротких TG-постов даёт сопоставимое качество. На Vercel Pro
+// (60s) можно вернуть Sonnet.
+const POST_WRITER_MODEL = "claude-haiku-4-5";
 
 async function markFailed(draftId: string, reason: string) {
   const sb = getSupabase();

@@ -15,17 +15,40 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const sb = getSupabase();
 
-  const { data: draft } = await sb
+  const { data: draftRaw } = await sb
     .from("content_drafts")
     .select(
-      "id,project_id,content_type,status,body,caption,media_urls,decided_at,scheduled_at,error,published_message_id,created_at,projects!inner(tg_id)",
+      "id,project_id,content_type,status,body,caption,media_urls,decided_at,scheduled_at,error,published_message_id,created_at,updated_at,projects!inner(tg_id)",
     )
     .eq("id", id)
     .maybeSingle();
 
-  if (!draft) return Response.json({ error: "not found" }, { status: 404 });
-  if ((draft as any).projects.tg_id !== v.user.id) {
+  if (!draftRaw) return Response.json({ error: "not found" }, { status: 404 });
+  if ((draftRaw as any).projects.tg_id !== v.user.id) {
     return Response.json({ error: "not found" }, { status: 404 });
+  }
+
+  // Inline orphan-check: если placeholder (status='pending' + body='')
+  // висит >60 сек — Vercel after() явно убил функцию посреди работы.
+  // Перемечаем в rejected (DTO 'failed') прямо сейчас, чтобы polling
+  // получил terminal за следующий же тик (≤2 сек), а не ждал
+  // cron-цикла UptimeRobot (до 5 мин).
+  let draft = draftRaw as any;
+  const stalePlaceholder =
+    draft.status === "pending" &&
+    String(draft.body || "").trim().length === 0 &&
+    draft.updated_at &&
+    Date.now() - new Date(draft.updated_at).getTime() > 60_000;
+  if (stalePlaceholder) {
+    await sb
+      .from("content_drafts")
+      .update({
+        status: "rejected",
+        error: "generation timeout (>60s)",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    draft = { ...draft, status: "rejected", error: "generation timeout (>60s)" };
   }
 
   const contentType = (draft as any).content_type;
