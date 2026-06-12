@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   //   rejected      → 'failed'
   const rawStatus = String((draft as any).status || "");
   const dtoStatus =
-    rawStatus === "rejected"
+    rawStatus === "rejected" || rawStatus === "failed"
       ? "failed"
       : rawStatus === "published"
         ? "published"

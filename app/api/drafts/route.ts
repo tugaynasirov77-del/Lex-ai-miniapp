@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "../../../lib/supabase";
 import { verifyInitData } from "../../../lib/verifyTelegram";
@@ -11,6 +11,18 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const POST_WRITER_MODEL = "claude-sonnet-4-6";
+
+async function markFailed(draftId: string, reason: string) {
+  const sb = getSupabase();
+  await sb
+    .from("content_drafts")
+    .update({
+      status: "failed",
+      error: reason.slice(0, 500),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", draftId);
+}
 
 /**
  * POST /api/drafts
@@ -71,46 +83,63 @@ export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ error: "ANTHROPIC_API_KEY missing" }, { status: 500 });
   }
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  if (format === "carousel") {
-    try {
-      const { carousel } = await generateCarousel({
-        client,
-        topic,
-        projectId,
-        tgId: v.user.id,
-      });
-      if (!carousel) {
-        return Response.json({ error: "carousel writer returned invalid JSON" }, { status: 502 });
-      }
-      const { data: inserted, error } = await sb
-        .from("content_drafts")
-        .insert({
-          project_id: projectId,
-          platform,
-          content_type: "carousel",
-          body: carousel.caption || "",
-          caption: carousel.caption || "",
-          chosen_title: carousel.carousel_title || null,
-          media_urls: carousel.slides,
-          source: "manual",
-          status: "pending",
-        })
-        .select("id")
-        .single();
-      if (error || !inserted) {
-        return Response.json({ error: error?.message || "insert failed" }, { status: 500 });
-      }
-      return Response.json({ draftId: inserted.id, projectId });
-    } catch (e: any) {
-      return Response.json({ error: `carousel: ${e?.message || "fail"}` }, { status: 502 });
-    }
+  // 1) Сразу создаём placeholder-row в status='generating'. Это гарантирует,
+  //    что у клиента будет draftId, даже если AI-генерация позже упадёт по
+  //    таймауту функции (Hobby = 10s). Polling всё увидит — либо переход в
+  //    'pending'/'ready', либо в 'failed' (через orphan-detector cron'а
+  //    publish-scheduled, который ловит застрявшие >3 мин).
+  const { data: placeholder, error: insErr } = await sb
+    .from("content_drafts")
+    .insert({
+      project_id: projectId,
+      platform,
+      content_type: format,
+      body: "",
+      source: "manual",
+      status: "generating",
+    })
+    .select("id")
+    .single();
+  if (insErr || !placeholder) {
+    return Response.json({ error: insErr?.message || "insert failed" }, { status: 500 });
   }
+  const draftId = placeholder.id as string;
+  const tgId = v.user.id;
 
-  // post — простой одинарный writer-вызов под brief.topic.
-  try {
-    const task = `Напиши ОДИН Telegram-пост по теме.
+  // 2) Тяжёлая AI-работа — в after(). Ответ клиенту уходит немедленно, AI
+  //    продолжается до maxDuration. На Vercel Hobby это 10s — если не
+  //    успели, orphan-cron подберёт и пометит 'failed'.
+  after(async () => {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    try {
+      if (format === "carousel") {
+        const { carousel } = await generateCarousel({
+          client,
+          topic,
+          projectId,
+          tgId,
+        });
+        if (!carousel) {
+          await markFailed(draftId, "carousel writer returned invalid JSON");
+          return;
+        }
+        await sb
+          .from("content_drafts")
+          .update({
+            body: carousel.caption || "",
+            caption: carousel.caption || "",
+            chosen_title: carousel.carousel_title || null,
+            media_urls: carousel.slides,
+            status: "pending",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", draftId);
+        return;
+      }
+
+      // post
+      const task = `Напиши ОДИН Telegram-пост по теме.
 
 Тон: ${brief?.tone || "confident"}.
 Тема: ${topic}.
@@ -125,37 +154,33 @@ ${brief?.goal ? `Цель: ${brief.goal}.` : ""}
 - Никаких "сегодня", дат и конкретных цифр которых нет в данных.
 
 Выведи только текст поста, без префиксов.`;
-
-    const res = await client.messages.create({
-      model: POST_WRITER_MODEL,
-      max_tokens: 1200,
-      system: buildAgentSystem("alina", task),
-      messages: [{ role: "user", content: sanitizeForAnthropic(topic) }],
-    });
-    const text = res.content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text)
-      .join("")
-      .trim();
-    if (!text) return Response.json({ error: "writer returned empty" }, { status: 502 });
-
-    const { data: inserted, error } = await sb
-      .from("content_drafts")
-      .insert({
-        project_id: projectId,
-        platform,
-        content_type: "post",
-        body: text,
-        source: "manual",
-        status: "pending",
-      })
-      .select("id")
-      .single();
-    if (error || !inserted) {
-      return Response.json({ error: error?.message || "insert failed" }, { status: 500 });
+      const res = await client.messages.create({
+        model: POST_WRITER_MODEL,
+        max_tokens: 1200,
+        system: buildAgentSystem("alina", task),
+        messages: [{ role: "user", content: sanitizeForAnthropic(topic) }],
+      });
+      const text = res.content
+        .filter((b: any) => b.type === "text")
+        .map((b: any) => b.text)
+        .join("")
+        .trim();
+      if (!text) {
+        await markFailed(draftId, "writer returned empty");
+        return;
+      }
+      await sb
+        .from("content_drafts")
+        .update({
+          body: text,
+          status: "pending",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", draftId);
+    } catch (e: any) {
+      await markFailed(draftId, `${format}: ${e?.message || "fail"}`);
     }
-    return Response.json({ draftId: inserted.id, projectId });
-  } catch (e: any) {
-    return Response.json({ error: `writer: ${e?.message || "fail"}` }, { status: 502 });
-  }
+  });
+
+  return Response.json({ draftId, projectId });
 }

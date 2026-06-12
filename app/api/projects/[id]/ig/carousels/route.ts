@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "../../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../../lib/verifyTelegram";
@@ -79,128 +79,144 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return Response.json({ error: "topic too short (<8 chars)" }, { status: 400 });
   }
 
-  const { data: niche } = await sb
-    .from("niche_strategy")
-    .select("summary")
-    .eq("project_id", projectId)
-    .maybeSingle();
-
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-  let totalCost = 0;
-  let retries = 0;
-
-  // 1) Алина
-  let { carousel, cost: c1 } = await generateCarousel({
-    client,
-    topic,
-    nicheSummary: niche?.summary || undefined,
-    projectId,
-    tgId: project.tg_id,
-  });
-  totalCost += c1;
-  if (!carousel) return Response.json({ error: "invalid JSON from Алина" }, { status: 502 });
-
-  // 2) Аркадий
-  let review: CarouselReview | null = null;
-  try {
-    const rr = await reviewCarousel({
-      client,
-      carouselJson: carousel,
-      projectId,
-      tgId: project.tg_id,
-    });
-    review = rr.review;
-    totalCost += rr.cost;
-  } catch {
-    review = null;
+  // 1) Сразу placeholder в 'generating' — клиент получает draft_id без
+  //    ожидания AI. Тяжёлая работа Алина+Аркадий+retry уезжает в after().
+  //    Зависание >3 мин ловит orphan-detector из cron'а publish-scheduled.
+  const { data: placeholder, error: insErr } = await sb
+    .from("content_drafts")
+    .insert({
+      project_id: projectId,
+      platform: "instagram",
+      content_type: "carousel",
+      source: planId ? "plan" : "manual",
+      plan_id: planId || null,
+      plan_day: planDay || null,
+      body: "",
+      status: "generating",
+      writer_prompt_version: ALINA_CAROUSEL_PROMPT_VERSION,
+    })
+    .select("id")
+    .single();
+  if (insErr || !placeholder) {
+    return Response.json({ error: insErr?.message || "insert failed" }, { status: 500 });
   }
+  const draftId = placeholder.id as string;
 
-  // 3) Retry если score<7
-  if (review && review.score < ARKADIY_THRESHOLD && retries < MAX_RETRIES) {
-    retries++;
-    const extraSystem = `ПРЕДЫДУЩАЯ ПОПЫТКА БЫЛА СЛАБОЙ (оценка ${review.score}/10).
-Замечания редактора:
-${review.comments}
-${review.errors.length ? "Ошибки: " + review.errors.join("; ") : ""}
+  after(async () => {
+    const sb2 = getSupabase();
+    const markFailed = async (reason: string) => {
+      await sb2
+        .from("content_drafts")
+        .update({
+          status: "failed",
+          error: reason.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", draftId);
+    };
 
-Перепиши карусель с учётом этих замечаний.`;
+    try {
+      const { data: niche } = await sb2
+        .from("niche_strategy")
+        .select("summary")
+        .eq("project_id", projectId)
+        .maybeSingle();
 
-    const retryGen = await generateCarousel({
-      client,
-      topic,
-      nicheSummary: niche?.summary || undefined,
-      projectId,
-      tgId: project.tg_id,
-      extraSystem,
-    });
-    totalCost += retryGen.cost;
-    if (retryGen.carousel) {
-      carousel = retryGen.carousel;
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+      let totalCost = 0;
+      let retries = 0;
+
+      // Алина
+      let { carousel, cost: c1 } = await generateCarousel({
+        client,
+        topic,
+        nicheSummary: niche?.summary || undefined,
+        projectId,
+        tgId: project.tg_id,
+      });
+      totalCost += c1;
+      if (!carousel) {
+        await markFailed("invalid JSON from Алина");
+        return;
+      }
+
+      // Аркадий
+      let review: CarouselReview | null = null;
       try {
-        const rr2 = await reviewCarousel({
+        const rr = await reviewCarousel({
           client,
           carouselJson: carousel,
           projectId,
           tgId: project.tg_id,
         });
-        totalCost += rr2.cost;
-        if (rr2.review) review = rr2.review;
+        review = rr.review;
+        totalCost += rr.cost;
       } catch {
-        /* keep prior review */
+        review = null;
       }
-    }
-  }
 
-  // 4) Сохранение
-  const draftPayload: Record<string, any> = {
-    project_id: projectId,
-    platform: "instagram",
-    content_type: "carousel",
-    source: planId ? "plan" : "manual",
-    plan_id: planId || null,
-    plan_day: planDay || null,
-    chosen_title: carousel.carousel_title,
-    caption: carousel.caption,
-    body: carousel.caption,
-    media_urls: carousel.slides,
-    status: "pending",
-    writer_prompt_version: ALINA_CAROUSEL_PROMPT_VERSION,
-    cost_usd: totalCost,
-  };
-  if (review) {
-    draftPayload.editor_score = review.score;
-    draftPayload.editor_verdict = review.verdict;
-    draftPayload.editor_comments = review.comments;
-    draftPayload.editor_errors = review.errors;
-    draftPayload.needs_review = review.verdict !== "approve";
-    draftPayload.editor_prompt_version = ARKADIY_CAROUSEL_PROMPT_VERSION;
-    draftPayload.editor_retries = retries;
-  }
+      // Retry если score<7
+      if (review && review.score < ARKADIY_THRESHOLD && retries < MAX_RETRIES) {
+        retries++;
+        const extraSystem = `ПРЕДЫДУЩАЯ ПОПЫТКА БЫЛА СЛАБОЙ (оценка ${review.score}/10).
+Замечания редактора:
+${review.comments}
+${review.errors.length ? "Ошибки: " + review.errors.join("; ") : ""}
 
-  const { data: inserted, error } = await sb
-    .from("content_drafts")
-    .insert(draftPayload)
-    .select("id")
-    .single();
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-
-  return Response.json({
-    ok: true,
-    draft_id: inserted.id,
-    carousel,
-    editor: review
-      ? {
-          score: review.score,
-          verdict: review.verdict,
-          structure: review.structure,
-          hook_strength: review.hook_strength,
-          cta_quality: review.cta_quality,
-          clarity: review.clarity,
-          comments: review.comments,
-          errors: review.errors,
-          retries,
+Перепиши карусель с учётом этих замечаний.`;
+        const retryGen = await generateCarousel({
+          client,
+          topic,
+          nicheSummary: niche?.summary || undefined,
+          projectId,
+          tgId: project.tg_id,
+          extraSystem,
+        });
+        totalCost += retryGen.cost;
+        if (retryGen.carousel) {
+          carousel = retryGen.carousel;
+          try {
+            const rr2 = await reviewCarousel({
+              client,
+              carouselJson: carousel,
+              projectId,
+              tgId: project.tg_id,
+            });
+            totalCost += rr2.cost;
+            if (rr2.review) review = rr2.review;
+          } catch {
+            /* keep prior review */
+          }
         }
-      : null,
-    cost: totalCost,
+      }
+
+      const updatePayload: Record<string, any> = {
+        chosen_title: carousel.carousel_title,
+        caption: carousel.caption,
+        body: carousel.caption,
+        media_urls: carousel.slides,
+        status: "pending",
+        cost_usd: totalCost,
+        error: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (review) {
+        updatePayload.editor_score = review.score;
+        updatePayload.editor_verdict = review.verdict;
+        updatePayload.editor_comments = review.comments;
+        updatePayload.editor_errors = review.errors;
+        updatePayload.needs_review = review.verdict !== "approve";
+        updatePayload.editor_prompt_version = ARKADIY_CAROUSEL_PROMPT_VERSION;
+        updatePayload.editor_retries = retries;
+      }
+      await sb2
+        .from("content_drafts")
+        .update(updatePayload)
+        .eq("id", draftId);
+    } catch (e: any) {
+      await markFailed(`carousel: ${e?.message || "fail"}`);
+    }
   });
+
+  return Response.json({ ok: true, draft_id: draftId });
 }
