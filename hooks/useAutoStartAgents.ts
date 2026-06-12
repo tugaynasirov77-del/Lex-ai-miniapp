@@ -102,36 +102,45 @@ export function useAutoStartAgents(
       error: null,
     });
 
-    const analysisP = analyze(projectId)
-      .then(() => {
+    // Последовательно: Анна → Александр.
+    // IG-planner endpoint hard-rejects если в ig_analyses нет строки
+    // (error: "no analysis yet"). При параллельном запуске план
+    // успевал стартовать раньше, чем Анна закоммитила результат → fail.
+    // Pause 800мс между ними страхует от ещё одной replica-race.
+    (async () => {
+      let analysisOk = false;
+      try {
+        await analyze(projectId);
+        analysisOk = true;
         setState((s) => ({ ...s, analysisRunning: false, analysisDone: true }));
-      })
-      .catch((e: unknown) => {
+      } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "analysis failed";
         setState((s) => ({
           ...s,
           analysisRunning: false,
           error: s.error ?? msg,
         }));
-      });
+      }
 
-    const planP = plan(projectId)
-      .then(() => {
+      if (analysisOk) {
+        await new Promise((r) => setTimeout(r, 800));
+      }
+
+      try {
+        await plan(projectId);
         setState((s) => ({ ...s, planRunning: false, planDone: true }));
-      })
-      .catch((e: unknown) => {
+      } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "plan failed";
         setState((s) => ({
           ...s,
           planRunning: false,
           error: s.error ?? msg,
         }));
-      });
+      }
 
-    Promise.allSettled([analysisP, planP]).then(() => {
       setState((s) => ({ ...s, active: false }));
       if (onComplete) onComplete();
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, platform, retryKey]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
 import HomeScreen from "./HomeScreen";
@@ -71,6 +71,26 @@ export default function AppFlow() {
     };
   }, []);
 
+  // iOS Telegram WebView: визуальный viewport уменьшается при появлении
+  // клавиатуры, но наш absolute-контейнер растягивается на window.height
+  // и активный input уезжает за клавиатуру. Подписываемся на
+  // visualViewport и ужимаем контейнер до его высоты — контент
+  // автоматически сожмётся, и iOS scroll'нёт input в видимую часть.
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setViewportHeight(vv.height);
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
   return (
     <div
       style={{
@@ -79,6 +99,10 @@ export default function AppFlow() {
         left: 0,
         right: 0,
         bottom: 0,
+        // Если visualViewport поднимется (клавиатура открылась) —
+        // явно ограничиваем высоту контейнера, иначе bottom:0 уезжает
+        // под клавиатуру.
+        ...(viewportHeight !== null ? { height: viewportHeight, bottom: "auto" } : {}),
         overflow: "hidden",
       }}
     >
