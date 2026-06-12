@@ -505,6 +505,7 @@ export default function ProjectScreen({ onBack }: Props) {
               // CreateProjectScreen auto-resume прыгнет на шаг 2 (attach).
               actions.navigate("create-project");
             }}
+            onOpenBilling={() => actions.navigate("billing")}
             onProjectUpdated={(p) => {
               setProject(p);
               setRefreshTick((t) => t + 1);
@@ -1788,6 +1789,7 @@ function SettingsTab({
   handle,
   attached,
   onContinueSetup,
+  onOpenBilling,
   onProjectUpdated,
   onDeleted,
 }: {
@@ -1796,6 +1798,7 @@ function SettingsTab({
   handle: string | null;
   attached: boolean;
   onContinueSetup: () => void;
+  onOpenBilling: () => void;
   onProjectUpdated: (project: ProjectDTO) => void;
   onDeleted: () => void;
 }) {
@@ -1857,9 +1860,7 @@ function SettingsTab({
         <button
           onClick={() => {
             hapticImpact("light");
-            if (typeof window !== "undefined") {
-              window.location.href = "/billing";
-            }
+            onOpenBilling();
           }}
           style={{
             ...miniBtn,

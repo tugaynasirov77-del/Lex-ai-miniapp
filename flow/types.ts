@@ -13,6 +13,7 @@ export type ScreenKey =
   | "create-project"
   | "add-competitors"
   | "project"
+  | "billing"
   | "choose-format"
   | "project-brief"
   | "upload"

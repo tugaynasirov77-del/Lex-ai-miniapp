@@ -74,9 +74,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
   const goBilling = () => {
     hapticImpact("light");
-    if (typeof window !== "undefined") {
-      window.location.href = "/billing";
-    }
+    actions.navigate("billing");
   };
 
   return (

@@ -14,6 +14,7 @@ import DashboardScreen from "./screens/DashboardScreen";
 import ProjectScreen from "./screens/ProjectScreen";
 import CreateProjectScreen from "./screens/CreateProjectScreen";
 import AddCompetitorsScreen from "./screens/AddCompetitorsScreen";
+import BillingScreen from "./screens/BillingScreen";
 import { useFlow, useFlowActions, type ContentFormat } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
@@ -111,6 +112,7 @@ export default function AppFlow() {
             <AddCompetitorsScreen onBack={goBack} />
           )}
           {currentScreen === "project" && <ProjectScreen onBack={goBack} />}
+          {currentScreen === "billing" && <BillingScreen onBack={goBack} />}
           {currentScreen === "choose-format" && (
             <ChooseFormatScreen
               onPick={(format?: ContentFormat) => {
