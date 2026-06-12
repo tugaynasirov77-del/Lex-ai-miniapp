@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
-import { listProjects, type ProjectDTO } from "../../lib/api";
+import {
+  getBillingSummary,
+  listProjects,
+  type BillingSummary,
+  type ProjectDTO,
+} from "../../lib/api";
 import { hapticImpact, hapticSelection } from "../../lib/telegram";
 
 const YELLOW = "#F5E70A";
@@ -17,14 +22,21 @@ type Filter = "all" | "telegram" | "instagram";
 export default function DashboardScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
   const [data, setData] = useState<ProjectDTO[] | null>(null);
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 
   const load = async () => {
     setError(null);
     try {
-      const r = await listProjects();
-      setData(r.projects || []);
+      const [pr, bl] = await Promise.allSettled([
+        listProjects(),
+        getBillingSummary(),
+      ]);
+      if (pr.status === "fulfilled") setData(pr.value.projects || []);
+      else throw pr.reason;
+      if (bl.status === "fulfilled") setBilling(bl.value);
+      // billing — мягкая ошибка, плашка просто скрывается
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить");
     }
@@ -60,9 +72,19 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
     filter === "all" ? true : p.platform === filter,
   );
 
+  const goBilling = () => {
+    hapticImpact("light");
+    if (typeof window !== "undefined") {
+      window.location.href = "/billing";
+    }
+  };
+
   return (
     <ScreenWrap>
       <Header />
+
+      {/* Тонкая плашка тарифа (тап → /billing) */}
+      {billing && <BillingPill billing={billing} onTap={goBilling} />}
 
       {/* Filter tabs */}
       {data && data.length > 0 && (
@@ -139,6 +161,73 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 }
 
 // --- pieces ---
+
+// Тонкая плашка тарифа: ~44px, одна строка.
+// Free → жёлтый акцент с upsell. Pro/Business → ненавязчивый статус-чип.
+function BillingPill({
+  billing,
+  onTap,
+}: {
+  billing: BillingSummary;
+  onTap: () => void;
+}) {
+  const isFree = billing.tier === "free";
+  const tierLabel = billing.current_config?.label ?? billing.tier.toUpperCase();
+  const expires = billing.subscription?.expires_at
+    ? new Date(billing.subscription.expires_at).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+      })
+    : null;
+
+  return (
+    <button
+      onClick={onTap}
+      style={{
+        appearance: "none",
+        width: "100%",
+        marginTop: 14,
+        padding: "10px 14px",
+        borderRadius: 12,
+        border: `1px solid ${isFree ? "rgba(245,231,10,0.35)" : CARD_BORDER}`,
+        background: isFree ? "rgba(245,231,10,0.08)" : CARD_BG,
+        color: INK,
+        fontFamily: "inherit",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          padding: "3px 8px",
+          borderRadius: 999,
+          background: isFree ? YELLOW : "rgba(255,255,255,0.08)",
+          color: isFree ? "#0A0608" : INK,
+        }}
+      >
+        {tierLabel}
+      </span>
+      <span style={{ fontSize: 13, flex: 1, textAlign: "left", color: isFree ? INK : MUTED }}>
+        {isFree ? (
+          <>
+            Pro со скидкой <b style={{ color: YELLOW }}>−30%</b> · 690 ₽/мес
+          </>
+        ) : expires ? (
+          <>Активен до {expires}</>
+        ) : (
+          <>Управление подпиской</>
+        )}
+      </span>
+      <span style={{ color: MUTED, fontSize: 16, lineHeight: 1 }}>›</span>
+    </button>
+  );
+}
 
 function Header() {
   return (

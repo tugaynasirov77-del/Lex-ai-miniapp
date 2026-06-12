@@ -178,6 +178,18 @@ export function listProjects(): Promise<{ projects: ProjectDTO[] }> {
   return getJSON("/api/projects");
 }
 
+// --- billing summary (для тонкой плашки на Dashboard) ---
+
+export type BillingSummary = {
+  tier: "free" | "pro" | "business";
+  current_config: { label: string; priceRub: number };
+  subscription: { expires_at?: string | null } | null;
+};
+
+export function getBillingSummary(): Promise<BillingSummary> {
+  return getJSON("/api/billing");
+}
+
 export function getProject(projectId: string): Promise<{ project: ProjectDTO }> {
   return getJSON(`/api/projects/${projectId}`);
 }
