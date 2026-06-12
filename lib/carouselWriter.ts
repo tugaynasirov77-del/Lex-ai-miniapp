@@ -3,7 +3,10 @@ import { buildAgentSystem } from "./agents";
 import { sanitizeForAnthropic } from "./sanitize";
 import { recordSpend } from "./projectBudget";
 
-export const ALINA_CAROUSEL_MODEL = "claude-sonnet-4-6";
+// На Vercel Hobby (10s ceiling) Sonnet не помещается в after()-бюджет.
+// Haiku 4.5 в ~3× быстрее, для слайдов карусели качество приемлемое.
+// На Vercel Pro (60s) — вернуть на claude-sonnet-4-6.
+export const ALINA_CAROUSEL_MODEL = "claude-haiku-4-5-20251001";
 export const ALINA_CAROUSEL_PROMPT_VERSION = "v1";
 
 export type CarouselSlide = {

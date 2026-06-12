@@ -124,68 +124,76 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
       let totalCost = 0;
-      let retries = 0;
+      const retries = 0;
+
+      // На Vercel Hobby (10s) Алина+Аркадий+retry не помещается. Делаем
+      // только Алину через Haiku — карусель готова за ~5 сек. Аркадий-
+      // ревью отключён до Vercel Pro / VPS-воркера; возвращается флагом
+      // process.env.CAROUSEL_FULL_PIPELINE = "1".
+      const fullPipeline = process.env.CAROUSEL_FULL_PIPELINE === "1";
 
       // Алина
-      let { carousel, cost: c1 } = await generateCarousel({
+      const alinaRes = await generateCarousel({
         client,
         topic,
         nicheSummary: niche?.summary || undefined,
         projectId,
         tgId: project.tg_id,
       });
-      totalCost += c1;
+      let carousel = alinaRes.carousel;
+      totalCost += alinaRes.cost;
       if (!carousel) {
         await markFailed("invalid JSON from Алина");
         return;
       }
 
-      // Аркадий
+      // Аркадий (только если включён полный pipeline через ENV-флаг)
       let review: CarouselReview | null = null;
-      try {
-        const rr = await reviewCarousel({
-          client,
-          carouselJson: carousel,
-          projectId,
-          tgId: project.tg_id,
-        });
-        review = rr.review;
-        totalCost += rr.cost;
-      } catch {
-        review = null;
-      }
+      if (fullPipeline) {
+        try {
+          const rr = await reviewCarousel({
+            client,
+            carouselJson: carousel,
+            projectId,
+            tgId: project.tg_id,
+          });
+          review = rr.review;
+          totalCost += rr.cost;
+        } catch {
+          review = null;
+        }
 
-      // Retry если score<7
-      if (review && review.score < ARKADIY_THRESHOLD && retries < MAX_RETRIES) {
-        retries++;
-        const extraSystem = `ПРЕДЫДУЩАЯ ПОПЫТКА БЫЛА СЛАБОЙ (оценка ${review.score}/10).
+        // Retry score<7 — тоже только при full pipeline
+        if (review && review.score < ARKADIY_THRESHOLD) {
+          const extraSystem = `ПРЕДЫДУЩАЯ ПОПЫТКА БЫЛА СЛАБОЙ (оценка ${review.score}/10).
 Замечания редактора:
 ${review.comments}
 ${review.errors.length ? "Ошибки: " + review.errors.join("; ") : ""}
 
 Перепиши карусель с учётом этих замечаний.`;
-        const retryGen = await generateCarousel({
-          client,
-          topic,
-          nicheSummary: niche?.summary || undefined,
-          projectId,
-          tgId: project.tg_id,
-          extraSystem,
-        });
-        totalCost += retryGen.cost;
-        if (retryGen.carousel) {
-          carousel = retryGen.carousel;
-          try {
-            const rr2 = await reviewCarousel({
-              client,
-              carouselJson: carousel,
-              projectId,
-              tgId: project.tg_id,
-            });
-            totalCost += rr2.cost;
-            if (rr2.review) review = rr2.review;
-          } catch {
-            /* keep prior review */
+          const retryGen = await generateCarousel({
+            client,
+            topic,
+            nicheSummary: niche?.summary || undefined,
+            projectId,
+            tgId: project.tg_id,
+            extraSystem,
+          });
+          totalCost += retryGen.cost;
+          if (retryGen.carousel) {
+            carousel = retryGen.carousel;
+            try {
+              const rr2 = await reviewCarousel({
+                client,
+                carouselJson: carousel,
+                projectId,
+                tgId: project.tg_id,
+              });
+              totalCost += rr2.cost;
+              if (rr2.review) review = rr2.review;
+            } catch {
+              /* keep prior review */
+            }
           }
         }
       }
