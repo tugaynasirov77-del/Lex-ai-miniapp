@@ -88,14 +88,26 @@ export async function publishDueDrafts(): Promise<{ processed: number; results: 
       const j = await r.json();
 
       if (!j.ok) {
+        const attempts = (d.publish_attempts ?? 0) + 1;
+        const desc = (j.description || "send failed").slice(0, 500);
+        // Fatal-ошибки от Telegram — нет смысла ретраить, сразу failed.
+        const fatal = /chat not found|bot was kicked|forbidden|not enough rights|chat_not_found|bot_not_in_channel|bot_not_admin/i.test(
+          desc,
+        );
+        const goingFailed = fatal || attempts >= 5;
         await sb
           .from("content_drafts")
           .update({
-            publish_attempts: (d.publish_attempts ?? 0) + 1,
-            publish_error: (j.description || "send failed").slice(0, 500),
+            publish_attempts: attempts,
+            publish_error: desc,
+            ...(goingFailed ? { status: "failed" } : {}),
           })
           .eq("id", d.id);
-        results.push({ draft_id: d.id, error: j.description });
+        results.push({
+          draft_id: d.id,
+          error: j.description,
+          ...(goingFailed ? { final: true } : {}),
+        });
         continue;
       }
 
@@ -103,6 +115,7 @@ export async function publishDueDrafts(): Promise<{ processed: number; results: 
       await sb
         .from("content_drafts")
         .update({
+          status: "published",
           published_message_id: messageId,
           published_at: new Date().toISOString(),
           chosen_title: chosenTitle,
@@ -112,14 +125,17 @@ export async function publishDueDrafts(): Promise<{ processed: number; results: 
 
       results.push({ draft_id: d.id, message_id: messageId, channel: d.projects?.channel_username });
     } catch (e: any) {
+      const attempts = (d.publish_attempts ?? 0) + 1;
+      const goingFailed = attempts >= 5;
       await sb
         .from("content_drafts")
         .update({
-          publish_attempts: (d.publish_attempts ?? 0) + 1,
+          publish_attempts: attempts,
           publish_error: (e.message || "exception").slice(0, 500),
+          ...(goingFailed ? { status: "failed" } : {}),
         })
         .eq("id", d.id);
-      results.push({ draft_id: d.id, error: e.message });
+      results.push({ draft_id: d.id, error: e.message, ...(goingFailed ? { final: true } : {}) });
     }
   }
 
