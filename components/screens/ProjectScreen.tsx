@@ -554,7 +554,28 @@ export default function ProjectScreen({ onBack }: Props) {
             }}
           />
         )}
-        {tab === "scout" && (
+        {tab === "scout" && isIg && (
+          <IgIdeasTab
+            insights={(project as any)?.lex_insights ?? null}
+            onPickHook={(hook) =>
+              assembleIdea({ topic: hook, format: "post", hook })
+            }
+            onPickCarousel={(title, structure) =>
+              assembleIdea({
+                topic: `${title}\n\nСтруктура: ${structure}`,
+                format: "carousel",
+              })
+            }
+            onPickReel={(format, example) =>
+              assembleIdea({
+                topic: `${format}\n\n${example}`,
+                format: "reel",
+              })
+            }
+            onGoSettings={() => setTab("settings")}
+          />
+        )}
+        {tab === "scout" && !isIg && (
           <ScoutTab
             projectId={projectId}
             isIg={isIg}
@@ -1390,9 +1411,10 @@ function FeedCard({
           color: "rgba(255,255,255,0.9)",
           overflow: "hidden",
           display: "-webkit-box",
-          WebkitLineClamp: 2,
+          WebkitLineClamp: isIg ? 4 : 2,
           WebkitBoxOrient: "vertical",
           marginBottom: 8,
+          whiteSpace: "pre-wrap",
         }}
       >
         {item.preview || "(без текста)"}
@@ -1443,38 +1465,40 @@ function FeedCard({
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: "0.04em",
-                padding: "6px 10px",
+                padding: "6px 12px",
                 borderRadius: 999,
-                background: `${YELLOW}1A`,
-                border: `1px solid ${YELLOW}40`,
-                color: YELLOW,
+                background: YELLOW,
+                border: "none",
+                color: "#0A0608",
                 cursor: "pointer",
                 fontFamily: "inherit",
               }}
             >
-              СКОПИРОВАТЬ
+              СКОПИРОВАТЬ ВСЁ
             </button>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
-            style={{
-              appearance: "none",
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "transparent",
-              border: `1px solid ${CARD_BORDER}`,
-              color: INK,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            ОТКРЫТЬ
-          </button>
+          {!isIg && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+              style={{
+                appearance: "none",
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "transparent",
+                border: `1px solid ${CARD_BORDER}`,
+                color: INK,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              ОТКРЫТЬ
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1986,6 +2010,210 @@ function ScoutTab({
     </div>
   );
 }
+
+// =====================================================================
+// IG Ideas — упрощённый таб для IG-проектов:
+// playbook из brand_kit + тапаемые кнопки CTA.
+// Заменяет "Разведку" с конкурентами для IG.
+// =====================================================================
+
+function IgIdeasTab({
+  insights,
+  onPickHook,
+  onPickCarousel,
+  onPickReel,
+  onGoSettings,
+}: {
+  insights: LexInsightsLite | null;
+  onPickHook: (hook: string) => void;
+  onPickCarousel: (title: string, structure: string) => void;
+  onPickReel: (format: string, example: string) => void;
+  onGoSettings: () => void;
+}) {
+  if (!insights) {
+    return (
+      <Card>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+          Идеи появятся после Brand Setup
+        </div>
+        <p style={{ margin: "0 0 12px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+          Открой Настройки → Профиль бренда. Расскажи о нише, аудитории и тоне.
+          LEX AI соберёт playbook: готовые hooks, идеи каруселей и Reels-форматы.
+        </p>
+        <button
+          onClick={onGoSettings}
+          style={{
+            ...miniBtn,
+            background: YELLOW,
+            color: "#0A0608",
+          }}
+        >
+          ОТКРЫТЬ НАСТРОЙКИ →
+        </button>
+      </Card>
+    );
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Niche summary */}
+      {insights.niche_summary && (
+        <Card>
+          <div style={{ fontSize: 11, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
+            твоя ниша
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: INK, lineHeight: 1.5 }}>
+            {insights.niche_summary}
+          </p>
+        </Card>
+      )}
+
+      {/* Ready hooks */}
+      {!!insights.ready_hooks?.length && (
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+            Готовые hooks для постов
+          </div>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED }}>
+            Тапни — создадим пост по этой теме
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {insights.ready_hooks.slice(0, 12).map((h, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  hapticImpact("light");
+                  onPickHook(h);
+                }}
+                style={ideaRowStyle}
+              >
+                <span style={{ flex: 1, fontSize: 13, color: INK, lineHeight: 1.45, textAlign: "left" }}>
+                  {h}
+                </span>
+                <span style={{ color: YELLOW, fontSize: 14, fontWeight: 700, marginLeft: 8 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Carousel ideas */}
+      {!!insights.carousel_themes?.length && (
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+            Идеи каруселей
+          </div>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED }}>
+            Тапни — соберём карусель с готовой структурой
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {insights.carousel_themes.slice(0, 8).map((c, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  hapticImpact("light");
+                  onPickCarousel(c.title, c.structure);
+                }}
+                style={{ ...ideaRowStyle, flexDirection: "column", alignItems: "stretch", gap: 4 }}
+              >
+                <div style={{ fontSize: 13, color: INK, fontWeight: 600, textAlign: "left" }}>
+                  · {c.title}
+                </div>
+                {c.structure && (
+                  <div style={{ fontSize: 11, color: MUTED, textAlign: "left" }}>
+                    {c.structure}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Reel ideas */}
+      {!!insights.reel_formats?.length && (
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+            Форматы Reels
+          </div>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: MUTED }}>
+            Тапни — напишем сценарий в этом формате
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {insights.reel_formats.slice(0, 6).map((r, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  hapticImpact("light");
+                  onPickReel(r.format, r.example);
+                }}
+                style={{ ...ideaRowStyle, flexDirection: "column", alignItems: "stretch", gap: 4 }}
+              >
+                <div style={{ fontSize: 13, color: INK, fontWeight: 600, textAlign: "left" }}>
+                  · {r.format}
+                </div>
+                {r.example && (
+                  <div style={{ fontSize: 11, color: MUTED, textAlign: "left" }}>
+                    {r.example}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Hashtags */}
+      {!!insights.hashtag_strategy?.length && (
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+            Хэштеги для ниши
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {insights.hashtag_strategy.map((h, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 11,
+                  padding: "5px 9px",
+                  borderRadius: 999,
+                  background: `${YELLOW}14`,
+                  border: `1px solid ${YELLOW}40`,
+                  color: YELLOW,
+                }}
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Schedule */}
+      {insights.posting_schedule && (
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+            Расписание постинга
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+            {insights.posting_schedule}
+          </p>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+const ideaRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  background: "rgba(255,255,255,0.04)",
+  border: `1px solid ${CARD_BORDER}`,
+  borderRadius: 10,
+  padding: "10px 12px",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  color: INK,
+};
 
 function CompetitorsCard({
   projectId,

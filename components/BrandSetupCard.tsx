@@ -49,7 +49,10 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [savedOk, setSavedOk] = useState(false);
+  // hasSavedKit = true если в БД уже есть профиль (после load или save).
+  // dirty = юзер изменил что-то после load/save.
+  const [hasSavedKit, setHasSavedKit] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -57,12 +60,13 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
       .then((r) => {
         if (!alive) return;
         const k = r.brand_kit;
-        if (k) {
+        if (k && (k.niche || k.short_description)) {
           setNiche(k.niche || "");
           setDescription(k.short_description || "");
           setAudience(k.audience || "");
           setTone(k.voice || "");
           setInspirations((k.inspirations || []).map((h) => `@${h}`).join(", "));
+          setHasSavedKit(true);
         }
         setLoaded(true);
       })
@@ -71,6 +75,14 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
       alive = false;
     };
   }, [projectId]);
+
+  // Помечаем dirty при любом изменении формы
+  function onChange<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setter(v);
+      setDirty(true);
+    };
+  }
 
   async function save() {
     setErr(null);
@@ -94,9 +106,9 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
         inspirations: insps,
       });
       hapticNotify("success");
-      setSavedOk(true);
+      setHasSavedKit(true);
+      setDirty(false);
       onSaved?.(r.brand_kit);
-      setTimeout(() => setSavedOk(false), 2500);
     } catch (e) {
       hapticNotify("error");
       setErr(e instanceof Error ? e.message : "Не получилось.");
@@ -132,7 +144,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
               <button
                 key={n}
                 type="button"
-                onClick={() => setNiche(n)}
+                onClick={() => onChange(setNiche)(n)}
                 style={{
                   ...pillStyle,
                   borderColor: active ? YELLOW : CARD_BORDER,
@@ -151,7 +163,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
       <Field label="Расскажи про бренд (1-2 предложения)">
         <textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => onChange(setDescription)(e.target.value)}
           rows={2}
           placeholder="Например: Помогаю предпринимателям внедрять AI в маркетинг."
           style={textareaStyle}
@@ -162,7 +174,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
       <Field label="Твоя аудитория">
         <textarea
           value={audience}
-          onChange={(e) => setAudience(e.target.value)}
+          onChange={(e) => onChange(setAudience)(e.target.value)}
           rows={2}
           placeholder="Например: Малый бизнес и SMM-щики 25-45 лет"
           style={textareaStyle}
@@ -178,7 +190,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
               <button
                 key={t}
                 type="button"
-                onClick={() => setTone(t)}
+                onClick={() => onChange(setTone)(t)}
                 style={{
                   ...pillStyle,
                   borderColor: active ? YELLOW : CARD_BORDER,
@@ -197,7 +209,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
       <Field label="Вдохновение (опционально)" hint="до 5 IG-аккаунтов через запятую">
         <textarea
           value={inspirations}
-          onChange={(e) => setInspirations(e.target.value)}
+          onChange={(e) => onChange(setInspirations)(e.target.value)}
           rows={1}
           placeholder="@nike, @gymshark"
           style={textareaStyle}
@@ -208,26 +220,55 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
         <p style={{ margin: "6px 0 0", color: "#FF7373", fontSize: 12 }}>{err}</p>
       )}
 
+      {/* Статус: сохранено / есть изменения / новый */}
+      {hasSavedKit && !dirty && !busy && (
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 12,
+            color: "#5BD66B",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span>✓</span>
+          <span>Профиль сохранён. LEX AI использует его для всего контента.</span>
+        </div>
+      )}
+      {hasSavedKit && dirty && (
+        <div style={{ marginTop: 10, fontSize: 12, color: "#F39B40", fontWeight: 600 }}>
+          Изменения не сохранены
+        </div>
+      )}
+
       <button
         onClick={save}
-        disabled={busy}
+        disabled={busy || (!dirty && hasSavedKit)}
         style={{
-          marginTop: 12,
+          marginTop: 10,
           width: "100%",
           minHeight: 48,
-          background: savedOk ? "#5BD66B" : YELLOW,
-          color: "#0A0608",
+          background: !dirty && hasSavedKit ? "rgba(255,255,255,0.08)" : YELLOW,
+          color: !dirty && hasSavedKit ? MUTED : "#0A0608",
           border: "none",
           borderRadius: 12,
           fontSize: 14,
           fontWeight: 800,
           letterSpacing: "0.05em",
           textTransform: "uppercase",
-          cursor: busy ? "not-allowed" : "pointer",
+          cursor: busy || (!dirty && hasSavedKit) ? "default" : "pointer",
           opacity: busy ? 0.6 : 1,
         }}
       >
-        {busy ? "LEX AI собирает playbook..." : savedOk ? "✓ Сохранено" : "СОХРАНИТЬ ПРОФИЛЬ"}
+        {busy
+          ? "LEX AI собирает playbook..."
+          : !dirty && hasSavedKit
+            ? "Профиль сохранён"
+            : hasSavedKit
+              ? "ОБНОВИТЬ ПРОФИЛЬ"
+              : "СОХРАНИТЬ ПРОФИЛЬ"}
       </button>
     </div>
   );
