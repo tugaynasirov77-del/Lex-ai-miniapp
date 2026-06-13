@@ -11,6 +11,8 @@ import {
   deleteProject,
   lexAnalyze,
   lexWritePlan,
+  addTgCompetitor,
+  addIgCompetitor,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -1487,54 +1489,13 @@ function ScoutTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Конкуренты — IG-блок (для TG конкуренты добавляются в отдельном UI) */}
-      {isIg && (
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            marginBottom: 8,
-          }}
-        >
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Конкуренты</div>
-          <span style={{ fontSize: 12, color: MUTED }}>
-            {competitors.length}{" "}
-            {plural(competitors.length, "аккаунт", "аккаунта", "аккаунтов")}
-          </span>
-        </div>
-        {competitors.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-            Добавьте 3–5 конкурентов — LEX AI соберёт отчёт по нише.
-          </p>
-        ) : (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {competitors.slice(0, 8).map((c) => (
-              <span
-                key={c.id}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  padding: "5px 10px",
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.06)",
-                  border: `1px solid ${CARD_BORDER}`,
-                  color: INK,
-                }}
-              >
-                @{c.username}
-              </span>
-            ))}
-            {competitors.length > 8 && (
-              <span style={{ fontSize: 12, color: MUTED, alignSelf: "center" }}>
-                +{competitors.length - 8}
-              </span>
-            )}
-          </div>
-        )}
-      </Card>
-      )}
+      {/* Конкуренты — универсальный блок для TG и IG с inline-формой */}
+      <CompetitorsCard
+        projectId={projectId}
+        isIg={isIg}
+        igCompetitors={competitors}
+        onChanged={onRefresh}
+      />
 
       {/* Анализ ниши — отображаем lex_insights из БД */}
       <Card>
@@ -1766,6 +1727,162 @@ function ScoutTab({
           : "Снапшотов пока нет"}
       </div>
     </div>
+  );
+}
+
+function CompetitorsCard({
+  projectId,
+  isIg,
+  igCompetitors,
+  onChanged,
+}: {
+  projectId: string;
+  isIg: boolean;
+  igCompetitors: IgAggregateCompetitor[];
+  onChanged: () => void;
+}) {
+  // Для IG список приходит из агрегата, для TG показываем только локально добавленных.
+  // Полноценный TG-list — TODO (нужен GET endpoint для competitor_channels).
+  const initialIg = igCompetitors.map((c) => c.username);
+  const [local, setLocal] = useState<string[]>([]);
+  const all = isIg ? Array.from(new Set([...initialIg, ...local])) : local;
+
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  function normalize(raw: string): string {
+    let s = raw.trim().replace(/^https?:\/\/(t\.me|instagram\.com|www\.instagram\.com)\//i, "");
+    s = s.replace(/^@/, "").replace(/\/$/, "");
+    return s.toLowerCase();
+  }
+
+  async function add() {
+    const handle = normalize(value);
+    if (!handle || handle.length < 3) {
+      setErr("Минимум 3 символа.");
+      return;
+    }
+    if (all.includes(handle)) {
+      setErr("Уже добавлен.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    hapticImpact("light");
+    try {
+      if (isIg) {
+        await addIgCompetitor(projectId, { handle });
+      } else {
+        await addTgCompetitor(projectId, { username: handle });
+      }
+      setLocal((prev) => [...prev, handle]);
+      setValue("");
+      hapticNotify("success");
+      onChanged();
+    } catch (e) {
+      hapticNotify("error");
+      setErr(humanError(e, "Не получилось добавить."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Конкуренты</div>
+        <span style={{ fontSize: 12, color: MUTED }}>
+          {all.length}{" "}
+          {plural(all.length, "аккаунт", "аккаунта", "аккаунтов")}
+        </span>
+      </div>
+
+      {all.length === 0 ? (
+        <p style={{ margin: "0 0 10px", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+          Добавь 1–5 конкурентов — LEX AI разберёт их и соберёт insights для ниши.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {all.slice(0, 12).map((u) => (
+            <span
+              key={u}
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                padding: "5px 10px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.06)",
+                border: `1px solid ${CARD_BORDER}`,
+                color: INK,
+              }}
+            >
+              @{u}
+            </span>
+          ))}
+          {all.length > 12 && (
+            <span style={{ fontSize: 12, color: MUTED, alignSelf: "center" }}>
+              +{all.length - 12}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Inline-форма добавления */}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            if (err) setErr(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
+          placeholder={isIg ? "@username из IG" : "@username канала"}
+          disabled={busy}
+          style={{
+            flex: 1,
+            background: "rgba(255,255,255,0.05)",
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 10,
+            padding: "10px 12px",
+            color: INK,
+            fontSize: 14,
+            fontFamily: "inherit",
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={add}
+          disabled={busy || !value.trim()}
+          style={{
+            padding: "0 16px",
+            background: YELLOW,
+            color: "#0A0608",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            cursor: busy || !value.trim() ? "not-allowed" : "pointer",
+            opacity: busy || !value.trim() ? 0.5 : 1,
+          }}
+        >
+          {busy ? "…" : "+ ДОБАВИТЬ"}
+        </button>
+      </div>
+      {err && (
+        <p style={{ margin: "6px 0 0", fontSize: 11, color: "#FF7373" }}>{err}</p>
+      )}
+    </Card>
   );
 }
 
