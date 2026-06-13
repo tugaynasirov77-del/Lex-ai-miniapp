@@ -145,6 +145,92 @@ export type ReelScript = {
  *
  * Кеш живёт 7 дней — после этого рекомендуется обновить (вне этого метода).
  */
+// Базовый анализ (быстро). Для IG доп. вызов playbook идёт параллельно.
+async function analyzeBasic(args: {
+  client: Anthropic;
+  projectId: string;
+  tgId: number;
+  contextText: string;
+}): Promise<{ partial: Partial<LexInsights>; cost: number }> {
+  const { client, projectId, tgId, contextText } = args;
+  const task = `ЗАДАЧА: краткий анализ ниши и конкурентов.
+
+Верни JSON:
+{
+  "niche_summary": "2-3 предложения: что за ниша, кто аудитория",
+  "audience_pains": ["боль 1", ... 4-5 штук],
+  "working_hooks": ["паттерн hook 1", ... 5-7],
+  "content_themes": ["тема 1", ... 6-8],
+  "tone_notes": "1-2 предложения о тоне",
+  "pitfalls": ["чего избегать 1", ... 3-5]
+}
+Только JSON.`;
+  const res = await client.messages.create({
+    model: LEX_MODEL,
+    max_tokens: 900,
+    temperature: 0.5,
+    system: LEX_SYSTEM + "\n\n" + task,
+    messages: [{ role: "user", content: sanitizeForAnthropic(contextText) }],
+  });
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "lex_analyze",
+    model: LEX_MODEL,
+    usage: res.usage as any,
+    tgId,
+  });
+  const raw = extractText(res);
+  const parsed = safeJson<any>(raw) || {};
+  return { partial: parsed, cost };
+}
+
+// Playbook-блок (IG only): готовые hooks, carousel themes, reel formats, etc
+async function analyzePlaybook(args: {
+  client: Anthropic;
+  projectId: string;
+  tgId: number;
+  contextText: string;
+}): Promise<{ partial: Partial<LexInsights>; cost: number }> {
+  const { client, projectId, tgId, contextText } = args;
+  const task = `ЗАДАЧА: собери playbook-блок готовых идей для Instagram.
+
+Верни JSON:
+{
+  "ready_hooks": [
+    "Готовая первая строка 1, ≤80 симв",
+    ... 10-12 РЕАЛЬНЫХ цепляющих фраз, готовых к копированию в IG-пост
+  ],
+  "carousel_themes": [
+    {"title": "название", "structure": "слайд 1: X / 2: Y / 3: Z / CTA"},
+    ... 4-6 готовых тем
+  ],
+  "reel_formats": [
+    {"format": "название формата", "example": "1 предложение как снять"},
+    ... 3-4 формата
+  ],
+  "posting_schedule": "1-2 предложения: когда что постить (пн-вс)",
+  "hashtag_strategy": ["#tag1", ... 7-10 рабочих хэштегов]
+}
+Только JSON.`;
+  const res = await client.messages.create({
+    model: LEX_MODEL,
+    max_tokens: 1500,
+    temperature: 0.7,
+    system: LEX_SYSTEM + "\n\n" + task,
+    messages: [{ role: "user", content: sanitizeForAnthropic(contextText) }],
+  });
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "lex_playbook",
+    model: LEX_MODEL,
+    usage: res.usage as any,
+    tgId,
+  });
+  const raw = extractText(res);
+  const parsed = safeJson<any>(raw) || {};
+  return { partial: parsed, cost };
+}
+
 export async function analyzeCompetitors(args: {
   client: Anthropic;
   projectId: string;
@@ -173,79 +259,33 @@ export async function analyzeCompetitors(args: {
       }
     }
   }
+  const contextText = lines.join("\n");
 
-  // Для IG — full playbook (без публичных постов конкурентов вытягиваем
-  // максимум из общих знаний модели), Sonnet 4.6.
-  // Для TG — базовый набор полей, Haiku (есть реальные тексты постов).
-  const task = isIg
-    ? `ЗАДАЧА: собери ПОЛНЫЙ playbook по нише для Instagram-проекта.
+  // IG: 2 параллельных вызова Haiku (basic + playbook). Каждый ≤1.5k tokens,
+  // в параллели влезаем в 10s ceiling. Мерджим результаты.
+  // TG: один базовый вызов (для playbook надо реальные посты конкурентов,
+  // а они уже есть с t.me/s/ — но достаточно базового анализа).
+  let parsed: any = null;
+  let cost = 0;
 
-У тебя нет доступа к свежим постам конкурентов через API — используй свои
-общие знания об этих аккаунтах (если они известны) + о нише в целом.
-Цель: дать юзеру всё для создания сильного IG-контента на ближайший месяц.
+  if (isIg) {
+    const [basic, playbook] = await Promise.all([
+      analyzeBasic({ client, projectId, tgId, contextText }),
+      analyzePlaybook({ client, projectId, tgId, contextText }),
+    ]);
+    parsed = { ...basic.partial, ...playbook.partial };
+    cost = basic.cost + playbook.cost;
+  } else {
+    const basic = await analyzeBasic({ client, projectId, tgId, contextText });
+    parsed = basic.partial;
+    cost = basic.cost;
+  }
 
-Верни JSON со ВСЕМИ полями (никаких пропусков):
-{
-  "niche_summary": "2-3 предложения: что за ниша, кто аудитория, в чём драйв",
-  "audience_pains": ["конкретная боль 1", "боль 2", ... 4-5 штук],
-  "tone_notes": "2-3 предложения: как пишут топы ниши, что цепляет",
-  "pitfalls": ["чего избегать 1", "избегать 2", ... 3-5 штук],
-  "ready_hooks": [10-12 РЕАЛЬНЫХ цепляющих первых строк, ≤80 символов],
-  "content_themes": [6-8 коротких тем],
-  "carousel_themes": [
-    {"title": "...", "structure": "слайд 1: X / 2: Y / 3: Z / CTA"},
-    ... 4-6 штук
-  ],
-  "reel_formats": [
-    {"format": "...", "example": "1 предложение как снять"},
-    ... 3-4 штуки
-  ],
-  "posting_schedule": "1-2 предложения: какие форматы когда (пн-вс)",
-  "hashtag_strategy": [7-10 рабочих хэштегов],
-  "working_hooks": [5 коротких паттернов]
-}
-
-Только JSON, без пояснений.`
-    : `ЗАДАЧА: проанализируй конкурентов и выдай insights для генерации контента.
-
-Верни JSON:
-{
-  "niche_summary": "1-2 предложения о нише",
-  "audience_pains": ["боль 1", "боль 2", "боль 3"],
-  "working_hooks": ["рабочий hook-паттерн 1", "паттерн 2", ...],
-  "content_themes": ["тема 1", "тема 2", ...],
-  "tone_notes": "1-2 предложения о тоне конкурентов",
-  "pitfalls": ["ошибка 1", "ошибка 2", "ошибка 3"]
-}
-
-Только JSON, ничего больше.`;
-
-  const modelToUse = isIg ? LEX_MODEL_DEEP : LEX_MODEL;
-
-  const res = await client.messages.create({
-    model: modelToUse,
-    // Haiku ~100 tok/s output. 2500 tokens = ~25s — выходит за Hobby 10s.
-    // Берём 1800 — это ~18s output, плюс ускорение Haiku из-за частого
-    // кеша prompt'а → реально влезает в 8-9s.
-    max_tokens: isIg ? 1800 : 900,
-    temperature: 0.6,
-    system: LEX_SYSTEM + "\n\n" + task,
-    messages: [{ role: "user", content: sanitizeForAnthropic(lines.join("\n")) }],
-  });
-
-  const cost = await recordSpend({
-    projectId,
-    agentRole: "lex_analyze",
-    model: modelToUse,
-    usage: res.usage as any,
-    tgId,
-  });
-
-  const raw = extractText(res);
-  const parsed = safeJson<Omit<LexInsights, "updated_at">>(raw);
   if (!parsed || !parsed.niche_summary) {
     return { insights: null, cost };
   }
+  // Заглушка чтобы прежний код ниже не сломался
+  void LEX_MODEL_DEEP;
 
   const p: any = parsed;
   const insights: LexInsights = {
