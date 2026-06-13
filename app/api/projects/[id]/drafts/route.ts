@@ -23,15 +23,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const a = await authProject(req, id);
   if ("err" in a) return a.err;
 
-  const status = req.nextUrl.searchParams.get("status") || "pending";
+  const status = req.nextUrl.searchParams.get("status");
   const sb = getSupabase();
-  const { data } = await sb
+  let q = sb
     .from("content_drafts")
     .select("*")
-    .eq("project_id", id)
-    .eq("status", status)
+    .eq("project_id", id);
+  if (status && status !== "all") {
+    q = q.eq("status", status);
+  } else {
+    // По умолчанию — вся история: pending + approved + published.
+    // rejected скрываем (юзер их явно отбракован).
+    q = q.in("status", ["pending", "approved", "published"]);
+  }
+  const { data } = await q
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
   return Response.json({ drafts: data ?? [] });
 }
