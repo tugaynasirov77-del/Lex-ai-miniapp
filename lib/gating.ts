@@ -7,7 +7,10 @@ export type GateAction = "post" | "carousel" | "reel";
  * Whitelist tg_id'ов с безлимитом — обходят quota-чек.
  * Основатель + админы.
  */
-const ADMIN_TG_IDS = new Set<number>([5825762433]);
+const ADMIN_TG_IDS = new Set<number>([
+  5825762433, // основатель
+  999482511,  // @truekostoev — тестовый безлимит
+]);
 
 /**
  * Quota epoch — драфты созданные ДО этой даты не учитываются в лимитах.
