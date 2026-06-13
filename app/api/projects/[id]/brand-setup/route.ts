@@ -66,18 +66,31 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const fakeCompetitors: CompetitorInput[] = inspirations.length
-    ? inspirations.map((h) => ({ handle: h, description: "Источник вдохновения от юзера" }))
-    : [{ handle: "—", description: `Ниша: ${niche}. Бренд: ${description}. ЦА: ${audience}` }];
+  // Передаём в анализ полноценный контекст бренда + handles вдохновения.
+  // Это даёт LEX-у конкретику, а не «список аккаунтов без описания».
+  const brandContext = [
+    `Бренд: ${description}`,
+    audience ? `Целевая аудитория: ${audience}` : "",
+    tone ? `Тон общения: ${tone}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const inspirationsList: CompetitorInput[] = inspirations.length
+    ? inspirations.map((h) => ({
+        handle: h,
+        description: `Один из топ-аккаунтов в нише, который вдохновляет бренд`,
+      }))
+    : [];
 
   try {
     const { insights, cost } = await analyzeCompetitors({
       client,
       projectId: id,
       tgId: v.user.id,
-      channelTitle: project.title || "канал",
+      channelTitle: `${project.title || "канал"} — ${brandContext}`,
       niche,
-      competitors: fakeCompetitors,
+      competitors: inspirationsList,
       platform: (project.platform as any) || "instagram",
     });
     return Response.json({ ok: true, brand_kit, insights, cost });

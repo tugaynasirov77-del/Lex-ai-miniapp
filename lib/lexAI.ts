@@ -65,12 +65,53 @@ HOOK-ФОРМУЛЫ (выбери одну):
 // ---------- Helpers ----------
 
 function safeJson<T>(s: string): T | null {
+  let cleaned = s.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
   try {
-    const cleaned = s.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
     return JSON.parse(cleaned) as T;
   } catch {
+    // Попытка восстановить обрезанный JSON: добавляем закрывающие
+    // скобки и убираем повисшую запятую/незакрытую строку. Haiku
+    // часто обрывается на максимуме токенов — этот recovery спасает
+    // частично заполненные блоки (10 hooks вместо 0 при обрыве на 11-м).
+    const repaired = repairTruncatedJson(cleaned);
+    if (repaired) {
+      try {
+        return JSON.parse(repaired) as T;
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
+}
+
+function repairTruncatedJson(s: string): string | null {
+  // Если есть незавершённая строка — закрываем её
+  let str = s;
+  const quotesBalanced = (str.match(/"/g) || []).length % 2 === 0;
+  if (!quotesBalanced) {
+    str = str + '"';
+  }
+  // Убираем повисшую запятую в конце массива/объекта
+  str = str.replace(/,\s*$/, "");
+  // Считаем баланс скобок и закрываем
+  let openCurly = 0;
+  let openSquare = 0;
+  for (const ch of str) {
+    if (ch === "{") openCurly++;
+    else if (ch === "}") openCurly--;
+    else if (ch === "[") openSquare++;
+    else if (ch === "]") openSquare--;
+  }
+  while (openSquare > 0) {
+    str = str.replace(/,\s*$/, "") + "]";
+    openSquare--;
+  }
+  while (openCurly > 0) {
+    str = str.replace(/,\s*$/, "") + "}";
+    openCurly--;
+  }
+  return str;
 }
 
 function extractText(res: Anthropic.Messages.Message): string {
@@ -248,7 +289,7 @@ async function analyzeStructures(args: {
 Только JSON.`;
   const res = await client.messages.create({
     model: LEX_MODEL,
-    max_tokens: 1300,
+    max_tokens: 1800,
     temperature: 0.7,
     system: LEX_SYSTEM + "\n\n" + task,
     messages: [{ role: "user", content: sanitizeForAnthropic(contextText) }],
