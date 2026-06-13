@@ -103,7 +103,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .eq("tg_id", tgId)
     .select()
     .single();
-  if (updErr) return Response.json({ error: updErr.message }, { status: 500 });
+  if (updErr) {
+    // Unique-constraint violation: канал уже привязан к другому проекту юзера
+    if (/projects_tg_channel_unique|duplicate key/i.test(updErr.message)) {
+      // Найдём существующий проект и подскажем юзеру
+      const { data: existing } = await sb
+        .from("projects")
+        .select("id,title")
+        .eq("tg_id", tgId)
+        .eq("channel_id", chat.id)
+        .maybeSingle();
+      return Response.json(
+        {
+          error: existing
+            ? `Канал @${username} уже подключён к проекту «${existing.title}». Открой его в Dashboard.`
+            : `Канал @${username} уже используется в другом проекте.`,
+          code: "channel_already_attached",
+          existing_project_id: existing?.id ?? null,
+        },
+        { status: 409 }
+      );
+    }
+    return Response.json({ error: updErr.message }, { status: 500 });
+  }
 
   await sb.from("project_budget").upsert(
     { project_id: projectId, monthly_cap_usd: 1.0 },
