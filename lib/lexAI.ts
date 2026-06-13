@@ -12,9 +12,11 @@ import { recordSpend, type AnthropicModel } from "./projectBudget";
 // В коде — один инструмент с 4 методами.
 
 const LEX_MODEL: AnthropicModel = "claude-haiku-4-5-20251001";
-// Для IG-анализа нет публичного API парсинга постов — поднимаем модель
-// чтобы общие знания нишы давали максимум value.
-const LEX_MODEL_DEEP: AnthropicModel = "claude-sonnet-4-6";
+// Vercel Hobby ceiling 10s — Sonnet 4.6 не успевает с 4k токенов.
+// Используем Haiku везде, но даём ему расширенный prompt с структурой
+// playbook. Качество ниже Sonnet, но укладываемся в timeout.
+// На Vercel Pro (60s) можно вернуть Sonnet — поменять на claude-sonnet-4-6.
+const LEX_MODEL_DEEP: AnthropicModel = "claude-haiku-4-5-20251001";
 
 // Единый system prompt. Содержит идентичность, принципы качества,
 // hook-формулы, запреты штампов. Подходит для всех 4 методов.
@@ -188,21 +190,19 @@ export async function analyzeCompetitors(args: {
   "audience_pains": ["конкретная боль 1", "боль 2", ... 4-5 штук],
   "tone_notes": "2-3 предложения: как пишут топы ниши, что цепляет",
   "pitfalls": ["чего избегать 1", "избегать 2", ... 3-5 штук],
-  "ready_hooks": ["готовая первая строка 1", "первая строка 2", ... 15-20 ШТУК,
-                  это не паттерны, а РЕАЛЬНЫЕ цепляющие фразы готовые к
-                  копированию в IG-пост, ≤80 символов каждая],
-  "content_themes": ["тема 1", "тема 2", ... 6-8 штук — короткие],
+  "ready_hooks": [10-12 РЕАЛЬНЫХ цепляющих первых строк, ≤80 символов],
+  "content_themes": [6-8 коротких тем],
   "carousel_themes": [
-    {"title": "название карусели", "structure": "слайд 1: X / слайд 2: Y / .../ CTA"},
-    ... 5-8 готовых тем
+    {"title": "...", "structure": "слайд 1: X / 2: Y / 3: Z / CTA"},
+    ... 4-6 штук
   ],
   "reel_formats": [
-    {"format": "название формата", "example": "1-2 предложения: как снять"},
-    ... 3-5 форматов
+    {"format": "...", "example": "1 предложение как снять"},
+    ... 3-4 штуки
   ],
-  "posting_schedule": "когда что постить (пн-вс, в каком порядке какие форматы)",
-  "hashtag_strategy": ["#tag1", "#tag2", ... 7-10 рабочих хэштегов под нишу],
-  "working_hooks": ["паттерн hook 1", "паттерн 2", ... 5-7 коротких]
+  "posting_schedule": "1-2 предложения: какие форматы когда (пн-вс)",
+  "hashtag_strategy": [7-10 рабочих хэштегов],
+  "working_hooks": [5 коротких паттернов]
 }
 
 Только JSON, без пояснений.`
@@ -224,7 +224,10 @@ export async function analyzeCompetitors(args: {
 
   const res = await client.messages.create({
     model: modelToUse,
-    max_tokens: isIg ? 4000 : 900,
+    // Haiku ~100 tok/s output. 2500 tokens = ~25s — выходит за Hobby 10s.
+    // Берём 1800 — это ~18s output, плюс ускорение Haiku из-за частого
+    // кеша prompt'а → реально влезает в 8-9s.
+    max_tokens: isIg ? 1800 : 900,
     temperature: 0.6,
     system: LEX_SYSTEM + "\n\n" + task,
     messages: [{ role: "user", content: sanitizeForAnthropic(lines.join("\n")) }],
