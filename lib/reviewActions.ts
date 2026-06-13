@@ -38,7 +38,7 @@ export async function authDraft(draftId: string, tgId: number) {
   const sb = getSupabase();
   const { data } = await sb
     .from("content_drafts")
-    .select("id,project_id,content_type,platform,status,scheduled_at,text,body,chosen_title,caption,media_urls,video_url,published_message_id,projects!inner(tg_id)")
+    .select("id,project_id,content_type,platform,status,scheduled_at,body,chosen_title,caption,media_urls,video_url,published_message_id,projects!inner(tg_id)")
     .eq("id", draftId)
     .maybeSingle();
   if (!data) return null;
