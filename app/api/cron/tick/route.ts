@@ -33,14 +33,12 @@ function authOk(req: Request): boolean {
 
 // Полный пайплайн обработки. Порядок логический, но фактически
 // каждый cron запускается независимо — никакого ожидания между ними.
+// После перехода на LEX AI остался только publishing-pipeline.
+// Генерация контента теперь sync через /api/projects/[id]/lex/*,
+// автогенерация по плану упразднена (юзер сам жмёт кнопку).
 const PIPELINE = [
   "publish-scheduled",
   "ig-publish-scheduled",
-  "writer",
-  "strategist",
-  "analyst",
-  "niche-strategy",
-  "scout-discover",
 ] as const;
 
 export async function GET(req: Request) {

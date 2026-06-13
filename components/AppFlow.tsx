@@ -4,18 +4,13 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
 import HomeScreen from "./HomeScreen";
-import ChooseFormatScreen from "./screens/ChooseFormatScreen";
-import ProjectBriefScreen from "./screens/ProjectBriefScreen";
-import UploadScreen from "./screens/UploadScreen";
-import GenerateScreen from "./screens/GenerateScreen";
-import ReviewScreen from "./screens/ReviewScreen";
-import ReelApproveScreen from "./screens/ReelApproveScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import ProjectScreen from "./screens/ProjectScreen";
 import CreateProjectScreen from "./screens/CreateProjectScreen";
 import AddCompetitorsScreen from "./screens/AddCompetitorsScreen";
 import BillingScreen from "./screens/BillingScreen";
-import { useFlow, useFlowActions, type ContentFormat } from "../flow";
+import LexCreateScreen from "./screens/LexCreateScreen";
+import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
 import { hapticImpact } from "../lib/telegram";
@@ -113,36 +108,10 @@ export default function AppFlow() {
           )}
           {currentScreen === "project" && <ProjectScreen onBack={goBack} />}
           {currentScreen === "billing" && <BillingScreen onBack={goBack} />}
-          {currentScreen === "choose-format" && (
-            <ChooseFormatScreen
-              onPick={(format?: ContentFormat) => {
-                if (format) actions.setFormat(format);
-                // Reel идёт в upload (нужно загрузить видео).
-                // Остальные форматы идут в project-brief.
-                if (format === "reel") goNext("upload");
-                else goNext("project-brief");
-              }}
-              onBack={goBack}
-            />
-          )}
-          {currentScreen === "project-brief" && (
-            <ProjectBriefScreen
-              onSubmit={() => goNext("generate")}
-              onBack={goBack}
-            />
-          )}
-          {currentScreen === "upload" && (
-            <UploadScreen
-              onUploaded={() => goNext("generate")}
-              onBack={goBack}
-            />
-          )}
-          {currentScreen === "generate" && <GenerateScreen onBack={goBack} />}
-
-          {currentScreen === "reel-approve" && (
-            <ReelApproveScreen onBack={goBack} />
-          )}
-          {currentScreen === "review" && <ReviewScreen onBack={goBack} />}
+          {currentScreen === "lex-create" && <LexCreateScreen onBack={goBack} />}
+          {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
+              удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
+              старый currentScreen, useResumeFlow сбросит на home. */}
         </motion.div>
       </AnimatePresence>
     </div>

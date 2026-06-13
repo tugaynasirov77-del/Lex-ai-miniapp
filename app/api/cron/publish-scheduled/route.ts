@@ -1,5 +1,4 @@
 import { publishDueDrafts } from "../../../../lib/publishScheduler";
-import { orphanGeneratingDrafts } from "../../../../lib/orphanGen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,10 +15,6 @@ function authOk(req: Request): boolean {
 
 export async function GET(req: Request) {
   if (!authOk(req)) return new Response("forbidden", { status: 403 });
-  // Параллельно: публикуем due-драфты + ловим зависшие в generating.
-  const [publish, orphan] = await Promise.all([
-    publishDueDrafts(),
-    orphanGeneratingDrafts(),
-  ]);
-  return Response.json({ ok: true, ...publish, orphan });
+  const publish = await publishDueDrafts();
+  return Response.json({ ok: true, ...publish });
 }

@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  runIgAnalysis,
-  runIgPlan,
-  runTgAnalysis,
-  runTgPlan,
-} from "../lib/api";
+import { lexAnalyze } from "../lib/api";
 
 type Platform = "telegram" | "instagram";
 
@@ -14,10 +9,11 @@ export type AutoStartState = {
   /** Хук активно работает (есть запущенные вызовы). */
   active: boolean;
   analysisRunning: boolean;
+  /** Совместимость со старым UI — теперь planRunning всегда false. */
   planRunning: boolean;
   analysisDone: boolean;
   planDone: boolean;
-  /** Сообщение последней ошибки (analysis или plan). */
+  /** Сообщение последней ошибки. */
   error: string | null;
 };
 
@@ -32,10 +28,6 @@ const INITIAL: AutoStartState = {
 
 const flagKey = (projectId: string) => `lex.autoStart.${projectId}`;
 
-/**
- * Ставит маркер «запустить агентов» для проекта. Читается из
- * useAutoStartAgents в ProjectScreen.
- */
 export function markAutoStart(projectId: string): void {
   if (typeof window === "undefined") return;
   try {
@@ -46,23 +38,18 @@ export function markAutoStart(projectId: string): void {
 }
 
 /**
- * После добавления конкурентов AddCompetitorsScreen ставит флаг в
- * localStorage и навигирует в /project. Этот хук в ProjectScreen
- * проверяет флаг и параллельно запускает analyze + plan через
- * соответствующие платформенные endpoint'ы.
+ * После добавления конкурентов AddCompetitorsScreen ставит флаг.
+ * Этот хук запускает единственный вызов lexAnalyze — анализ ниши и
+ * конкурентов, результат кешируется в БД (projects.lex_insights)
+ * и используется во всех генераторах контента (post/carousel/reel).
  *
- * Идемпотентность: флаг снимается сразу при старте (даже при ошибке
- * мы не зациклимся при повторном рендере). Дополнительный startedRef
- * защищает от двойного запуска в одной mount-сессии (StrictMode).
- *
- * При завершении обоих вызовов вызывается onComplete — родитель
- * перечитывает данные проекта (план/анализ).
+ * Заменяет старый pipeline Анна+Александр (analyze + plan) одним
+ * вызовом LEX AI.
  */
 export function useAutoStartAgents(
   projectId: string | null,
   platform: Platform | null,
   onComplete?: () => void,
-  /** Передай новый счётчик, чтобы forсировать перезапуск (для retry-кнопки). */
   retryKey: number = 0,
 ): AutoStartState {
   const [state, setState] = useState<AutoStartState>(INITIAL);
@@ -82,69 +69,45 @@ export function useAutoStartAgents(
     if (flag !== "1") return;
 
     startedRef.current = true;
-    // Снимаем флаг сразу — даже при сетевой ошибке не зацикливаем перезапуск.
     try {
       localStorage.removeItem(flagKey(projectId));
     } catch {
       /* noop */
     }
 
-    const analyze =
-      platform === "instagram" ? runIgAnalysis : runTgAnalysis;
-    const plan = platform === "instagram" ? runIgPlan : runTgPlan;
-
     setState({
       active: true,
       analysisRunning: true,
-      planRunning: true,
+      planRunning: false,
       analysisDone: false,
       planDone: false,
       error: null,
     });
 
-    // Последовательно: Анна → Александр.
-    // IG-planner endpoint hard-rejects если в ig_analyses нет строки
-    // (error: "no analysis yet"). При параллельном запуске план
-    // успевал стартовать раньше, чем Анна закоммитила результат → fail.
-    // Pause 800мс между ними страхует от ещё одной replica-race.
     (async () => {
-      let analysisOk = false;
       try {
-        await analyze(projectId);
-        analysisOk = true;
-        setState((s) => ({ ...s, analysisRunning: false, analysisDone: true }));
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : "analysis failed";
+        await lexAnalyze(projectId);
         setState((s) => ({
           ...s,
           analysisRunning: false,
-          error: s.error ?? msg,
+          analysisDone: true,
+          planDone: true,
+          active: false,
         }));
-      }
-
-      if (analysisOk) {
-        await new Promise((r) => setTimeout(r, 800));
-      }
-
-      try {
-        await plan(projectId);
-        setState((s) => ({ ...s, planRunning: false, planDone: true }));
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : "plan failed";
+        const msg = e instanceof Error ? e.message : "analyze failed";
         setState((s) => ({
           ...s,
-          planRunning: false,
-          error: s.error ?? msg,
+          analysisRunning: false,
+          active: false,
+          error: msg,
         }));
       }
-
-      setState((s) => ({ ...s, active: false }));
       if (onComplete) onComplete();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, platform, retryKey]);
 
-  // При retryKey change — обнуляем startedRef, чтобы useEffect отработал.
   useEffect(() => {
     if (retryKey > 0) {
       startedRef.current = false;

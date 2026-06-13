@@ -2,27 +2,26 @@ import { NextRequest } from "next/server";
 import { verifyInitData } from "../../../lib/verifyTelegram";
 import { getSupabase } from "../../../lib/supabase";
 import { TIERS } from "../../../lib/tiers";
-import { getActiveTier, getProjectUsage } from "../../../lib/gating";
+import { getActiveTier, countUsage } from "../../../lib/gating";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** GET /api/billing?project_id=... — текущий tier, лимиты, usage, доступные планы */
+/** GET /api/billing — текущий tier, usage, доступные планы */
 export async function GET(req: NextRequest) {
   const v = verifyInitData(req.headers.get("x-telegram-init-data"));
-  if (!v.ok || !v.user) return Response.json({ error: v.error ?? "unauthorized" }, { status: 401 });
+  if (!v.ok || !v.user)
+    return Response.json({ error: v.error ?? "unauthorized" }, { status: 401 });
 
-  const projectId = req.nextUrl.searchParams.get("project_id");
   const tier = await getActiveTier(v.user.id);
   const cfg = TIERS[tier];
 
-  let usage = null;
-  if (projectId) {
-    const sb = getSupabase();
-    // owner check
-    const { data: p } = await sb.from("projects").select("id").eq("id", projectId).eq("tg_id", v.user.id).maybeSingle();
-    if (p) usage = await getProjectUsage(projectId);
-  }
+  // Usage по 3 action'ам, период из cfg.limits[action].period
+  const [postsUsed, carouselsUsed, reelsUsed] = await Promise.all([
+    countUsage(v.user.id, "post", cfg.limits.post.period),
+    countUsage(v.user.id, "carousel", cfg.limits.carousel.period),
+    countUsage(v.user.id, "reel", cfg.limits.reel.period),
+  ]);
 
   const sb = getSupabase();
   const { data: sub } = await sb
@@ -37,7 +36,12 @@ export async function GET(req: NextRequest) {
     tier,
     current_config: cfg,
     subscription: sub,
-    usage,
+    usage: {
+      post: { used: postsUsed, limit: cfg.limits.post.count, period: cfg.limits.post.period },
+      carousel: { used: carouselsUsed, limit: cfg.limits.carousel.count, period: cfg.limits.carousel.period },
+      reel: { used: reelsUsed, limit: cfg.limits.reel.count, period: cfg.limits.reel.period },
+    },
     available_tiers: Object.values(TIERS),
+    payments_enabled: false, // ЮKassa на верификации — пока всем free
   });
 }

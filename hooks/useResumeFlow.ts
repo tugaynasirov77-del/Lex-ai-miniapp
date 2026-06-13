@@ -68,10 +68,24 @@ export function useResumeFlow() {
       // home. Без этого Telegram BackButton на ProjectScreen прыгает на
       // home и юзер чувствует «back не работает».
       if (p.currentScreen && p.currentScreen !== "home") {
-        if (p.currentScreen !== "dashboard") {
+        // Whitelist валидных экранов после удаления legacy flow.
+        const VALID = new Set([
+          "dashboard",
+          "create-project",
+          "add-competitors",
+          "project",
+          "billing",
+          "lex-create",
+        ]);
+        if (!VALID.has(p.currentScreen)) {
+          // Старый legacy экран — сбрасываем на dashboard.
           actions.navigate("dashboard");
+        } else {
+          if (p.currentScreen !== "dashboard") {
+            actions.navigate("dashboard");
+          }
+          actions.navigate(p.currentScreen);
         }
-        actions.navigate(p.currentScreen);
       }
     } catch {
       // Битый JSON — игнор, оставляем INITIAL_STATE.

@@ -1,16 +1,19 @@
 import { getSupabase } from "./supabase";
-import { TIERS, tierFromString, type Tier, type TierConfig } from "./tiers";
+import { TIERS, tierFromString, type Tier, type TierConfig, type LimitSpec } from "./tiers";
 
-export type GateAction = "reel" | "carousel" | "plan" | "analysis";
+export type GateAction = "post" | "carousel" | "reel";
 
 function startOfMonthIso(): string {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 }
+
 function startOfWeekIso(): string {
   const d = new Date();
-  const day = d.getUTCDay() || 7;
-  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day + 1));
+  const day = d.getUTCDay() || 7; // вс=0 → 7
+  const monday = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day + 1)
+  );
   return monday.toISOString();
 }
 
@@ -26,94 +29,76 @@ export async function getActiveTier(tgId: number): Promise<Tier> {
     .limit(1)
     .maybeSingle();
   if (!data) return "free";
-  // expired?
   if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return "free";
   return tierFromString(data.plan);
 }
 
-export type Usage = {
-  reels: number;
-  carousels: number;
-  plans_this_week: number;
-  analyses: number;
-};
-
-export async function getProjectUsage(projectId: string): Promise<Usage> {
+/**
+ * Считает использование action'а юзера (по всем проектам) за период,
+ * который задаётся в TierConfig.limits[action].period.
+ */
+export async function countUsage(
+  tgId: number,
+  action: GateAction,
+  period: "week" | "month",
+): Promise<number> {
   const sb = getSupabase();
-  const monthIso = startOfMonthIso();
-  const weekIso = startOfWeekIso();
+  const since = period === "week" ? startOfWeekIso() : startOfMonthIso();
 
-  const [reels, carousels, plans, analyses] = await Promise.all([
-    sb.from("content_drafts").select("id", { count: "exact", head: true })
-      .eq("project_id", projectId).eq("content_type", "reel")
-      .neq("status", "rejected").gte("created_at", monthIso),
-    sb.from("content_drafts").select("id", { count: "exact", head: true })
-      .eq("project_id", projectId).eq("content_type", "carousel")
-      .neq("status", "rejected").gte("created_at", monthIso),
-    sb.from("content_plans").select("id", { count: "exact", head: true })
-      .eq("project_id", projectId).gte("created_at", weekIso),
-    sb.from("ig_analyses").select("id", { count: "exact", head: true })
-      .eq("project_id", projectId).gte("created_at", monthIso),
-  ]);
+  // Считаем по всем проектам юзера — подписка per-user.
+  const { count } = await sb
+    .from("content_drafts")
+    .select("id, projects!inner(tg_id)", { count: "exact", head: true })
+    .eq("content_type", action)
+    .neq("status", "rejected")
+    .gte("created_at", since)
+    .eq("projects.tg_id", tgId);
 
-  return {
-    reels: reels.count ?? 0,
-    carousels: carousels.count ?? 0,
-    plans_this_week: plans.count ?? 0,
-    analyses: analyses.count ?? 0,
-  };
+  return count ?? 0;
 }
 
 export type GateResult =
-  | { ok: true; tier: Tier; config: TierConfig; usage: Usage }
-  | { ok: false; tier: Tier; config: TierConfig; usage: Usage; reason: string; limit: number; used: number };
+  | { ok: true; tier: Tier; config: TierConfig; limit: LimitSpec; used: number }
+  | {
+      ok: false;
+      tier: Tier;
+      config: TierConfig;
+      limit: LimitSpec;
+      used: number;
+      reason: string;
+    };
 
-/** Проверка можно ли выполнить действие. Учитывает tier-лимиты + budget cap. */
+/** Проверка можно ли выполнить action. */
 export async function checkQuota(args: {
-  projectId: string;
   tgId: number;
   action: GateAction;
 }): Promise<GateResult> {
-  const { projectId, tgId, action } = args;
+  const { tgId, action } = args;
   const tier = await getActiveTier(tgId);
   const cfg = TIERS[tier];
-  const usage = await getProjectUsage(projectId);
+  const limit = cfg.limits[action];
+  const used = await countUsage(tgId, action, limit.period);
 
-  const map: Record<GateAction, { used: number; limit: number; label: string }> = {
-    reel: { used: usage.reels, limit: cfg.reelsPerMonth, label: "Reels в месяц" },
-    carousel: { used: usage.carousels, limit: cfg.carouselsPerMonth, label: "каруселей в месяц" },
-    plan: { used: usage.plans_this_week, limit: cfg.plansPerWeek, label: "планов в неделю" },
-    analysis: { used: usage.analyses, limit: cfg.analysesPerMonth, label: "анализов в месяц" },
-  };
-  const m = map[action];
-  if (m.used >= m.limit) {
-    // лог события
-    try {
-      const sb = getSupabase();
-      await sb.from("billing_events").insert({
-        project_id: projectId,
-        tg_id: tgId,
-        type: "gate_block",
-        tier,
-        meta: { action, used: m.used, limit: m.limit },
-      });
-    } catch {/* silent */}
+  if (used >= limit.count) {
+    const periodLabel = limit.period === "week" ? "за эту неделю" : "за этот месяц";
     return {
       ok: false,
       tier,
       config: cfg,
-      usage,
-      reason: `Лимит ${cfg.label}: ${m.used}/${m.limit} ${m.label}. Апгрейд → Pro/Business.`,
-      used: m.used,
-      limit: m.limit,
+      limit,
+      used,
+      reason: `Лимит ${cfg.label}: ${used}/${limit.count} ${actionLabel(action)} ${periodLabel}.`,
     };
   }
-  return { ok: true, tier, config: cfg, usage };
+  return { ok: true, tier, config: cfg, limit, used };
+}
+
+function actionLabel(a: GateAction): string {
+  return a === "post" ? "постов" : a === "carousel" ? "каруселей" : "сценариев Reels";
 }
 
 /** Хелпер для API: блокирует с 402, если квота превышена. */
 export async function enforceQuota(args: {
-  projectId: string;
   tgId: number;
   action: GateAction;
 }): Promise<{ pass: true; tier: Tier } | { pass: false; response: Response }> {
@@ -124,7 +109,14 @@ export async function enforceQuota(args: {
     response: Response.json(
       {
         error: r.reason,
-        gate: { tier: r.tier, action: args.action, used: r.used, limit: r.limit, upgrade_required: true },
+        gate: {
+          tier: r.tier,
+          action: args.action,
+          used: r.used,
+          limit: r.limit.count,
+          period: r.limit.period,
+          upgrade_required: false, // ЮKassa ещё не верифицирована
+        },
       },
       { status: 402 }
     ),

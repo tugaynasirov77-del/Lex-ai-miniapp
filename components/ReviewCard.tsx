@@ -2,6 +2,10 @@
 import { useState } from "react";
 import InlineEdit from "./InlineEdit";
 
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, "");
+}
+
 export type ReviewDraft = {
   id: string;
   project_id: string;
@@ -237,7 +241,7 @@ function ReelBody({ draft }: { draft: ReviewDraft }) {
         )}
       </div>
       {captionText && (
-        <p className="whitespace-pre-wrap text-sm text-zinc-200">{captionText}</p>
+        <p className="whitespace-pre-wrap text-sm text-zinc-200">{stripHtml(captionText)}</p>
       )}
     </div>
   );
@@ -279,7 +283,7 @@ function PostBody({
   return (
     <div className="space-y-1">
       {draft.chosen_title && <h3 className="font-semibold text-zinc-100">{draft.chosen_title}</h3>}
-      <p className="whitespace-pre-wrap text-sm text-zinc-200">{textVal}</p>
+      <p className="whitespace-pre-wrap text-sm text-zinc-200">{stripHtml(textVal)}</p>
     </div>
   );
 }
@@ -363,9 +367,9 @@ function CarouselBody({
                   {i + 1}/{slides.length}
                 </div>
                 <div className="space-y-1">
-                  <div className="text-[11px] font-semibold leading-tight text-white line-clamp-3">{title}</div>
+                  <div className="text-[11px] font-semibold leading-tight text-white line-clamp-3">{stripHtml(title)}</div>
                   {body && (
-                    <div className="text-[9px] leading-snug text-white/80 line-clamp-4">{body}</div>
+                    <div className="text-[9px] leading-snug text-white/80 line-clamp-4">{stripHtml(body)}</div>
                   )}
                   {s.visual && (
                     <div className="text-[8px] italic text-white/50 line-clamp-2">🎨 {s.visual}</div>
@@ -377,7 +381,7 @@ function CarouselBody({
         })}
       </div>
       {(draft.caption || draft.body) && (
-        <p className="whitespace-pre-wrap text-sm text-zinc-200">{draft.caption || draft.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-zinc-200">{stripHtml(draft.caption || draft.body || "")}</p>
       )}
     </div>
   );

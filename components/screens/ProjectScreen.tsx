@@ -48,6 +48,10 @@ type FeedItem = {
   error?: string | null;
 };
 
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, "");
+}
+
 export default function ProjectScreen({ onBack }: Props) {
   const { state } = useFlow();
   const actions = useFlowActions();
@@ -272,7 +276,7 @@ export default function ProjectScreen({ onBack }: Props) {
     if (fmt === "reel") {
       // Reel требует загрузку видео — Brief по нему всё равно не нужен,
       // ведём сразу на upload (тема уже в state).
-      actions.navigate("upload");
+      actions.navigate("lex-create");
       return;
     }
 
@@ -280,11 +284,11 @@ export default function ProjectScreen({ onBack }: Props) {
     try {
       const r = await createDraft({ format: fmt, brief, projectId });
       actions.setIds({ draftId: r.draftId });
-      actions.navigate("generate");
+      actions.navigate("lex-create");
     } catch (e) {
       hapticNotify("error");
       // Фолбэк — открываем brief, если что-то пошло не так с прямым созданием.
-      actions.navigate("project-brief");
+      actions.navigate("lex-create");
     }
   };
 
@@ -300,7 +304,7 @@ export default function ProjectScreen({ onBack }: Props) {
         items.push({
           id: r.id,
           kind: "reel",
-          preview: r.body?.slice(0, 120) || "Reel",
+          preview: stripHtml(r.body || "").slice(0, 120) || "Reel",
           status: effStatus,
           createdAt: r.created_at,
           permalink: r.ig_permalink,
@@ -314,7 +318,7 @@ export default function ProjectScreen({ onBack }: Props) {
           error: c.error || null,
           id: c.id,
           kind: "carousel",
-          preview: c.body?.slice(0, 120) || "Карусель",
+          preview: stripHtml(c.body || "").slice(0, 120) || "Карусель",
           status: c.status || "pending",
           createdAt: c.created_at,
           permalink: c.ig_permalink,
@@ -328,7 +332,7 @@ export default function ProjectScreen({ onBack }: Props) {
     return tgDrafts.map((d) => ({
       id: d.id,
       kind: "post" as const,
-      preview: (d.body || "").slice(0, 120),
+      preview: stripHtml(d.body || "").slice(0, 120),
       status: d.status || "pending",
       createdAt: d.created_at || "",
       permalink: null,
@@ -359,7 +363,7 @@ export default function ProjectScreen({ onBack }: Props) {
     if (it.kind === "reel" && it.status === "awaiting_approval" && it.reelJobId) {
       actions.setFormat("reel");
       actions.setIds({ reelJobId: it.reelJobId });
-      actions.navigate("reel-approve");
+      actions.navigate("lex-create");
       return;
     }
 
@@ -368,13 +372,13 @@ export default function ProjectScreen({ onBack }: Props) {
     if (it.kind === "reel" && it.reelJobId) {
       actions.setFormat("reel");
       actions.setIds({ reelJobId: it.reelJobId });
-      actions.navigate("review");
+      actions.navigate("lex-create");
       return;
     }
     if (it.kind === "post" || it.kind === "carousel") {
       actions.setFormat(it.kind);
       actions.setIds({ draftId: it.id });
-      actions.navigate("review");
+      actions.navigate("lex-create");
       return;
     }
     // reel без job id — невалидное состояние, тихо игнорируем
@@ -406,6 +410,31 @@ export default function ProjectScreen({ onBack }: Props) {
           onRetry={retryAutoStart}
         />
       )}
+
+      {/* Главная кнопка LEX AI — создание контента */}
+      <button
+        onClick={() => {
+          hapticImpact("medium");
+          actions.navigate("lex-create");
+        }}
+        style={{
+          marginTop: 14,
+          width: "100%",
+          minHeight: 56,
+          border: "none",
+          borderRadius: 16,
+          background: YELLOW,
+          color: "#0A0608",
+          fontSize: 15,
+          fontWeight: 800,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          cursor: "pointer",
+          boxShadow: `0 18px 40px ${YELLOW}33`,
+        }}
+      >
+        + Создать контент
+      </button>
 
       <QuickHub
         isIg={isIg}

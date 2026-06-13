@@ -570,3 +570,93 @@ export function rejectWeeklyPlan(
 ): Promise<{ ok: true; already?: boolean }> {
   return postJSON(`/api/weekly-plans/${planId}/reject`, { reason });
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// LEX AI (новый единый инструмент)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type LexInsights = {
+  niche_summary: string;
+  audience_pains: string[];
+  working_hooks: string[];
+  content_themes: string[];
+  tone_notes: string;
+  pitfalls: string[];
+  updated_at: string;
+};
+
+export type LexPostVariant = {
+  hook: string;
+  body: string;
+  title: string;
+};
+
+export type LexCarousel = {
+  topic: string;
+  hook: string;
+  image_prompt: string;
+  slides: { num: number; text: string }[];
+  caption: string;
+  hashtags: string[];
+};
+
+export type LexReelScript = {
+  topic: string;
+  hook: string;
+  scenes: { seconds: string; action: string; on_screen?: string }[];
+  music_hint: string;
+  caption: string;
+  hashtags: string[];
+  duration_sec: number;
+};
+
+export type CarouselStyle =
+  | "minimal"
+  | "pop"
+  | "editorial"
+  | "ai_tech"
+  | "business";
+
+export function lexAnalyze(
+  projectId: string,
+): Promise<{ ok: true; insights: LexInsights; cost: number }> {
+  return postJSON(`/api/projects/${projectId}/lex/analyze`, {});
+}
+
+export function lexWritePost(
+  projectId: string,
+  topic: string,
+): Promise<{
+  ok: true;
+  draftId: string;
+  variants: LexPostVariant[];
+  cost: number;
+}> {
+  return postJSON(`/api/projects/${projectId}/lex/post`, { topic });
+}
+
+export function lexWriteCarousel(
+  projectId: string,
+  topic: string,
+  style: CarouselStyle = "minimal",
+): Promise<{
+  ok: true;
+  draftId: string;
+  carousel: LexCarousel;
+  cost: number;
+}> {
+  return postJSON(`/api/projects/${projectId}/lex/carousel`, { topic, style });
+}
+
+export function lexWriteReel(
+  projectId: string,
+  topic: string,
+  duration: 15 | 30 | 60 = 30,
+): Promise<{
+  ok: true;
+  draftId: string;
+  script: LexReelScript;
+  cost: number;
+}> {
+  return postJSON(`/api/projects/${projectId}/lex/reel`, { topic, duration });
+}

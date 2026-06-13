@@ -19,7 +19,8 @@ export type ScreenKey =
   | "upload"
   | "generate"
   | "reel-approve"
-  | "review";
+  | "review"
+  | "lex-create";
 
 /** Какой контент юзер выбрал на choose-format. */
 export type ContentFormat = "reel" | "carousel" | "post" | "weekly-plan";

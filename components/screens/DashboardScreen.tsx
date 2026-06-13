@@ -84,6 +84,9 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
       {/* Тонкая плашка тарифа (тап → /billing) */}
       {billing && <BillingPill billing={billing} onTap={goBilling} />}
 
+      {/* Update banner для существующих юзеров */}
+      {data && data.length > 0 && <UpdateBanner />}
+
       {/* Filter tabs */}
       {data && data.length > 0 && (
         <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
@@ -159,6 +162,65 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 }
 
 // --- pieces ---
+
+const UPDATE_BANNER_KEY = "lex.updateBanner.v1.dismissed";
+
+function UpdateBanner() {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (localStorage.getItem(UPDATE_BANNER_KEY) === "1") setDismissed(true);
+    } catch { /* noop */ }
+  }, []);
+
+  if (dismissed) return null;
+
+  const close = () => {
+    setDismissed(true);
+    try { localStorage.setItem(UPDATE_BANNER_KEY, "1"); } catch { /* noop */ }
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: `linear-gradient(135deg, ${YELLOW}18, ${YELLOW}08)`,
+        border: `1px solid ${YELLOW}50`,
+        borderRadius: 14,
+        padding: 14,
+        position: "relative",
+      }}
+    >
+      <button
+        onClick={close}
+        aria-label="закрыть"
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 10,
+          background: "transparent",
+          border: "none",
+          color: MUTED,
+          fontSize: 18,
+          cursor: "pointer",
+          padding: 4,
+          lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+      <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 6, paddingRight: 24 }}>
+        🚀 LEX AI стал в 2 раза быстрее
+      </div>
+      <div style={{ fontSize: 12, lineHeight: 1.45, color: MUTED }}>
+        Один инструмент вместо команды агентов. На каждый пост — 3 варианта на выбор.
+        Карусели и Reels — готовые сценарии. Открой любой проект и жми «+ Создать контент».
+      </div>
+    </div>
+  );
+}
 
 // Тонкая плашка тарифа: ~44px, одна строка.
 // Free → жёлтый акцент с upsell. Pro/Business → ненавязчивый статус-чип.
