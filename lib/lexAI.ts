@@ -562,6 +562,116 @@ export async function writeReelScript(args: {
   return { script, cost };
 }
 
+// ---------- Method 5: writeWeekPlan ----------
+
+export type PlanIdea = {
+  day: string;                              // "пн" | "вт" | "ср" | "чт" | "пт" | "сб" | "вс"
+  format: "post" | "carousel" | "reel";
+  topic: string;
+  hook: string;
+};
+
+export type WeekPlan = {
+  ideas: PlanIdea[];      // ровно 7 — по идее в день
+  generated_at: string;
+};
+
+/**
+ * Генерит план контента на 7 дней (пн-вс). Один Anthropic-вызов.
+ * Тарифные ограничения накладывает UI: для Free показываются все 7,
+ * но действия (создать на основе идеи) доступны только на первых N.
+ */
+export async function writeWeekPlan(args: {
+  client: Anthropic;
+  projectId: string;
+  tgId: number;
+  insights: LexInsights | null;
+  brand: BrandKit | null;
+}): Promise<{ plan: WeekPlan | null; cost: number }> {
+  const { client, projectId, tgId, insights, brand } = args;
+  const ctx = buildContextBlock(insights, brand);
+
+  const task = `ЗАДАЧА: придумай план контента на 7 дней (пн → вс).
+
+Выдай 7 идей — по одной на день недели.
+Для каждой идеи: формат (post / carousel / reel), тема и hook.
+Чередуй форматы: ~3 поста, ~2 карусели, ~2 reels на неделе.
+Темы должны быть РАЗНЫМИ и опираться на боли аудитории + рабочие hooks из контекста.
+
+Верни JSON:
+{
+  "ideas": [
+    {"day": "пн", "format": "post", "topic": "...", "hook": "первая фраза, ≤80 симв"},
+    {"day": "вт", "format": "carousel", "topic": "...", "hook": "..."},
+    {"day": "ср", "format": "reel", "topic": "...", "hook": "..."},
+    {"day": "чт", "format": "post", "topic": "...", "hook": "..."},
+    {"day": "пт", "format": "post", "topic": "...", "hook": "..."},
+    {"day": "сб", "format": "carousel", "topic": "...", "hook": "..."},
+    {"day": "вс", "format": "reel", "topic": "...", "hook": "..."}
+  ]
+}
+
+Только JSON.`;
+
+  const res = await client.messages.create({
+    model: LEX_MODEL,
+    max_tokens: 1400,
+    temperature: 0.7,
+    system: LEX_SYSTEM,
+    messages: [
+      { role: "user", content: sanitizeForAnthropic(ctx + "\n" + task) },
+    ],
+  });
+
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "lex_plan",
+    model: LEX_MODEL,
+    usage: res.usage as any,
+    tgId,
+  });
+
+  const raw = extractText(res);
+  const parsed = safeJson<{ ideas: PlanIdea[] }>(raw);
+  if (!parsed || !Array.isArray(parsed.ideas) || parsed.ideas.length < 5) {
+    return { plan: null, cost };
+  }
+
+  const VALID_FORMATS: PlanIdea["format"][] = ["post", "carousel", "reel"];
+  const ideas: PlanIdea[] = parsed.ideas
+    .slice(0, 7)
+    .map((i) => ({
+      day: String(i.day || "").slice(0, 10),
+      format: VALID_FORMATS.includes(i.format) ? i.format : "post",
+      topic: String(i.topic || "").slice(0, 200),
+      hook: String(i.hook || "").slice(0, 200),
+    }))
+    .filter((i) => i.topic.length > 0);
+
+  if (ideas.length < 5) return { plan: null, cost };
+
+  const plan: WeekPlan = {
+    ideas,
+    generated_at: new Date().toISOString(),
+  };
+
+  // Кешируем план на проекте — для retrieve без AI-вызова
+  const sb = getSupabase();
+  await sb.from("projects").update({ lex_week_plan: plan }).eq("id", projectId);
+
+  return { plan, cost };
+}
+
+export async function getWeekPlanFromCache(projectId: string): Promise<WeekPlan | null> {
+  const sb = getSupabase();
+  const { data } = await sb
+    .from("projects")
+    .select("lex_week_plan")
+    .eq("id", projectId)
+    .maybeSingle();
+  return (data?.lex_week_plan as WeekPlan) || null;
+}
+
 // ---------- Brand kit helpers ----------
 
 export async function getBrandKitFromProject(projectId: string): Promise<BrandKit | null> {

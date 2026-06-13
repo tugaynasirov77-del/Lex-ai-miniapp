@@ -547,8 +547,25 @@ export type ApproveDraftResult = {
   already?: boolean;
 };
 
-export function approveDraft(draftId: string): Promise<ApproveDraftResult> {
-  return postJSON(`/api/drafts/${draftId}/approve`, {});
+export function approveDraft(
+  draftId: string,
+  opts?: { publish_now?: boolean; scheduled_at?: string },
+): Promise<ApproveDraftResult> {
+  return postJSON(`/api/drafts/${draftId}/approve`, opts || {});
+}
+
+export async function deleteDraft(draftId: string): Promise<{ ok: true }> {
+  const r = await fetch(`/api/drafts/${draftId}`, {
+    method: "DELETE",
+    headers: {
+      "x-telegram-init-data":
+        typeof window !== "undefined"
+          ? (window as any).Telegram?.WebApp?.initData || ""
+          : "",
+    },
+  });
+  if (!r.ok) throw new ApiError(r.status, await readError(r));
+  return { ok: true };
 }
 
 export function rejectDraft(
@@ -659,4 +676,26 @@ export function lexWriteReel(
   cost: number;
 }> {
   return postJSON(`/api/projects/${projectId}/lex/reel`, { topic, duration });
+}
+
+export type LexPlanIdea = {
+  day: string;
+  format: "post" | "carousel" | "reel";
+  topic: string;
+  hook: string;
+};
+
+export type LexWeekPlan = {
+  ideas: LexPlanIdea[];
+  generated_at: string;
+};
+
+export function lexGetPlan(projectId: string): Promise<{ plan: LexWeekPlan | null }> {
+  return getJSON(`/api/projects/${projectId}/lex/plan`);
+}
+
+export function lexWritePlan(
+  projectId: string,
+): Promise<{ ok: true; plan: LexWeekPlan; cost: number }> {
+  return postJSON(`/api/projects/${projectId}/lex/plan`, {});
 }

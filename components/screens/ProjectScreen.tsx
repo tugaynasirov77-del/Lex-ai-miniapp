@@ -6,13 +6,11 @@ import {
   getProject,
   getProjectIg,
   getProjectDrafts,
-  getProjectIgAnalysis,
-  getProjectIgPlan,
-  getProjectTgPlan,
+  lexGetPlan,
   updateProject,
   deleteProject,
-  runIgAnalysis,
-  runIgPlan,
+  lexAnalyze,
+  lexWritePlan,
   createDraft,
   ApiError,
   type ProjectDTO,
@@ -102,29 +100,26 @@ export default function ProjectScreen({ onBack }: Props) {
         const r = await getProject(projectId);
         if (!alive) return;
         setProject(r.project);
-        // Plan-fetch унифицирован: тот же state, разный endpoint по платформе.
-        const planFetch =
-          r.project.platform === "instagram"
-            ? getProjectIgPlan(projectId)
-            : getProjectTgPlan(projectId);
+        // Единый LEX-план кешируется в projects.lex_week_plan, тащим один раз.
+        const planFetch = lexGetPlan(projectId).catch(() => ({ plan: null }));
         if (r.project.platform === "instagram") {
-          const [agg, an, pl] = await Promise.all([
+          const [agg, pl] = await Promise.all([
             getProjectIg(projectId),
-            getProjectIgAnalysis(projectId).catch(() => ({ analysis: null })),
-            planFetch.catch(() => ({ plan: null })),
+            planFetch,
           ]);
           if (!alive) return;
           setIg(agg);
-          setAnalysis(an.analysis);
-          setPlan(pl.plan);
+          // analysis-блок остаётся стабом до отдельного UI для lex_insights
+          setAnalysis(null);
+          setPlan(pl.plan as any);
         } else {
           const [d, pl] = await Promise.all([
             getProjectDrafts(projectId),
-            planFetch.catch(() => ({ plan: null })),
+            planFetch,
           ]);
           if (!alive) return;
           setTgDrafts(d.drafts || []);
-          setPlan(pl.plan);
+          setPlan(pl.plan as any);
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Не удалось загрузить");
@@ -1446,7 +1441,7 @@ function ScoutTab({
     setActionErr(null);
     hapticImpact("medium");
     try {
-      await runIgAnalysis(projectId);
+      await lexAnalyze(projectId);
       hapticNotify("success");
       onRefresh();
     } catch (e) {
@@ -1469,7 +1464,7 @@ function ScoutTab({
     setActionErr(null);
     hapticImpact("medium");
     try {
-      await runIgPlan(projectId);
+      await lexWritePlan(projectId);
       hapticNotify("success");
       onRefresh();
     } catch (e) {

@@ -7,6 +7,7 @@ import {
   lexWriteCarousel,
   lexWriteReel,
   approveDraft,
+  deleteDraft,
   ApiError,
   type LexPostVariant,
   type LexCarousel,
@@ -60,6 +61,7 @@ export default function LexCreateScreen({ onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [variants, setVariants] = useState<LexPostVariant[]>([]);
+  const [pickedVariant, setPickedVariant] = useState<LexPostVariant | null>(null);
   const [carousel, setCarousel] = useState<LexCarousel | null>(null);
   const [reel, setReel] = useState<LexReelScript | null>(null);
 
@@ -113,11 +115,14 @@ export default function LexCreateScreen({ onBack }: Props) {
     }
   }
 
-  async function pickPostAndApprove(v: LexPostVariant) {
+  // Шаг 1: юзер выбрал один из 3 вариантов — переходим на экран действий.
+  async function pickPostVariant(v: LexPostVariant) {
     if (!draftId) return;
     hapticImpact("medium");
+    setPickedVariant(v);
+    // Заодно сохраним выбранный вариант как body в БД, чтобы публикация
+    // взяла именно его.
     try {
-      // обновляем body на выбранный вариант + апрувим в один шаг
       await fetch(`/api/drafts/${draftId}`, {
         method: "PATCH",
         headers: {
@@ -127,7 +132,51 @@ export default function LexCreateScreen({ onBack }: Props) {
         },
         body: JSON.stringify({ body: v.body, chosen_title: v.title }),
       });
-      await approveDraft(draftId);
+    } catch {
+      // не критично — body уже body[0] по умолчанию
+    }
+  }
+
+  async function publishNow() {
+    if (!draftId) return;
+    hapticImpact("medium");
+    try {
+      await approveDraft(draftId, { publish_now: true });
+      hapticNotify("success");
+      actions.navigate("project");
+    } catch (e) {
+      hapticNotify("error");
+      setError(e instanceof Error ? e.message : "не получилось");
+    }
+  }
+
+  async function publishAt(iso: string) {
+    if (!draftId) return;
+    hapticImpact("medium");
+    try {
+      await approveDraft(draftId, { scheduled_at: iso });
+      hapticNotify("success");
+      actions.navigate("project");
+    } catch (e) {
+      hapticNotify("error");
+      setError(e instanceof Error ? e.message : "не получилось");
+    }
+  }
+
+  async function regenerate() {
+    if (!draftId) return;
+    hapticImpact("medium");
+    // Удаляем текущий — лимит не накручиваем (DELETE его исключит из quota)
+    try { await deleteDraft(draftId); } catch { /* ignore */ }
+    setPickedVariant(null);
+    await submit();
+  }
+
+  async function discard() {
+    if (!draftId) return;
+    hapticImpact("medium");
+    try {
+      await deleteDraft(draftId);
       hapticNotify("success");
       actions.navigate("project");
     } catch (e) {
@@ -149,6 +198,7 @@ export default function LexCreateScreen({ onBack }: Props) {
   function resetToForm() {
     setPhase("form");
     setVariants([]);
+    setPickedVariant(null);
     setCarousel(null);
     setReel(null);
     setDraftId(null);
@@ -199,14 +249,36 @@ export default function LexCreateScreen({ onBack }: Props) {
         />
       )}
 
-      {phase === "result" && format === "post" && (
-        <PostResult variants={variants} onPick={pickPostAndApprove} onNew={resetToForm} />
+      {phase === "result" && format === "post" && !pickedVariant && (
+        <PostResult variants={variants} onPick={pickPostVariant} onNew={resetToForm} />
+      )}
+      {phase === "result" && format === "post" && pickedVariant && (
+        <PostActions
+          variant={pickedVariant}
+          onPublishNow={publishNow}
+          onPublishAt={publishAt}
+          onRegenerate={regenerate}
+          onDelete={discard}
+          onBack={() => setPickedVariant(null)}
+        />
       )}
       {phase === "result" && format === "carousel" && carousel && (
-        <CarouselResult carousel={carousel} onCopy={copy} onNew={resetToForm} />
+        <CarouselResult
+          carousel={carousel}
+          onCopy={copy}
+          onNew={resetToForm}
+          onRegenerate={regenerate}
+          onDelete={discard}
+        />
       )}
       {phase === "result" && format === "reel" && reel && (
-        <ReelResult script={reel} onCopy={copy} onNew={resetToForm} />
+        <ReelResult
+          script={reel}
+          onCopy={copy}
+          onNew={resetToForm}
+          onRegenerate={regenerate}
+          onDelete={discard}
+        />
       )}
     </Wrap>
   );
@@ -228,6 +300,9 @@ function Wrap({ children }: { children: React.ReactNode }) {
         padding:
           "max(calc(env(safe-area-inset-top) + 56px), 88px) 18px " +
           "max(calc(env(safe-area-inset-bottom) + 28px), 40px)",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
       }}
     >
       {children}
@@ -599,14 +674,143 @@ function PostResult({
   );
 }
 
+function PostActions({
+  variant,
+  onPublishNow,
+  onPublishAt,
+  onRegenerate,
+  onDelete,
+  onBack,
+}: {
+  variant: LexPostVariant;
+  onPublishNow: () => void;
+  onPublishAt: (iso: string) => void;
+  onRegenerate: () => void;
+  onDelete: () => void;
+  onBack: () => void;
+}) {
+  // Дефолт: завтра 10:00 по локали
+  const now = new Date();
+  const defaultDt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  defaultDt.setHours(10, 0, 0, 0);
+  const defaultLocal = toLocalInput(defaultDt);
+
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [dt, setDt] = useState(defaultLocal);
+
+  function tryPublishAt() {
+    const local = new Date(dt);
+    if (isNaN(local.getTime())) return;
+    onPublishAt(local.toISOString());
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          background: CARD_BG,
+          border: `1px solid ${CARD_BORDER}`,
+          borderRadius: 14,
+          padding: 14,
+        }}
+      >
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>
+          Выбранный пост
+        </div>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap", color: INK }}>
+          {variant.body}
+        </p>
+      </div>
+
+      {!scheduleMode && (
+        <>
+          <button onClick={onPublishNow} style={btnPrimary(false)}>
+            ОПУБЛИКОВАТЬ СЕЙЧАС
+          </button>
+          <button onClick={() => setScheduleMode(true)} style={btnSecondary()}>
+            ЗАПЛАНИРОВАТЬ НА ДАТУ
+          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onRegenerate} style={{ ...btnSecondary(), flex: 1 }}>
+              ПЕРЕСОБРАТЬ
+            </button>
+            <button
+              onClick={onDelete}
+              style={{
+                ...btnSecondary(),
+                flex: 1,
+                color: "#FF7373",
+                border: "1px solid rgba(255,115,115,0.40)",
+              }}
+            >
+              УДАЛИТЬ
+            </button>
+          </div>
+          <button onClick={onBack} style={btnGhost()}>
+            ← К вариантам
+          </button>
+        </>
+      )}
+
+      {scheduleMode && (
+        <div
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 14,
+            padding: 14,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <label style={{ fontSize: 12, color: MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            Дата и время публикации
+          </label>
+          <input
+            type="datetime-local"
+            value={dt}
+            onChange={(e) => setDt(e.target.value)}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: `1px solid ${CARD_BORDER}`,
+              borderRadius: 10,
+              padding: 12,
+              color: INK,
+              fontSize: 14,
+              fontFamily: "inherit",
+              colorScheme: "dark",
+            }}
+          />
+          <button onClick={tryPublishAt} style={btnPrimary(false)}>
+            ПОДТВЕРДИТЬ
+          </button>
+          <button onClick={() => setScheduleMode(false)} style={btnGhost()}>
+            ← Отмена
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function CarouselResult({
   carousel,
   onCopy,
   onNew,
+  onRegenerate,
+  onDelete,
 }: {
   carousel: LexCarousel;
   onCopy: (text: string, label?: string) => void;
   onNew: () => void;
+  onRegenerate: () => void;
+  onDelete: () => void;
 }) {
   const slidesText = carousel.slides
     .map((s) => `Слайд ${s.num}: ${s.text}`)
@@ -629,9 +833,7 @@ function CarouselResult({
       />
       <CopyBlock label="Тексты слайдов" text={slidesText} onCopy={onCopy} />
       <CopyBlock label="Caption и хэштеги" text={captionFull} onCopy={onCopy} />
-      <button onClick={onNew} style={btnSecondary()}>
-        ← НОВАЯ ТЕМА
-      </button>
+      <ResultActions onNew={onNew} onRegenerate={onRegenerate} onDelete={onDelete} />
     </div>
   );
 }
@@ -640,10 +842,14 @@ function ReelResult({
   script,
   onCopy,
   onNew,
+  onRegenerate,
+  onDelete,
 }: {
   script: LexReelScript;
   onCopy: (text: string, label?: string) => void;
   onNew: () => void;
+  onRegenerate: () => void;
+  onDelete: () => void;
 }) {
   const scenesText = script.scenes
     .map(
@@ -660,10 +866,42 @@ function ReelResult({
       <CopyBlock label="Только HOOK" text={script.hook} onCopy={onCopy} />
       <CopyBlock label="Подсказка по музыке" text={script.music_hint} onCopy={onCopy} />
       <CopyBlock label="Caption и хэштеги" text={captionFull} onCopy={onCopy} />
-      <button onClick={onNew} style={btnSecondary()}>
-        ← НОВАЯ ТЕМА
-      </button>
+      <ResultActions onNew={onNew} onRegenerate={onRegenerate} onDelete={onDelete} />
     </div>
+  );
+}
+
+function ResultActions({
+  onNew,
+  onRegenerate,
+  onDelete,
+}: {
+  onNew: () => void;
+  onRegenerate: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={onRegenerate} style={{ ...btnSecondary(), flex: 1 }}>
+          ПЕРЕСОБРАТЬ
+        </button>
+        <button
+          onClick={onDelete}
+          style={{
+            ...btnSecondary(),
+            flex: 1,
+            color: "#FF7373",
+            border: "1px solid rgba(255,115,115,0.40)",
+          }}
+        >
+          УДАЛИТЬ
+        </button>
+      </div>
+      <button onClick={onNew} style={btnGhost()}>
+        ← Новая тема
+      </button>
+    </>
   );
 }
 
