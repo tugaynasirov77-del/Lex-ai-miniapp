@@ -1418,6 +1418,11 @@ type LexInsightsLite = {
   content_themes?: string[];
   tone_notes?: string;
   pitfalls?: string[];
+  ready_hooks?: string[];
+  carousel_themes?: { title: string; structure: string }[];
+  reel_formats?: { format: string; example: string }[];
+  posting_schedule?: string;
+  hashtag_strategy?: string[];
   updated_at?: string;
 };
 
@@ -1581,6 +1586,81 @@ function ScoutTab({
                     <li key={i}>{p}</li>
                   ))}
                 </ul>
+              </SubBlock>
+            )}
+
+            {/* Playbook (IG) */}
+            {!!lexInsights.ready_hooks?.length && (
+              <SubBlock title={`Готовые hooks · ${lexInsights.ready_hooks.length}`}>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 16,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.85)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {lexInsights.ready_hooks.slice(0, 20).map((h, i) => (
+                    <li key={i} style={{ marginBottom: 3 }}>{h}</li>
+                  ))}
+                </ul>
+              </SubBlock>
+            )}
+            {!!lexInsights.carousel_themes?.length && (
+              <SubBlock title={`Идеи каруселей · ${lexInsights.carousel_themes.length}`}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {lexInsights.carousel_themes.slice(0, 10).map((c, i) => (
+                    <div key={i} style={{ fontSize: 12, lineHeight: 1.5 }}>
+                      <div style={{ color: INK, fontWeight: 600 }}>· {c.title}</div>
+                      {c.structure && (
+                        <div style={{ color: MUTED, marginLeft: 12 }}>{c.structure}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </SubBlock>
+            )}
+            {!!lexInsights.reel_formats?.length && (
+              <SubBlock title={`Форматы Reels · ${lexInsights.reel_formats.length}`}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {lexInsights.reel_formats.slice(0, 6).map((r, i) => (
+                    <div key={i} style={{ fontSize: 12, lineHeight: 1.5 }}>
+                      <div style={{ color: INK, fontWeight: 600 }}>· {r.format}</div>
+                      {r.example && (
+                        <div style={{ color: MUTED, marginLeft: 12 }}>{r.example}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </SubBlock>
+            )}
+            {lexInsights.posting_schedule && (
+              <SubBlock title="Расписание постинга">
+                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                  {lexInsights.posting_schedule}
+                </p>
+              </SubBlock>
+            )}
+            {!!lexInsights.hashtag_strategy?.length && (
+              <SubBlock title="Хэштеги для ниши">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {lexInsights.hashtag_strategy.map((h, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: 11,
+                        padding: "4px 8px",
+                        borderRadius: 999,
+                        background: `${YELLOW}14`,
+                        border: `1px solid ${YELLOW}40`,
+                        color: YELLOW,
+                      }}
+                    >
+                      {h}
+                    </span>
+                  ))}
+                </div>
               </SubBlock>
             )}
           </>

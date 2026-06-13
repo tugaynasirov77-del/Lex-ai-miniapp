@@ -81,6 +81,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       channelTitle:
         a.project.channel_title || a.project.title || a.project.channel_username || "канал",
       competitors,
+      platform: platform as "telegram" | "instagram",
     });
     if (!insights) {
       return Response.json({ error: "analyze returned empty" }, { status: 502 });

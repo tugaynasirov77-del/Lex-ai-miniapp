@@ -12,6 +12,9 @@ import { recordSpend, type AnthropicModel } from "./projectBudget";
 // В коде — один инструмент с 4 методами.
 
 const LEX_MODEL: AnthropicModel = "claude-haiku-4-5-20251001";
+// Для IG-анализа нет публичного API парсинга постов — поднимаем модель
+// чтобы общие знания нишы давали максимум value.
+const LEX_MODEL_DEEP: AnthropicModel = "claude-sonnet-4-6";
 
 // Единый system prompt. Содержит идентичность, принципы качества,
 // hook-формулы, запреты штампов. Подходит для всех 4 методов.
@@ -84,13 +87,19 @@ export type CompetitorInput = {
 };
 
 export type LexInsights = {
-  niche_summary: string;        // 1-2 предложения о нише
-  audience_pains: string[];     // 3-5 болей аудитории
-  working_hooks: string[];      // 5-7 hook-паттернов которые работают у конкурентов
-  content_themes: string[];     // 5-8 ходовых тем
-  tone_notes: string;           // как пишут конкуренты (тон)
-  pitfalls: string[];           // 3-5 ошибок которые делать НЕ нужно
-  updated_at: string;           // ISO
+  niche_summary: string;            // 1-2 предложения о нише
+  audience_pains: string[];         // 3-5 болей аудитории
+  working_hooks: string[];          // 5-7 hook-паттернов или ГОТОВЫХ первых строк
+  content_themes: string[];         // 5-8 тем
+  tone_notes: string;               // тон конкурентов
+  pitfalls: string[];               // 3-5 чего избегать
+  // Расширения для глубокого playbook (IG): опциональны, заполняются Sonnet'ом
+  ready_hooks?: string[];           // 15-20 готовых первых строк
+  carousel_themes?: { title: string; structure: string }[]; // 5-10 тем с структурой
+  reel_formats?: { format: string; example: string }[];     // 3-5 готовых reels-форматов
+  posting_schedule?: string;        // когда что постить
+  hashtag_strategy?: string[];      // 7-10 рабочих хэштегов
+  updated_at: string;               // ISO
 };
 
 export type BrandKit = {
@@ -109,11 +118,11 @@ export type PostVariant = {
 
 export type CarouselDraft = {
   topic: string;
-  hook: string;                 // дубликат title 1-го слайда для удобства фронта
-  image_prompt: string;         // готовый промпт для Midjourney/Sora/DALL-E
-  slides: { num: number; text: string }[]; // 6-8 слайдов
-  caption: string;              // под пост, 200-400 симв + хэштеги
-  hashtags: string[];           // 5-7 хэштегов отдельно
+  hook: string;
+  image_prompt: string;             // общий промпт стиля (для master-консистенции)
+  slides: { num: number; text: string; image_prompt?: string }[]; // per-slide promt
+  caption: string;
+  hashtags: string[];
 };
 
 export type ReelScript = {
@@ -141,8 +150,10 @@ export async function analyzeCompetitors(args: {
   channelTitle: string;
   niche?: string;
   competitors: CompetitorInput[];
+  platform?: "telegram" | "instagram";
 }): Promise<{ insights: LexInsights | null; cost: number }> {
-  const { client, projectId, tgId, channelTitle, niche, competitors } = args;
+  const { client, projectId, tgId, channelTitle, niche, competitors, platform } = args;
+  const isIg = platform === "instagram";
 
   const lines: string[] = [];
   lines.push(`Канал: ${channelTitle}`);
@@ -161,7 +172,41 @@ export async function analyzeCompetitors(args: {
     }
   }
 
-  const task = `ЗАДАЧА: проанализируй конкурентов и выдай insights для генерации контента.
+  // Для IG — full playbook (без публичных постов конкурентов вытягиваем
+  // максимум из общих знаний модели), Sonnet 4.6.
+  // Для TG — базовый набор полей, Haiku (есть реальные тексты постов).
+  const task = isIg
+    ? `ЗАДАЧА: собери ПОЛНЫЙ playbook по нише для Instagram-проекта.
+
+У тебя нет доступа к свежим постам конкурентов через API — используй свои
+общие знания об этих аккаунтах (если они известны) + о нише в целом.
+Цель: дать юзеру всё для создания сильного IG-контента на ближайший месяц.
+
+Верни JSON со ВСЕМИ полями (никаких пропусков):
+{
+  "niche_summary": "2-3 предложения: что за ниша, кто аудитория, в чём драйв",
+  "audience_pains": ["конкретная боль 1", "боль 2", ... 4-5 штук],
+  "tone_notes": "2-3 предложения: как пишут топы ниши, что цепляет",
+  "pitfalls": ["чего избегать 1", "избегать 2", ... 3-5 штук],
+  "ready_hooks": ["готовая первая строка 1", "первая строка 2", ... 15-20 ШТУК,
+                  это не паттерны, а РЕАЛЬНЫЕ цепляющие фразы готовые к
+                  копированию в IG-пост, ≤80 символов каждая],
+  "content_themes": ["тема 1", "тема 2", ... 6-8 штук — короткие],
+  "carousel_themes": [
+    {"title": "название карусели", "structure": "слайд 1: X / слайд 2: Y / .../ CTA"},
+    ... 5-8 готовых тем
+  ],
+  "reel_formats": [
+    {"format": "название формата", "example": "1-2 предложения: как снять"},
+    ... 3-5 форматов
+  ],
+  "posting_schedule": "когда что постить (пн-вс, в каком порядке какие форматы)",
+  "hashtag_strategy": ["#tag1", "#tag2", ... 7-10 рабочих хэштегов под нишу],
+  "working_hooks": ["паттерн hook 1", "паттерн 2", ... 5-7 коротких]
+}
+
+Только JSON, без пояснений.`
+    : `ЗАДАЧА: проанализируй конкурентов и выдай insights для генерации контента.
 
 Верни JSON:
 {
@@ -175,10 +220,12 @@ export async function analyzeCompetitors(args: {
 
 Только JSON, ничего больше.`;
 
+  const modelToUse = isIg ? LEX_MODEL_DEEP : LEX_MODEL;
+
   const res = await client.messages.create({
-    model: LEX_MODEL,
-    max_tokens: 900,
-    temperature: 0.5,
+    model: modelToUse,
+    max_tokens: isIg ? 4000 : 900,
+    temperature: 0.6,
     system: LEX_SYSTEM + "\n\n" + task,
     messages: [{ role: "user", content: sanitizeForAnthropic(lines.join("\n")) }],
   });
@@ -186,7 +233,7 @@ export async function analyzeCompetitors(args: {
   const cost = await recordSpend({
     projectId,
     agentRole: "lex_analyze",
-    model: LEX_MODEL,
+    model: modelToUse,
     usage: res.usage as any,
     tgId,
   });
@@ -197,21 +244,42 @@ export async function analyzeCompetitors(args: {
     return { insights: null, cost };
   }
 
+  const p: any = parsed;
   const insights: LexInsights = {
-    niche_summary: String(parsed.niche_summary).slice(0, 400),
-    audience_pains: Array.isArray(parsed.audience_pains)
-      ? parsed.audience_pains.slice(0, 5).map((s) => String(s).slice(0, 200))
+    niche_summary: String(p.niche_summary).slice(0, 500),
+    audience_pains: Array.isArray(p.audience_pains)
+      ? p.audience_pains.slice(0, 5).map((s: any) => String(s).slice(0, 200))
       : [],
-    working_hooks: Array.isArray(parsed.working_hooks)
-      ? parsed.working_hooks.slice(0, 7).map((s) => String(s).slice(0, 200))
+    working_hooks: Array.isArray(p.working_hooks)
+      ? p.working_hooks.slice(0, 7).map((s: any) => String(s).slice(0, 200))
       : [],
-    content_themes: Array.isArray(parsed.content_themes)
-      ? parsed.content_themes.slice(0, 8).map((s) => String(s).slice(0, 200))
+    content_themes: Array.isArray(p.content_themes)
+      ? p.content_themes.slice(0, 8).map((s: any) => String(s).slice(0, 200))
       : [],
-    tone_notes: String(parsed.tone_notes || "").slice(0, 400),
-    pitfalls: Array.isArray(parsed.pitfalls)
-      ? parsed.pitfalls.slice(0, 5).map((s) => String(s).slice(0, 200))
+    tone_notes: String(p.tone_notes || "").slice(0, 500),
+    pitfalls: Array.isArray(p.pitfalls)
+      ? p.pitfalls.slice(0, 5).map((s: any) => String(s).slice(0, 200))
       : [],
+    // playbook-поля (IG)
+    ready_hooks: Array.isArray(p.ready_hooks)
+      ? p.ready_hooks.slice(0, 20).map((s: any) => String(s).slice(0, 200))
+      : undefined,
+    carousel_themes: Array.isArray(p.carousel_themes)
+      ? p.carousel_themes.slice(0, 10).map((c: any) => ({
+          title: String(c?.title || "").slice(0, 120),
+          structure: String(c?.structure || "").slice(0, 500),
+        })).filter((c: any) => c.title)
+      : undefined,
+    reel_formats: Array.isArray(p.reel_formats)
+      ? p.reel_formats.slice(0, 6).map((r: any) => ({
+          format: String(r?.format || "").slice(0, 120),
+          example: String(r?.example || "").slice(0, 400),
+        })).filter((r: any) => r.format)
+      : undefined,
+    posting_schedule: p.posting_schedule ? String(p.posting_schedule).slice(0, 600) : undefined,
+    hashtag_strategy: Array.isArray(p.hashtag_strategy)
+      ? p.hashtag_strategy.slice(0, 12).map((h: any) => String(h).replace(/^#?/, "#").slice(0, 40))
+      : undefined,
     updated_at: new Date().toISOString(),
   };
 
@@ -411,16 +479,20 @@ export async function writeCarousel(args: {
 - Слайды 2-6: основная мысль, по одной идее на слайд. ≤60 символов каждый.
 - Последний: CTA (сохрани/подпишись/поделись). ≤40 символов.
 
-ВИЗУАЛЬНЫЙ СТИЛЬ (используй для image_prompt): ${styleHint}
+МАСТЕР-СТИЛЬ (используй основой для всех слайдов): ${styleHint}
 
 Верни JSON:
 {
   "topic": "...",
-  "hook": "текст hook-слайда (дубликат slides[0].text)",
-  "image_prompt": "ПОЛНЫЙ промпт для Midjourney/Sora — английский, со стилем выше, единый для всей карусели",
+  "hook": "текст hook-слайда (= slides[0].text)",
+  "image_prompt": "Общий стиль карусели одной строкой — English Midjourney промпт со стилем выше + цветовой палитрой + типографикой. Единый для всех слайдов.",
   "slides": [
-    {"num": 1, "text": "текст слайда 1"},
-    {"num": 2, "text": "..."},
+    {
+      "num": 1,
+      "text": "текст слайда 1",
+      "image_prompt": "Сцена для этого слайда (English, ≤200 симв): что в кадре, композиция, акцентный объект — со ссылкой на мастер-стиль через '+ master style above'. Юзер скопирует и сгенерит в Midjourney."
+    },
+    {"num": 2, "text": "...", "image_prompt": "..."},
     ...
   ],
   "caption": "Подпись под пост 200-400 символов, hook первой строкой, без markdown",
@@ -455,9 +527,10 @@ export async function writeCarousel(args: {
 
   const slides = parsed.slides
     .slice(0, 8)
-    .map((s, i) => ({
+    .map((s: any, i: number) => ({
       num: i + 1,
       text: String(s.text ?? "").trim().slice(0, 100),
+      image_prompt: s.image_prompt ? String(s.image_prompt).slice(0, 400) : undefined,
     }))
     .filter((s) => s.text.length > 0);
 
