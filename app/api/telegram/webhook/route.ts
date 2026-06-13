@@ -14,7 +14,11 @@ export const dynamic = "force-dynamic";
  *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://lex-ai-miniapp.vercel.app/api/telegram/webhook&secret_token=<SECRET>"
  */
 
-const MINI_APP_URL = "https://t.me/Lex_app_bot/lex";
+// Web App URL — должен совпадать с тем что прописан в BotFather → /newapp.
+// Бот @Lex_app_bot имеет has_main_web_app: true, значит запускаем главную WebApp.
+const MINI_APP_WEB_URL = "https://lex-ai-miniapp.vercel.app";
+// Fallback для клиентов без поддержки web_app кнопки (старые версии TG)
+const MINI_APP_TME_URL = "https://t.me/Lex_app_bot?startapp";
 
 const WELCOME = `LEX AI — ИИ-фабрика контента для Telegram и Instagram.
 
@@ -58,9 +62,12 @@ async function sendMessage(
 }
 
 function openAppKeyboard() {
+  // web_app кнопка — самый надёжный способ открыть Mini App изнутри чата.
+  // В inline_keyboard поддерживается всеми современными клиентами TG.
   return {
     inline_keyboard: [
-      [{ text: "🚀 Открыть LEX AI", url: MINI_APP_URL }],
+      [{ text: "🚀 Открыть LEX AI", web_app: { url: MINI_APP_WEB_URL } }],
+      [{ text: "Открыть в браузере", url: MINI_APP_TME_URL }],
     ],
   };
 }
