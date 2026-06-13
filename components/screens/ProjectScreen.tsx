@@ -536,6 +536,7 @@ export default function ProjectScreen({ onBack }: Props) {
             isIg={isIg}
             competitors={ig?.competitors ?? []}
             analysis={analysis}
+            lexInsights={(project as any)?.lex_insights ?? null}
             plan={plan}
             lastSnapshotAt={ig?.snapshots?.[0]?.snapshot_at ?? null}
             onRefresh={refresh}
@@ -1434,11 +1435,22 @@ function StatusPill({
 // Scout tab — лёгкий перенос блоков из InstagramView
 // =====================================================================
 
+type LexInsightsLite = {
+  niche_summary?: string;
+  audience_pains?: string[];
+  working_hooks?: string[];
+  content_themes?: string[];
+  tone_notes?: string;
+  pitfalls?: string[];
+  updated_at?: string;
+};
+
 function ScoutTab({
   projectId,
   isIg,
   competitors,
   analysis,
+  lexInsights,
   plan,
   lastSnapshotAt,
   onRefresh,
@@ -1450,6 +1462,7 @@ function ScoutTab({
   isIg: boolean;
   competitors: IgAggregateCompetitor[];
   analysis: IgAnalysisDTO | null;
+  lexInsights: LexInsightsLite | null;
   plan: IgPlanDTO | null;
   lastSnapshotAt: string | null;
   onRefresh: () => void;
@@ -1494,28 +1507,14 @@ function ScoutTab({
       setPlanBusy(false);
     }
   };
-  if (!isIg) {
-    return (
-      <Card>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-          Разведка канала
-        </div>
-        <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Здесь появится анализ ниши и идеи на основе конкурентов.
-          Добавьте 1-3 конкурента — LEX AI соберёт всё за минуту.
-        </p>
-      </Card>
-    );
-  }
-
-  const themes = analysis?.result?.content_themes?.slice(0, 5) ?? [];
-  const hooks = analysis?.result?.hook_patterns?.slice(0, 4) ?? [];
-  const opportunities = analysis?.result?.opportunities?.slice(0, 3) ?? [];
   const planItems = plan?.items?.slice(0, 4) ?? [];
+  // Старые поля analysis больше не используются — оставлено для совместимости типов
+  void analysis;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Конкуренты */}
+      {/* Конкуренты — IG-блок (для TG конкуренты добавляются в отдельном UI) */}
+      {isIg && (
       <Card>
         <div
           style={{
@@ -1561,8 +1560,9 @@ function ScoutTab({
           </div>
         )}
       </Card>
+      )}
 
-      {/* Анализ Анны */}
+      {/* Анализ ниши — отображаем lex_insights из БД */}
       <Card>
         <div
           style={{
@@ -1573,42 +1573,37 @@ function ScoutTab({
           }}
         >
           <div style={{ fontSize: 15, fontWeight: 700 }}>Анализ ниши</div>
-          {analysis?.created_at && (
+          {lexInsights?.updated_at && (
             <span style={{ fontSize: 11, color: MUTED }}>
-              {formatDate(analysis.created_at)}
+              {formatDate(lexInsights.updated_at)}
             </span>
           )}
         </div>
-        {!analysis ? (
+        {!lexInsights ? (
           <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
             Добавь конкурентов выше — LEX AI разберёт их и соберёт insights для ниши.
           </p>
         ) : (
           <>
-            {analysis.result?.executive_summary && (
+            {lexInsights.niche_summary && (
               <p
                 style={{
                   margin: "0 0 10px",
                   fontSize: 13,
-                  color: "rgba(255,255,255,0.85)",
+                  color: "rgba(255,255,255,0.9)",
                   lineHeight: 1.5,
                 }}
               >
-                {analysis.result.executive_summary}
+                {lexInsights.niche_summary}
               </p>
             )}
-            {themes.length > 0 && (
-              <SubBlock title="Темы ниши">
-                <ChipRow items={themes} />
+            {!!lexInsights.audience_pains?.length && (
+              <SubBlock title="Боли аудитории">
+                <ChipRow items={lexInsights.audience_pains} />
               </SubBlock>
             )}
-            {hooks.length > 0 && (
-              <SubBlock title="Hook-паттерны">
-                <ChipRow items={hooks} />
-              </SubBlock>
-            )}
-            {opportunities.length > 0 && (
-              <SubBlock title="Возможности">
+            {!!lexInsights.working_hooks?.length && (
+              <SubBlock title="Рабочие hooks у конкурентов">
                 <ul
                   style={{
                     margin: 0,
@@ -1618,8 +1613,37 @@ function ScoutTab({
                     lineHeight: 1.5,
                   }}
                 >
-                  {opportunities.map((o, i) => (
-                    <li key={i}>{o}</li>
+                  {lexInsights.working_hooks.slice(0, 5).map((h, i) => (
+                    <li key={i}>{h}</li>
+                  ))}
+                </ul>
+              </SubBlock>
+            )}
+            {!!lexInsights.content_themes?.length && (
+              <SubBlock title="Темы ниши">
+                <ChipRow items={lexInsights.content_themes} />
+              </SubBlock>
+            )}
+            {lexInsights.tone_notes && (
+              <SubBlock title="Тон конкурентов">
+                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
+                  {lexInsights.tone_notes}
+                </p>
+              </SubBlock>
+            )}
+            {!!lexInsights.pitfalls?.length && (
+              <SubBlock title="Чего избегать">
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 16,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.8)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {lexInsights.pitfalls.slice(0, 5).map((p, i) => (
+                    <li key={i}>{p}</li>
                   ))}
                 </ul>
               </SubBlock>
@@ -1628,24 +1652,19 @@ function ScoutTab({
         )}
         <button
           onClick={runAnalysis}
-          disabled={analysisBusy || competitors.length === 0}
+          disabled={analysisBusy}
           style={{
             ...miniBtn,
             marginTop: 10,
-            opacity: analysisBusy || competitors.length === 0 ? 0.5 : 1,
+            opacity: analysisBusy ? 0.5 : 1,
           }}
         >
           {analysisBusy
-            ? "АННА АНАЛИЗИРУЕТ…"
-            : analysis
+            ? "LEX AI АНАЛИЗИРУЕТ…"
+            : lexInsights
               ? "ПЕРЕЗАПУСТИТЬ АНАЛИЗ"
               : "ЗАПУСТИТЬ АНАЛИЗ"}
         </button>
-        {competitors.length === 0 && (
-          <p style={{ margin: "6px 0 0", fontSize: 11, color: MUTED }}>
-            Сначала добавьте конкурентов.
-          </p>
-        )}
       </Card>
 
       {/* Недельный план */}
@@ -1726,15 +1745,15 @@ function ScoutTab({
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button
             onClick={runPlan}
-            disabled={planBusy || !analysis}
+            disabled={planBusy || !lexInsights}
             style={{
               ...miniBtn,
               flex: 1,
-              opacity: planBusy || !analysis ? 0.5 : 1,
+              opacity: planBusy || !lexInsights ? 0.5 : 1,
             }}
           >
             {planBusy
-              ? "АЛЕКСАНДР СОБИРАЕТ…"
+              ? "LEX AI СОБИРАЕТ…"
               : plan
                 ? "ОБНОВИТЬ ПЛАН"
                 : "СОБРАТЬ ПЛАН"}

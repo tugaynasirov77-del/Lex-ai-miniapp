@@ -796,6 +796,9 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
           "max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
       }}
     >
       {children}
