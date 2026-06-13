@@ -11,7 +11,6 @@ import {
   deleteProject,
   lexAnalyze,
   lexWritePlan,
-  createDraft,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -269,11 +268,10 @@ export default function ProjectScreen({ onBack }: Props) {
   };
 
   /**
-   * «Собрать» из идеи плана — без захода в Brief.
-   * Для post/carousel: createDraft с brief из идеи, навигация в generate.
-   * Для reel: брифа нет (видео нужно загрузить) → upload с pre-filled темой.
+   * «Собрать» из идеи плана — открываем LexCreateScreen с предзаполненными
+   * format и topic через screenMeta. Юзер видит готовую форму, жмёт «Создать».
    */
-  const assembleIdea = async (item: {
+  const assembleIdea = (item: {
     topic?: string;
     format?: string;
     hook?: string;
@@ -282,35 +280,11 @@ export default function ProjectScreen({ onBack }: Props) {
     if (!topic || !projectId) return;
     const fmt = mapIdeaFormat(item.format);
     hapticImpact("medium");
-    actions.resetContent();
+    const enrichedTopic = item.hook ? `${topic}\n\nHook: ${item.hook.trim()}` : topic;
     actions.setFormat(fmt);
-    const enrichedTopic = item.hook
-      ? `${topic}\n\nHook: ${item.hook.trim()}`
-      : topic;
-    const brief = {
-      topic: enrichedTopic,
-      tone: "confident" as const,
-      platform: (isIg ? "instagram" : "telegram") as "instagram" | "telegram",
-    };
-    actions.setBrief(brief);
-
-    if (fmt === "reel") {
-      // Reel требует загрузку видео — Brief по нему всё равно не нужен,
-      // ведём сразу на upload (тема уже в state).
-      actions.navigate("lex-create");
-      return;
-    }
-
-    // post / carousel — сразу создаём draft и идём в generate.
-    try {
-      const r = await createDraft({ format: fmt, brief, projectId });
-      actions.setIds({ draftId: r.draftId });
-      actions.navigate("lex-create");
-    } catch (e) {
-      hapticNotify("error");
-      // Фолбэк — открываем brief, если что-то пошло не так с прямым созданием.
-      actions.navigate("lex-create");
-    }
+    actions.setScreenMeta("lexTopic", enrichedTopic);
+    actions.setScreenMeta("lexFormat", fmt === "reel" ? "reel" : fmt === "carousel" ? "carousel" : "post");
+    actions.navigate("lex-create");
   };
 
   // unified feed для Content tab

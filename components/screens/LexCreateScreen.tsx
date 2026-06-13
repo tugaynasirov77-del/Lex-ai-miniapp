@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFlow, useFlowActions } from "../../flow";
 import {
   lexWritePost,
@@ -57,8 +57,25 @@ export default function LexCreateScreen({ onBack }: Props) {
   const actions = useFlowActions();
   const projectId = state.projectId;
 
-  const [format, setFormat] = useState<Format>("post");
-  const [topic, setTopic] = useState("");
+  // Pre-fill из screenMeta (когда юзер пришёл с PlanIdeaCard «Собрать»)
+  const prefillTopic = (state.screenMeta as any)?.lexTopic as string | undefined;
+  const prefillFormat = (state.screenMeta as any)?.lexFormat as Format | undefined;
+
+  const [format, setFormat] = useState<Format>(
+    prefillFormat === "post" || prefillFormat === "carousel" || prefillFormat === "reel"
+      ? prefillFormat
+      : "post"
+  );
+  const [topic, setTopic] = useState(prefillTopic || "");
+
+  // Очищаем screenMeta после первой подцепки чтобы при возврате не предзаполнялось снова
+  useEffect(() => {
+    if (prefillTopic || prefillFormat) {
+      actions.setScreenMeta("lexTopic", undefined);
+      actions.setScreenMeta("lexFormat", undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [style, setStyle] = useState<CarouselStyle>("minimal");
   const [duration, setDuration] = useState<15 | 30 | 60>(30);
 

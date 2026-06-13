@@ -52,103 +52,6 @@ async function getJSON<TResp>(path: string): Promise<TResp> {
 }
 
 // ---------------------------------------------------------------------------
-// drafts (post / carousel)
-// ---------------------------------------------------------------------------
-
-export type DraftFormat = Extract<ContentFormat, "post" | "carousel">;
-
-export type CreateDraftPayload = {
-  format: DraftFormat;
-  brief: Brief;
-  /** Опционально: переиспользовать существующий проект. Если не передан — сервер создаст. */
-  projectId?: string;
-};
-
-export type CreateDraftResult = {
-  draftId: string;
-  projectId: string;
-};
-
-export function createDraft(payload: CreateDraftPayload): Promise<CreateDraftResult> {
-  return postJSON("/api/drafts", payload);
-}
-
-export type UpdateDraftPatch = Partial<{
-  text: string;
-  slides: Array<{ idx: number; text: string }>;
-  caption: string;
-  schedule_at: string | null;
-}>;
-
-export function updateDraft(draftId: string, patch: UpdateDraftPatch): Promise<{ ok: true }> {
-  return patchJSON(`/api/drafts/${draftId}`, patch);
-}
-
-/** Статусы content_drafts. Backend источник истины. */
-export type DraftStatus =
-  | "generating"
-  | "reviewing"
-  | "ready"
-  | "scheduled"
-  | "published"
-  | "failed";
-
-export type DraftDTO = {
-  id: string;
-  project_id: string;
-  format: DraftFormat;
-  status: DraftStatus;
-  /** Опц. под-фаза агента (если backend репортит). */
-  phase?: "writing" | "review" | "finalize" | null;
-  text?: string;
-  slides?: Array<{ idx: number; text: string }>;
-  caption?: string;
-  scheduled_at?: string | null;
-  review_log?: unknown[];
-  error?: string | null;
-  updated_at: string;
-};
-
-export function getDraft(draftId: string): Promise<DraftDTO> {
-  return getJSON(`/api/drafts/${draftId}`);
-}
-
-// ---------------------------------------------------------------------------
-// weekly plan
-// ---------------------------------------------------------------------------
-
-export type CreateWeeklyPlanPayload = {
-  brief: Brief;
-  projectId?: string;
-};
-
-export type CreateWeeklyPlanResult = {
-  planId: string;
-  projectId: string;
-};
-
-export function createWeeklyPlan(
-  payload: CreateWeeklyPlanPayload,
-): Promise<CreateWeeklyPlanResult> {
-  return postJSON("/api/weekly-plans", payload);
-}
-
-export type WeeklyPlanStatus = "generating" | "reviewing" | "ready" | "failed";
-
-export type WeeklyPlanDTO = {
-  id: string;
-  project_id: string;
-  status: WeeklyPlanStatus;
-  phase?: "research" | "writing" | "review" | null;
-  ideas?: Array<{ idx: number; format: string; topic: string; hook: string }>;
-  error?: string | null;
-  updated_at: string;
-};
-
-export function getWeeklyPlan(planId: string): Promise<WeeklyPlanDTO> {
-  return getJSON(`/api/weekly-plans/${planId}`);
-}
-
 // ---------------------------------------------------------------------------
 // projects (опционально, если бэк требует явного create перед draft)
 // ---------------------------------------------------------------------------
@@ -286,74 +189,27 @@ export type IgAnalysisDTO = {
   created_at: string;
 };
 
-export function getProjectIgAnalysis(
-  projectId: string,
-): Promise<{ analysis: IgAnalysisDTO | null }> {
-  return getJSON(`/api/projects/${projectId}/ig/analyze`);
-}
-
 /**
- * Унифицированный план недели для IG и TG. Структура `items` совпадает:
- * IG (igPlanner) и TG (strategist) пишут в одну таблицу `content_plans`
- * с одинаковым набором полей у каждой идеи. format-значения отличаются:
- *   IG: "post" | "carousel" | "reel"
- *   TG: "text" | "poll" | "quiz"
- * UI решает их к бейджу формата через mapIdeaFormat.
+ * Унифицированный план недели. Сохраняется как backward-compat alias —
+ * ScoutTab всё ещё типизирует prop как IgPlanDTO, но реальный source
+ * теперь lex_week_plan (через lexGetPlan).
  */
 export type PlanDTO = {
-  id: string;
-  week_start: string;
+  id?: string;
+  week_start?: string;
   items: Array<{
     day?: string;
     format?: string;
     topic?: string;
     hook?: string;
     priority?: string;
-    /** TG-strategist дополнительно прокидывает type (insight|case|...) */
     type?: string;
   }>;
   summary?: any;
-  created_at: string;
+  created_at?: string;
 };
 
-/** Backward-compat alias. */
 export type IgPlanDTO = PlanDTO;
-
-export function getProjectIgPlan(
-  projectId: string,
-): Promise<{ plan: PlanDTO | null }> {
-  return getJSON(`/api/projects/${projectId}/ig/plan`);
-}
-
-export function getProjectTgPlan(
-  projectId: string,
-): Promise<{ plan: PlanDTO | null }> {
-  return getJSON(`/api/projects/${projectId}/plan`);
-}
-
-// --- IG analyze / plan actions (для Scout actions) ---
-
-export function runIgAnalysis(
-  projectId: string,
-): Promise<{ ok: true; analysis?: IgAnalysisDTO; cost?: number }> {
-  return postJSON(`/api/projects/${projectId}/ig/analyze`, {});
-}
-
-export function runIgPlan(
-  projectId: string,
-): Promise<{ ok: true; plan?: IgPlanDTO; cost?: number }> {
-  return postJSON(`/api/projects/${projectId}/ig/plan`, {});
-}
-
-// --- TG analyze / plan actions (auto-start после добавления конкурентов) ---
-
-export function runTgAnalysis(projectId: string): Promise<unknown> {
-  return postJSON(`/api/projects/${projectId}/niche-strategy`, {});
-}
-
-export function runTgPlan(projectId: string): Promise<unknown> {
-  return postJSON(`/api/projects/${projectId}/plan`, {});
-}
 
 // --- competitors (onboarding step 3a) ---
 
@@ -468,75 +324,6 @@ export function approveReel(
 // publish reel (IG Graph API через Виктор-публикатор)
 // ---------------------------------------------------------------------------
 
-export type PublishReelResult =
-  | { ok: true; media_id: string; permalink?: string | null }
-  | { ok: false; stub: true; message: string }
-  | { ok: false; error: string };
-
-/**
- * POST /api/projects/[id]/ig/publish с {draft_id}.
- *
- * Эндпоинт возвращает 501 с `stub:true` если INSTAGRAM_ACCESS_TOKEN не настроен —
- * это ожидаемое состояние MVP, обрабатываем graceful, без throw.
- *
- * Любые другие non-2xx — ApiError.
- */
-export async function publishReel(
-  projectId: string,
-  draftId: string,
-): Promise<PublishReelResult> {
-  const r = await tgFetch(`/api/projects/${projectId}/ig/publish`, {
-    method: "POST",
-    body: JSON.stringify({ draft_id: draftId }),
-  });
-  const data = await r.json().catch(() => ({}) as any);
-  if (r.status === 501 && data?.stub) {
-    return { ok: false, stub: true, message: data.message || "Publish не настроен" };
-  }
-  if (!r.ok) {
-    throw new ApiError(r.status, data?.error || `HTTP ${r.status}`);
-  }
-  return data as PublishReelResult;
-}
-
-// ---------------------------------------------------------------------------
-// reel jobs
-// ---------------------------------------------------------------------------
-
-export type ReelJobStatus =
-  | "pending"
-  | "claimed"
-  | "rendering"
-  | "awaiting_approval"
-  | "done"
-  | "failed";
-
-export type ReelJobPhase =
-  | "download"
-  | "validate"
-  | "transcribe"
-  | "render"
-  | "upload"
-  | null;
-
-export type ReelJobDTO = {
-  id: string;
-  project_id: string;
-  draft_id: string | null;
-  status: ReelJobStatus;
-  phase: ReelJobPhase;
-  transcript_words?: Array<{ idx: number; w: string; start_ms: number; end_ms: number }>;
-  video_url?: string | null;
-  cover_url?: string | null;
-  attempts?: number;
-  error?: string | null;
-  updated_at: string;
-};
-
-export function getReelJob(jobId: string): Promise<ReelJobDTO> {
-  return getJSON(`/api/ig/reel-jobs/${jobId}`);
-}
-
 // ---------------------------------------------------------------------------
 // review actions (approve / reject) — minimal contract, post/carousel/plan
 // ---------------------------------------------------------------------------
@@ -573,19 +360,6 @@ export function rejectDraft(
   reason?: string,
 ): Promise<{ ok: true; already?: boolean }> {
   return postJSON(`/api/drafts/${draftId}/reject`, { reason });
-}
-
-export function approveWeeklyPlan(
-  planId: string,
-): Promise<{ ok: true; already?: boolean }> {
-  return postJSON(`/api/weekly-plans/${planId}/approve`, {});
-}
-
-export function rejectWeeklyPlan(
-  planId: string,
-  reason?: string,
-): Promise<{ ok: true; already?: boolean }> {
-  return postJSON(`/api/weekly-plans/${planId}/reject`, { reason });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
