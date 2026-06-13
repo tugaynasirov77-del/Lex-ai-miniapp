@@ -4,6 +4,12 @@ import { TIERS, tierFromString, type Tier, type TierConfig, type LimitSpec } fro
 export type GateAction = "post" | "carousel" | "reel";
 
 /**
+ * Whitelist tg_id'ов с безлимитом — обходят quota-чек.
+ * Основатель + админы.
+ */
+const ADMIN_TG_IDS = new Set<number>([5825762433]);
+
+/**
  * Quota epoch — драфты созданные ДО этой даты не учитываются в лимитах.
  * Используется при relaunch (новые условия) — даёт всем чистый счётчик.
  * Текущее значение — момент перехода на LEX AI (13 июня 2026, 09:00 UTC).
@@ -91,6 +97,12 @@ export async function checkQuota(args: {
   const tier = await getActiveTier(tgId);
   const cfg = TIERS[tier];
   const limit = cfg.limits[action];
+
+  // Админы — безлимит, не делаем запрос count'а
+  if (ADMIN_TG_IDS.has(tgId)) {
+    return { ok: true, tier, config: cfg, limit, used: 0 };
+  }
+
   const used = await countUsage(tgId, action, limit.period);
 
   if (used >= limit.count) {
