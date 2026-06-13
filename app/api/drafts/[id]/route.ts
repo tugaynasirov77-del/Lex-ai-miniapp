@@ -144,6 +144,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (typeof body?.caption === "string")
     update.caption = body.caption.slice(0, 2048);
   if (Array.isArray(body?.media_urls)) update.media_urls = body.media_urls;
+  if (typeof body?.published_externally === "boolean")
+    update.published_externally = body.published_externally;
   if (Object.keys(update).length === 0)
     return Response.json({ error: "no fields to update" }, { status: 400 });
 

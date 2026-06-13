@@ -473,3 +473,53 @@ export function lexWritePlan(
 ): Promise<{ ok: true; plan: LexWeekPlan; cost: number }> {
   return postJSON(`/api/projects/${projectId}/lex/plan`, {});
 }
+
+// ─── Brand Setup (IG) ────────────────────────────────────────────────────
+
+export type BrandKit = {
+  channel_title?: string;
+  niche?: string;
+  short_description?: string;
+  voice?: string;
+  audience?: string;
+  goals?: string[];
+  inspirations?: string[];
+};
+
+export type BrandSetupPayload = {
+  niche: string;
+  description: string;
+  audience: string;
+  tone: string;
+  inspirations?: string[];
+};
+
+export function getBrandKit(projectId: string): Promise<{ brand_kit: BrandKit | null }> {
+  return getJSON(`/api/projects/${projectId}/brand-setup`);
+}
+
+export function saveBrandSetup(
+  projectId: string,
+  payload: BrandSetupPayload,
+): Promise<{ ok: true; brand_kit: BrandKit; insights?: any; cost?: number }> {
+  return postJSON(`/api/projects/${projectId}/brand-setup`, payload);
+}
+
+export async function markPublishedExternally(
+  draftId: string,
+  flag: boolean,
+): Promise<{ ok: true }> {
+  const r = await fetch(`/api/drafts/${draftId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-telegram-init-data":
+        typeof window !== "undefined"
+          ? (window as any).Telegram?.WebApp?.initData || ""
+          : "",
+    },
+    body: JSON.stringify({ published_externally: flag }),
+  });
+  if (!r.ok) throw new ApiError(r.status, await readError(r));
+  return { ok: true };
+}

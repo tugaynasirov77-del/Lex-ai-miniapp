@@ -13,6 +13,7 @@ import {
   lexWritePlan,
   addTgCompetitor,
   addIgCompetitor,
+  markPublishedExternally,
   ApiError,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -23,6 +24,7 @@ import {
 } from "../../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgents";
+import BrandSetupCard from "../BrandSetupCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -39,11 +41,13 @@ type FeedItem = {
   id: string;
   kind: "post" | "carousel" | "reel";
   preview: string;
+  fullCopy?: string;          // полный текст для «Скопировать всё» (IG)
   status: string;
   createdAt: string;
   permalink?: string | null;
   reelJobId?: string | null;
   publishedAt?: string | null;
+  publishedExternally?: boolean; // юзер сам отметил
   error?: string | null;
 };
 
@@ -129,25 +133,20 @@ export default function ProjectScreen({ onBack }: Props) {
         setProject(r.project);
         // Единый LEX-план кешируется в projects.lex_week_plan, тащим один раз.
         const planFetch = lexGetPlan(projectId).catch(() => ({ plan: null }));
-        if (r.project.platform === "instagram") {
-          const [agg, pl] = await Promise.all([
-            getProjectIg(projectId),
-            planFetch,
-          ]);
-          if (!alive) return;
-          setIg(agg);
-          // analysis-блок остаётся стабом до отдельного UI для lex_insights
-          setAnalysis(null);
-          setPlan(pl.plan as any);
-        } else {
-          const [d, pl] = await Promise.all([
-            getProjectDrafts(projectId),
-            planFetch,
-          ]);
-          if (!alive) return;
-          setTgDrafts(d.drafts || []);
-          setPlan(pl.plan as any);
-        }
+        // И для IG и для TG тянем всё через getProjectDrafts —
+        // там есть lex_carousel/lex_reel/published_externally.
+        const [d, pl, agg] = await Promise.all([
+          getProjectDrafts(projectId),
+          planFetch,
+          r.project.platform === "instagram"
+            ? getProjectIg(projectId).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        if (!alive) return;
+        setTgDrafts(d.drafts || []);
+        setIg(agg);
+        setAnalysis(null);
+        setPlan(pl.plan as any);
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Не удалось загрузить");
       } finally {
@@ -289,54 +288,79 @@ export default function ProjectScreen({ onBack }: Props) {
     actions.navigate("lex-create");
   };
 
-  // unified feed для Content tab
+  // unified feed для Content/Архив tab.
+  // Для IG и TG одинаково — тянем content_drafts через getProjectDrafts.
   const feed: FeedItem[] | null = (() => {
-    if (isIg) {
-      if (!ig) return null;
-      const items: FeedItem[] = [];
-      for (const r of ig.reels) {
-        const jobErr = (r.job as any)?.error || null;
-        // job.status более актуален (rendering/failed/done), берём его в приоритете.
-        const effStatus = (r.job as any)?.status || r.status || "pending";
-        items.push({
-          id: r.id,
-          kind: "reel",
-          preview: stripHtml(r.body || "").slice(0, 120) || "Reel",
-          status: effStatus,
-          createdAt: r.created_at,
-          permalink: r.ig_permalink,
-          reelJobId: r.job?.id || null,
-          publishedAt: r.published_at,
-          error: jobErr,
-        });
-      }
-      for (const c of ig.carousels) {
-        items.push({
-          error: c.error || null,
-          id: c.id,
-          kind: "carousel",
-          preview: stripHtml(c.body || "").slice(0, 120) || "Карусель",
-          status: c.status || "pending",
-          createdAt: c.created_at,
-          permalink: c.ig_permalink,
-          publishedAt: c.published_at,
-        });
-      }
-      items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-      return items;
-    }
     if (tgDrafts === null) return null;
-    return tgDrafts.map((d) => ({
-      id: d.id,
-      kind: "post" as const,
-      preview: stripHtml(d.body || "").slice(0, 120),
-      status: d.status || "pending",
-      createdAt: d.created_at || "",
-      permalink: null,
-      publishedAt: d.published_message_id ? "" : null,
-      error: d.error || null,
-    }));
+    return tgDrafts.map((d: any) => {
+      const kind: FeedItem["kind"] =
+        d.content_type === "carousel"
+          ? "carousel"
+          : d.content_type === "reel"
+            ? "reel"
+            : "post";
+      // Полный текст для «Скопировать всё» (только для IG-форматов)
+      let fullCopy: string | undefined;
+      if (kind === "carousel" && d.lex_carousel) {
+        const c = d.lex_carousel;
+        const slides = (c.slides || [])
+          .map((s: any) => `Слайд ${s.num}: ${s.text}`)
+          .join("\n\n");
+        fullCopy = [
+          `🎯 ${c.topic || ""}`,
+          c.hook ? `Hook: ${c.hook}` : "",
+          "",
+          "СЛАЙДЫ:",
+          slides,
+          "",
+          "CAPTION:",
+          c.caption || "",
+          "",
+          (c.hashtags || []).join(" "),
+        ]
+          .filter(Boolean)
+          .join("\n");
+      } else if (kind === "reel" && d.lex_reel) {
+        const r = d.lex_reel;
+        const scenes = (r.scenes || [])
+          .map(
+            (s: any) =>
+              `[${s.seconds}] ${s.action}${s.on_screen ? `\n   в кадре: ${s.on_screen}` : ""}`
+          )
+          .join("\n\n");
+        fullCopy = [
+          `🎬 ${r.topic || ""}`,
+          `HOOK: ${r.hook || ""}`,
+          "",
+          "РАСКАДРОВКА:",
+          scenes,
+          "",
+          `Музыка: ${r.music_hint || ""}`,
+          "",
+          `Caption: ${r.caption || ""}`,
+          (r.hashtags || []).join(" "),
+        ].join("\n");
+      } else if (kind === "post") {
+        fullCopy = d.body || "";
+      }
+      return {
+        id: d.id,
+        kind,
+        preview:
+          stripHtml(d.chosen_title || d.body || "").slice(0, 120) ||
+          (kind === "carousel" ? "Карусель" : kind === "reel" ? "Reels" : "Пост"),
+        fullCopy,
+        status: d.status || "pending",
+        createdAt: d.created_at || "",
+        permalink: d.ig_permalink || null,
+        publishedAt: d.published_message_id || d.published_at ? "" : null,
+        publishedExternally: !!d.published_externally,
+        error: d.error || null,
+      };
+    });
   })();
+  // Подавляем неиспользуемые после рефакторинга переменные.
+  void ig;
 
   const openItem = (it: FeedItem) => {
     hapticImpact("light");
@@ -472,13 +496,21 @@ export default function ProjectScreen({ onBack }: Props) {
                 borderBottom: on ? `2px solid ${YELLOW}` : `2px solid transparent`,
               }}
             >
-              {t === "content" ? "Контент" : t === "scout" ? "Разведка" : "Настройки"}
+              {t === "content"
+                ? isIg
+                  ? "Архив"
+                  : "Контент"
+                : t === "scout"
+                  ? isIg
+                    ? "Идеи"
+                    : "Разведка"
+                  : "Настройки"}
             </button>
           );
         })}
       </div>
 
-      <TabHint tab={tab} />
+      <TabHint tab={tab} isIg={isIg} />
 
       <div
         style={{
@@ -504,6 +536,22 @@ export default function ProjectScreen({ onBack }: Props) {
             onOpen={openItem}
             onAssemble={assembleIdea}
             onAdjust={pickIdea}
+            onCopy={(it) => {
+              if (!it.fullCopy) return;
+              navigator.clipboard?.writeText(it.fullCopy).then(
+                () => hapticNotify("success"),
+                () => hapticNotify("error"),
+              );
+            }}
+            onTogglePublished={async (it) => {
+              hapticImpact("light");
+              try {
+                await markPublishedExternally(it.id, !it.publishedExternally);
+                refresh();
+              } catch {
+                hapticNotify("error");
+              }
+            }}
           />
         )}
         {tab === "scout" && (
@@ -602,12 +650,14 @@ function ContentTab({
   feed,
   error,
   refreshing,
-  isIg: _isIg,
+  isIg,
   plan,
   onRefresh,
   onOpen,
   onAssemble,
   onAdjust,
+  onCopy,
+  onTogglePublished,
 }: {
   feed: FeedItem[] | null;
   error: string | null;
@@ -618,6 +668,8 @@ function ContentTab({
   onOpen: (it: FeedItem) => void;
   onAssemble: (item: { topic?: string; format?: string; hook?: string }) => void;
   onAdjust: (item: { topic?: string; format?: string; hook?: string }) => void;
+  onCopy?: (it: FeedItem) => void;
+  onTogglePublished?: (it: FeedItem) => void;
 }) {
   const planItems = plan?.items ?? [];
   const hasPlan = planItems.length > 0;
@@ -719,7 +771,14 @@ function ContentTab({
         </button>
       </div>
       {feed!.map((it) => (
-        <FeedCard key={`${it.kind}-${it.id}`} item={it} onOpen={() => onOpen(it)} />
+        <FeedCard
+          key={`${it.kind}-${it.id}`}
+          item={it}
+          isIg={isIg}
+          onOpen={() => onOpen(it)}
+          onCopy={onCopy}
+          onTogglePublished={onTogglePublished}
+        />
       ))}
     </div>
   );
@@ -970,12 +1029,16 @@ function FirstTimeTip() {
   );
 }
 
-function TabHint({ tab }: { tab: Tab }) {
+function TabHint({ tab, isIg }: { tab: Tab; isIg?: boolean }) {
   const text =
     tab === "content"
-      ? "История ваших постов, Reels и каруселей."
+      ? isIg
+        ? "Весь созданный контент. Отмечай что опубликовал в IG."
+        : "История ваших постов, Reels и каруселей."
       : tab === "scout"
-        ? "Конкуренты, анализ ниши и недельный план."
+        ? isIg
+          ? "Готовые идеи для постов, каруселей и Reels на основе твоей ниши."
+          : "Конкуренты, анализ ниши и недельный план."
         : "Подключения, тариф и управление проектом.";
   return (
     <div
@@ -1267,23 +1330,31 @@ function QuickHub({
   );
 }
 
-function FeedCard({ item, onOpen }: { item: FeedItem; onOpen: () => void }) {
+function FeedCard({
+  item,
+  onOpen,
+  isIg,
+  onCopy,
+  onTogglePublished,
+}: {
+  item: FeedItem;
+  onOpen: () => void;
+  isIg?: boolean;
+  onCopy?: (item: FeedItem) => void;
+  onTogglePublished?: (item: FeedItem) => void;
+}) {
   const kindLabel =
     item.kind === "reel" ? "Reel" : item.kind === "carousel" ? "Карусель" : "Пост";
   const status = humanStatus(item.status);
   return (
-    <button
-      onClick={onOpen}
+    <div
       style={{
-        appearance: "none",
-        textAlign: "left",
         background: CARD_BG,
         border: `1px solid ${CARD_BORDER}`,
         borderRadius: 14,
         padding: 14,
         color: INK,
         fontFamily: "inherit",
-        cursor: "pointer",
         width: "100%",
       }}
     >
@@ -1344,7 +1415,7 @@ function FeedCard({ item, onOpen }: { item: FeedItem; onOpen: () => void }) {
         </div>
       )}
 
-      {/* Bottom row: status pill + action hint */}
+      {/* Bottom row: status pill + actions */}
       <div
         style={{
           display: "flex",
@@ -1352,11 +1423,117 @@ function FeedCard({ item, onOpen }: { item: FeedItem; onOpen: () => void }) {
           gap: 8,
         }}
       >
-        <StatusPill label={status.label} tone={status.tone} />
-        <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED, fontWeight: 500 }}>
-          {status.action} →
-        </span>
+        {isIg ? (
+          <PublishedToggle
+            checked={!!item.publishedExternally}
+            onChange={() => onTogglePublished?.(item)}
+          />
+        ) : (
+          <StatusPill label={status.label} tone={status.tone} />
+        )}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          {isIg && item.fullCopy && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopy?.(item);
+              }}
+              style={{
+                appearance: "none",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: `${YELLOW}1A`,
+                border: `1px solid ${YELLOW}40`,
+                color: YELLOW,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              СКОПИРОВАТЬ
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+            style={{
+              appearance: "none",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "transparent",
+              border: `1px solid ${CARD_BORDER}`,
+              color: INK,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            ОТКРЫТЬ
+          </button>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function PublishedToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      style={{
+        appearance: "none",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        fontFamily: "inherit",
+      }}
+    >
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: 4,
+          border: `1.5px solid ${checked ? "#5BD66B" : CARD_BORDER}`,
+          background: checked ? "#5BD66B" : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#0A0608",
+          fontSize: 11,
+          fontWeight: 900,
+        }}
+      >
+        {checked ? "✓" : ""}
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          color: checked ? "#5BD66B" : MUTED,
+        }}
+      >
+        {checked ? "опубликовано" : "не опубликовано"}
+      </span>
     </button>
   );
 }
@@ -2074,6 +2251,9 @@ function SettingsTab({
           </p>
         </Card>
       )}
+
+      {/* Профиль бренда — ядро IG-проекта, заменяет «разведку конкурентов» */}
+      {isIg && <BrandSetupCard projectId={project.id} />}
 
       <RenameCard project={project} onUpdated={onProjectUpdated} />
 
