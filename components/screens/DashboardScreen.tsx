@@ -157,7 +157,37 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
           + ПОДКЛЮЧИТЬ КАНАЛ
         </button>
       )}
+
+      <SupportLink />
     </ScreenWrap>
+  );
+}
+
+function SupportLink() {
+  const open = () => {
+    hapticImpact("light");
+    const url = "https://t.me/Strateg_alex_bot";
+    const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else if (tg?.openLink) tg.openLink(url);
+    else window.open(url, "_blank");
+  };
+  return (
+    <button
+      onClick={open}
+      style={{
+        background: "transparent",
+        border: "none",
+        color: MUTED,
+        fontSize: 12,
+        padding: "12px 0 4px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        textAlign: "center",
+      }}
+    >
+      · Поддержка ·
+    </button>
   );
 }
 

@@ -2020,8 +2020,44 @@ function SettingsTab({
         </button>
       </Card>
 
+      <SupportCard />
+
       <DeleteCard project={project} onDeleted={onDeleted} />
     </div>
+  );
+}
+
+// --- Support card (открывает @Strateg_alex_bot — бот поддержки) ---
+
+function SupportCard() {
+  const openSupport = () => {
+    hapticImpact("light");
+    const url = "https://t.me/Strateg_alex_bot";
+    const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else if (tg?.openLink) tg.openLink(url);
+    else window.open(url, "_blank");
+  };
+  return (
+    <Card>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+        Поддержка
+      </div>
+      <p style={{ margin: "0 0 10px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
+        Нашёл баг или есть вопрос — напиши нам в бота. Ответим в течение суток.
+      </p>
+      <button
+        onClick={openSupport}
+        style={{
+          ...miniBtn,
+          background: "rgba(255,255,255,0.06)",
+          color: INK,
+          border: `1px solid ${CARD_BORDER}`,
+        }}
+      >
+        НАПИСАТЬ В ПОДДЕРЖКУ →
+      </button>
+    </Card>
   );
 }
 
