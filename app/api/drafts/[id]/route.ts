@@ -110,3 +110,76 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     updated_at: (draft as any).decided_at || (draft as any).created_at,
   });
 }
+
+/**
+ * PATCH /api/drafts/[id]
+ * Используется UI чтобы после выбора варианта из 3-х записать
+ * этот вариант в body (publish/schedule потом возьмут именно его).
+ *
+ * Body (любые поля опциональны): { body?, chosen_title?, caption?, media_urls? }
+ */
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const v = verifyInitData(req.headers.get("x-telegram-init-data"));
+  if (!v.ok || !v.user)
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+  const sb = getSupabase();
+
+  // owner check
+  const { data: draft } = await sb
+    .from("content_drafts")
+    .select("id,projects!inner(tg_id)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!draft) return Response.json({ error: "not found" }, { status: 404 });
+  if ((draft as any).projects.tg_id !== v.user.id)
+    return Response.json({ error: "not found" }, { status: 404 });
+
+  const body = await req.json().catch(() => ({} as any));
+  const update: Record<string, any> = {};
+  if (typeof body?.body === "string") update.body = body.body.slice(0, 4096);
+  if (typeof body?.chosen_title === "string")
+    update.chosen_title = body.chosen_title.slice(0, 200);
+  if (typeof body?.caption === "string")
+    update.caption = body.caption.slice(0, 2048);
+  if (Array.isArray(body?.media_urls)) update.media_urls = body.media_urls;
+  if (Object.keys(update).length === 0)
+    return Response.json({ error: "no fields to update" }, { status: 400 });
+
+  const { error } = await sb.from("content_drafts").update(update).eq("id", id);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
+}
+
+/**
+ * DELETE /api/drafts/[id]
+ * UI вызывает при «Удалить» — физически удаляет драфт.
+ * Для уже опубликованных (published_message_id != null) — 409.
+ */
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const v = verifyInitData(req.headers.get("x-telegram-init-data"));
+  if (!v.ok || !v.user)
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+  const sb = getSupabase();
+
+  const { data: draft } = await sb
+    .from("content_drafts")
+    .select("id,published_message_id,projects!inner(tg_id)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!draft) return Response.json({ error: "not found" }, { status: 404 });
+  if ((draft as any).projects.tg_id !== v.user.id)
+    return Response.json({ error: "not found" }, { status: 404 });
+  if ((draft as any).published_message_id)
+    return Response.json(
+      { error: "already published — нельзя удалить" },
+      { status: 409 }
+    );
+
+  const { error } = await sb.from("content_drafts").delete().eq("id", id);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
+}

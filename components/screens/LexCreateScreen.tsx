@@ -8,6 +8,7 @@ import {
   lexWriteReel,
   approveDraft,
   deleteDraft,
+  getProject,
   ApiError,
   type LexPostVariant,
   type LexCarousel,
@@ -76,6 +77,24 @@ export default function LexCreateScreen({ onBack }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Подгружаем проект чтобы знать, есть ли подключённый TG-канал для автопостинга.
+  // Если нет — для постов прячем «Опубликовать» и показываем «Скопировать».
+  const [hasTgChannel, setHasTgChannel] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!projectId) return;
+    let alive = true;
+    getProject(projectId)
+      .then((r) => {
+        if (!alive) return;
+        const ch = (r.project as any)?.channel_id;
+        setHasTgChannel(!!ch);
+      })
+      .catch(() => alive && setHasTgChannel(false));
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
   const [style, setStyle] = useState<CarouselStyle>("minimal");
   const [duration, setDuration] = useState<15 | 30 | 60>(30);
 
@@ -292,10 +311,12 @@ export default function LexCreateScreen({ onBack }: Props) {
       {phase === "result" && format === "post" && pickedVariant && (
         <PostActions
           variant={pickedVariant}
+          hasTgChannel={hasTgChannel !== false}
           onPublishNow={publishNow}
           onPublishAt={publishAt}
           onRegenerate={regenerate}
           onDelete={discard}
+          onCopy={copy}
           onBack={() => setPickedVariant(null)}
         />
       )}
@@ -816,17 +837,21 @@ function sanitizeTgHtml(html: string): string {
 
 function PostActions({
   variant,
+  hasTgChannel,
   onPublishNow,
   onPublishAt,
   onRegenerate,
   onDelete,
+  onCopy,
   onBack,
 }: {
   variant: LexPostVariant;
+  hasTgChannel: boolean;
   onPublishNow: () => void;
   onPublishAt: (iso: string) => void;
   onRegenerate: () => void;
   onDelete: () => void;
+  onCopy: (text: string, label?: string) => void;
   onBack: () => void;
 }) {
   // Дефолт: завтра 10:00 по локали
@@ -860,13 +885,58 @@ function PostActions({
         <HtmlPostBody html={variant.body} />
       </div>
 
-      {!scheduleMode && (
+      {!scheduleMode && hasTgChannel && (
         <>
           <button onClick={onPublishNow} style={btnPrimary(false)}>
             ОПУБЛИКОВАТЬ СЕЙЧАС
           </button>
           <button onClick={() => setScheduleMode(true)} style={btnSecondary()}>
             ЗАПЛАНИРОВАТЬ НА ДАТУ
+          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onRegenerate} style={{ ...btnSecondary(), flex: 1 }}>
+              ПЕРЕСОБРАТЬ
+            </button>
+            <button
+              onClick={onDelete}
+              style={{
+                ...btnSecondary(),
+                flex: 1,
+                color: "#FF7373",
+                border: "1px solid rgba(255,115,115,0.40)",
+              }}
+            >
+              УДАЛИТЬ
+            </button>
+          </div>
+          <button onClick={onBack} style={btnGhost()}>
+            ← К вариантам
+          </button>
+        </>
+      )}
+
+      {!scheduleMode && !hasTgChannel && (
+        <>
+          <div
+            style={{
+              background: "rgba(243,155,64,0.10)",
+              border: "1px solid rgba(243,155,64,0.40)",
+              borderRadius: 12,
+              padding: 10,
+              fontSize: 12,
+              color: "#F39B40",
+              lineHeight: 1.45,
+            }}
+          >
+            Автопубликация работает только для TG-каналов.
+            Здесь — IG-проект, поэтому пост нужно скопировать и
+            опубликовать вручную.
+          </div>
+          <button
+            onClick={() => onCopy(variant.body, "Текст поста")}
+            style={btnPrimary(false)}
+          >
+            СКОПИРОВАТЬ ТЕКСТ
           </button>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onRegenerate} style={{ ...btnSecondary(), flex: 1 }}>
