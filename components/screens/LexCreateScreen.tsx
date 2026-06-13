@@ -22,7 +22,7 @@ const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type Format = "post" | "carousel" | "reel";
-type Phase = "form" | "loading" | "result" | "error";
+type Phase = "form" | "loading" | "result" | "error" | "limit";
 
 const FORMAT_LABEL: Record<Format, string> = {
   post: "Пост",
@@ -94,6 +94,13 @@ export default function LexCreateScreen({ onBack }: Props) {
       setPhase("result");
       hapticNotify("success");
     } catch (e) {
+      // 402 = квота — показываем upgrade prompt вместо ошибки
+      if (e instanceof ApiError && e.status === 402) {
+        setError(e.message);
+        setPhase("limit");
+        hapticNotify("warning");
+        return;
+      }
       const msg =
         e instanceof ApiError
           ? e.message
@@ -182,6 +189,14 @@ export default function LexCreateScreen({ onBack }: Props) {
 
       {phase === "error" && (
         <ErrorBlock message={error || ""} onRetry={resetToForm} />
+      )}
+
+      {phase === "limit" && (
+        <LimitBlock
+          message={error || ""}
+          onClose={resetToForm}
+          onUpgrade={() => actions.navigate("billing")}
+        />
       )}
 
       {phase === "result" && format === "post" && (
@@ -438,6 +453,88 @@ function LoadingBlock({ format }: { format: Format }) {
   );
 }
 
+function LimitBlock({
+  message,
+  onClose,
+  onUpgrade,
+}: {
+  message: string;
+  onClose: () => void;
+  onUpgrade: () => void;
+}) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 999,
+          background: `${YELLOW}1A`,
+          border: `2px solid ${YELLOW}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: YELLOW,
+          fontSize: 28,
+          fontWeight: 900,
+        }}
+      >
+        ⚡
+      </div>
+      <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>
+        Лимит на эту неделю
+      </h2>
+      <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 300, lineHeight: 1.5 }}>
+        {message}
+      </p>
+      <div
+        style={{
+          background: CARD_BG,
+          border: `1px solid ${CARD_BORDER}`,
+          borderRadius: 14,
+          padding: 14,
+          width: "100%",
+          maxWidth: 340,
+        }}
+      >
+        <div style={{ fontSize: 12, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
+          В Pro будет:
+        </div>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
+          {[
+            "До 3 проектов",
+            "60 постов в месяц",
+            "30 каруселей в месяц",
+            "30 сценариев Reels в месяц",
+            "Приоритет в очереди",
+          ].map((s) => (
+            <li key={s} style={{ fontSize: 13, paddingLeft: 14, position: "relative" }}>
+              <span style={{ position: "absolute", left: 0, color: YELLOW, fontWeight: 700 }}>·</span>
+              {s}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <button onClick={onUpgrade} style={btnPrimary(false)}>
+        ОТКРЫТЬ ПОДПИСКУ
+      </button>
+      <button onClick={onClose} style={btnGhost()}>
+        ← Назад
+      </button>
+    </div>
+  );
+}
+
 function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div
@@ -519,18 +616,19 @@ function CarouselResult({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <CopyBlock
-        label="🎯 Тема + Hook"
+        label="Тема и Hook"
         text={`${carousel.topic}\n\n${carousel.hook}`}
         onCopy={onCopy}
       />
       <CopyBlock
-        label="🎨 Промпт для картинок (Midjourney/Sora/DALL-E)"
+        label="Промпт для картинок"
+        hint="Вставь в Midjourney / Sora / DALL-E"
         text={carousel.image_prompt}
         onCopy={onCopy}
         mono
       />
-      <CopyBlock label="📝 Тексты слайдов" text={slidesText} onCopy={onCopy} />
-      <CopyBlock label="📲 Caption + хэштеги" text={captionFull} onCopy={onCopy} />
+      <CopyBlock label="Тексты слайдов" text={slidesText} onCopy={onCopy} />
+      <CopyBlock label="Caption и хэштеги" text={captionFull} onCopy={onCopy} />
       <button onClick={onNew} style={btnSecondary()}>
         ← НОВАЯ ТЕМА
       </button>
@@ -553,15 +651,15 @@ function ReelResult({
         `[${s.seconds}] ${s.action}${s.on_screen ? `\n   в кадре: ${s.on_screen}` : ""}`
     )
     .join("\n\n");
-  const fullScript = `🎬 ${script.topic}\n\nHOOK: ${script.hook}\n\nРАСКАДРОВКА:\n${scenesText}\n\n🎵 ${script.music_hint}`;
+  const fullScript = `${script.topic}\n\nHOOK: ${script.hook}\n\nРАСКАДРОВКА:\n${scenesText}\n\nМУЗЫКА: ${script.music_hint}`;
   const captionFull = `${script.caption}\n\n${script.hashtags.join(" ")}`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <CopyBlock label="🎬 Полный сценарий + раскадровка" text={fullScript} onCopy={onCopy} />
-      <CopyBlock label="🎯 Только HOOK" text={script.hook} onCopy={onCopy} />
-      <CopyBlock label="🎵 Подсказка по музыке" text={script.music_hint} onCopy={onCopy} />
-      <CopyBlock label="📲 Caption + хэштеги" text={captionFull} onCopy={onCopy} />
+      <CopyBlock label="Полный сценарий и раскадровка" text={fullScript} onCopy={onCopy} />
+      <CopyBlock label="Только HOOK" text={script.hook} onCopy={onCopy} />
+      <CopyBlock label="Подсказка по музыке" text={script.music_hint} onCopy={onCopy} />
+      <CopyBlock label="Caption и хэштеги" text={captionFull} onCopy={onCopy} />
       <button onClick={onNew} style={btnSecondary()}>
         ← НОВАЯ ТЕМА
       </button>
@@ -572,11 +670,13 @@ function ReelResult({
 function CopyBlock({
   label,
   text,
+  hint,
   onCopy,
   mono,
 }: {
   label: string;
   text: string;
+  hint?: string;
   onCopy: (text: string, label?: string) => void;
   mono?: boolean;
 }) {
@@ -598,16 +698,22 @@ function CopyBlock({
           marginBottom: 8,
         }}
       >
-        <span
-          style={{
-            fontSize: 11,
-            color: MUTED,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          {label}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: INK,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            {label}
+          </span>
+          {hint && (
+            <span style={{ fontSize: 10, color: MUTED, letterSpacing: "0.02em" }}>{hint}</span>
+          )}
+        </div>
         <button
           onClick={() => {
             onCopy(text, label);

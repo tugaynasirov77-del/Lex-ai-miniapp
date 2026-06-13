@@ -122,7 +122,7 @@ export default function BillingScreen({ onBack }: Props) {
                 lineHeight: 1.45,
               }}
             >
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>💳 Оплата подписки — скоро</div>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>Оплата подписки — скоро</div>
               <div style={{ color: MUTED }}>
                 Подключаем ЮKassa (1-3 дня на верификацию). Сейчас все юзеры на бесплатном плане.
                 После запуска платежей лимиты увеличатся.

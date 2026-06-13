@@ -3,18 +3,32 @@ import { TIERS, tierFromString, type Tier, type TierConfig, type LimitSpec } fro
 
 export type GateAction = "post" | "carousel" | "reel";
 
+/**
+ * Quota epoch — драфты созданные ДО этой даты не учитываются в лимитах.
+ * Используется при relaunch (новые условия) — даёт всем чистый счётчик.
+ * Текущее значение — момент перехода на LEX AI (13 июня 2026, 09:00 UTC).
+ */
+const QUOTA_EPOCH = new Date("2026-06-13T09:00:00Z").getTime();
+
 function startOfMonthIso(): string {
   const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+  const ms = Math.max(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1),
+    QUOTA_EPOCH
+  );
+  return new Date(ms).toISOString();
 }
 
 function startOfWeekIso(): string {
   const d = new Date();
-  const day = d.getUTCDay() || 7; // вс=0 → 7
-  const monday = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day + 1)
+  const day = d.getUTCDay() || 7;
+  const monday = Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate() - day + 1
   );
-  return monday.toISOString();
+  const ms = Math.max(monday, QUOTA_EPOCH);
+  return new Date(ms).toISOString();
 }
 
 /** Текущий активный tier для tg_id юзера. */

@@ -665,7 +665,7 @@ function ContentTab({
                 lineHeight: 1.45,
               }}
             >
-              Александр собирает идеи на неделю. Как только готово — здесь
+              LEX AI собирает идеи на неделю. Как только готово — здесь
               появятся карточки с темами, нужно будет только одобрить.
             </p>
           </div>
@@ -1168,7 +1168,7 @@ function QuickHub({
     actions.push({
       key: "from-plan",
       label: "Из плана",
-      icon: "✨",
+      icon: "→",
       onTap: () => onPickIdea(topPlanIdea),
       primary: true,
     });
@@ -1177,7 +1177,7 @@ function QuickHub({
     actions.push({
       key: "scout",
       label: "Конкуренты",
-      icon: "🔍",
+      icon: "·",
       onTap: () => onOpenTab("scout"),
       primary: !hasPlan,
     });
@@ -1185,7 +1185,7 @@ function QuickHub({
     actions.push({
       key: "scout",
       label: "Разведка",
-      icon: "🔍",
+      icon: "·",
       onTap: () => onOpenTab("scout"),
     });
   }
@@ -1492,8 +1492,8 @@ function ScoutTab({
           Разведка канала
         </div>
         <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Здесь скоро появится статистика канала и подробная стратегия от
-          Михаила. Пока — добавьте конкурентов и дождитесь анализа Анны.
+          Здесь появится анализ ниши и идеи на основе конкурентов.
+          Добавьте 1-3 конкурента — LEX AI соберёт всё за минуту.
         </p>
       </Card>
     );
@@ -1524,7 +1524,7 @@ function ScoutTab({
         </div>
         {competitors.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-            Добавьте 3–5 конкурентов — Анна соберёт отчёт по нише.
+            Добавьте 3–5 конкурентов — LEX AI соберёт отчёт по нише.
           </p>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -1937,7 +1937,7 @@ function FinishSetupCard({
       <p style={{ margin: "0 0 12px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
         {isIg ? (
           <>
-            Без аккаунта Анна не понимает вашу нишу — анализ и план получатся
+            Без аккаунта LEX AI не понимает вашу нишу — анализ и план получатся
             обобщёнными. Подключение занимает минуту, это просто @username.{" "}
             <b style={{ color: INK }}>Публикация в IG пока вручную</b> — авто
             добавим позже.

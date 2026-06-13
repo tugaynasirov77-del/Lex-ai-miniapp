@@ -211,12 +211,12 @@ function UpdateBanner() {
       >
         ×
       </button>
-      <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 6, paddingRight: 24 }}>
-        🚀 LEX AI стал в 2 раза быстрее
+      <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 6, paddingRight: 24, letterSpacing: "-0.01em" }}>
+        LEX AI стал в 2 раза быстрее
       </div>
       <div style={{ fontSize: 12, lineHeight: 1.45, color: MUTED }}>
-        Один инструмент вместо команды агентов. На каждый пост — 3 варианта на выбор.
-        Карусели и Reels — готовые сценарии. Открой любой проект и жми «+ Создать контент».
+        Один инструмент вместо команды агентов. 3 варианта поста на выбор.
+        Карусели и Reels — готовые сценарии. Открой проект и жми «+ Создать контент».
       </div>
     </div>
   );
