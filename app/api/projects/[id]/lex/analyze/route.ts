@@ -36,16 +36,22 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   let competitors: CompetitorInput[] = [];
   if (platform === "instagram") {
+    // ig_competitors schema: username, full_name, followers, top_post_caption,
+    // top_post_likes, top_post_url, notes, profile_url
     const { data } = await sb
       .from("ig_competitors")
-      .select("handle, notes")
+      .select("username, full_name, top_post_caption, top_post_likes, notes")
       .eq("project_id", id)
       .limit(5);
     competitors = (data || []).map((c: any) => ({
-      handle: c.handle,
-      description: c.notes,
+      handle: c.username,
+      description: c.full_name || c.notes,
+      topPosts: c.top_post_caption
+        ? [{ text: c.top_post_caption, views: c.top_post_likes }]
+        : [],
     }));
   } else {
+    // competitor_channels schema: username, top_post_text, top_post_views
     const { data } = await sb
       .from("competitor_channels")
       .select("username, top_post_text, top_post_views")
