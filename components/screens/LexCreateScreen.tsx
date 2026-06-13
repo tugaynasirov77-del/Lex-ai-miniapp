@@ -23,7 +23,12 @@ const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type Format = "post" | "carousel" | "reel";
-type Phase = "form" | "loading" | "result" | "error" | "limit";
+type Phase = "form" | "loading" | "result" | "error" | "limit" | "done";
+
+type DoneInfo = {
+  variant: "publish_now" | "scheduled" | "deleted";
+  scheduledAtIso?: string;
+};
 
 const FORMAT_LABEL: Record<Format, string> = {
   post: "Пост",
@@ -58,6 +63,7 @@ export default function LexCreateScreen({ onBack }: Props) {
   const [duration, setDuration] = useState<15 | 30 | 60>(30);
 
   const [phase, setPhase] = useState<Phase>("form");
+  const [done, setDone] = useState<DoneInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [variants, setVariants] = useState<LexPostVariant[]>([]);
@@ -141,12 +147,14 @@ export default function LexCreateScreen({ onBack }: Props) {
     if (!draftId) return;
     hapticImpact("medium");
     try {
-      await approveDraft(draftId, { publish_now: true });
+      const r = await approveDraft(draftId, { publish_now: true });
       hapticNotify("success");
-      actions.navigate("project");
+      setDone({ variant: "publish_now", scheduledAtIso: r.scheduled_at });
+      setPhase("done");
     } catch (e) {
       hapticNotify("error");
       setError(e instanceof Error ? e.message : "не получилось");
+      setPhase("error");
     }
   }
 
@@ -154,12 +162,14 @@ export default function LexCreateScreen({ onBack }: Props) {
     if (!draftId) return;
     hapticImpact("medium");
     try {
-      await approveDraft(draftId, { scheduled_at: iso });
+      const r = await approveDraft(draftId, { scheduled_at: iso });
       hapticNotify("success");
-      actions.navigate("project");
+      setDone({ variant: "scheduled", scheduledAtIso: r.scheduled_at });
+      setPhase("done");
     } catch (e) {
       hapticNotify("error");
       setError(e instanceof Error ? e.message : "не получилось");
+      setPhase("error");
     }
   }
 
@@ -178,10 +188,12 @@ export default function LexCreateScreen({ onBack }: Props) {
     try {
       await deleteDraft(draftId);
       hapticNotify("success");
-      actions.navigate("project");
+      setDone({ variant: "deleted" });
+      setPhase("done");
     } catch (e) {
       hapticNotify("error");
       setError(e instanceof Error ? e.message : "не получилось");
+      setPhase("error");
     }
   }
 
@@ -246,6 +258,14 @@ export default function LexCreateScreen({ onBack }: Props) {
           message={error || ""}
           onClose={resetToForm}
           onUpgrade={() => actions.navigate("billing")}
+        />
+      )}
+
+      {phase === "done" && done && (
+        <DoneBlock
+          info={done}
+          onProject={() => actions.navigate("project")}
+          onNew={resetToForm}
         />
       )}
 
@@ -633,6 +653,85 @@ function ErrorBlock({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+function DoneBlock({
+  info,
+  onProject,
+  onNew,
+}: {
+  info: DoneInfo;
+  onProject: () => void;
+  onNew: () => void;
+}) {
+  const title =
+    info.variant === "publish_now"
+      ? "Пост в очереди на публикацию"
+      : info.variant === "scheduled"
+        ? "Пост запланирован"
+        : "Пост удалён";
+  const subtitle =
+    info.variant === "publish_now"
+      ? "Опубликуется в канале в ближайшие 5 минут."
+      : info.variant === "scheduled" && info.scheduledAtIso
+        ? `Опубликуется ${formatRu(info.scheduledAtIso)}.`
+        : info.variant === "deleted"
+          ? "Можешь начать заново."
+          : "";
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 999,
+          background: YELLOW,
+          boxShadow: `0 0 80px ${YELLOW}88`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#0A0608",
+          fontSize: 36,
+          fontWeight: 900,
+        }}
+      >
+        ✓
+      </div>
+      <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>
+        {title}
+      </h2>
+      <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 300, lineHeight: 1.5 }}>
+        {subtitle}
+      </p>
+      <button onClick={onProject} style={btnPrimary(false)}>
+        К ПРОЕКТУ
+      </button>
+      <button onClick={onNew} style={btnGhost()}>
+        ← Создать ещё
+      </button>
+    </div>
+  );
+}
+
+function formatRu(iso: string): string {
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  const m = months[d.getMonth()];
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${day} ${m} в ${hh}:${mm}`;
+}
+
 function PostResult({
   variants,
   onPick,
@@ -645,7 +744,7 @@ function PostResult({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <p style={{ margin: 0, fontSize: 13, color: MUTED }}>
-        Тапни нужный вариант — опубликуем в канал через час.
+        Тапни вариант — следующий шаг: публикация или планирование.
       </p>
       {variants.map((v, i) => (
         <button
@@ -664,7 +763,7 @@ function PostResult({
           <div style={{ fontSize: 11, color: MUTED, marginBottom: 6, letterSpacing: "0.06em" }}>
             ВАРИАНТ {i + 1}
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{v.body}</div>
+          <HtmlPostBody html={v.body} />
         </button>
       ))}
       <button onClick={onNew} style={btnSecondary()}>
@@ -672,6 +771,30 @@ function PostResult({
       </button>
     </div>
   );
+}
+
+// Рендерит body поста с поддержкой <b>, <i>, <blockquote> Telegram-разметки.
+// Безопасно — стрипает все ОСТАЛЬНЫЕ теги, оставляя только whitelist.
+function HtmlPostBody({ html }: { html: string }) {
+  const safe = sanitizeTgHtml(html);
+  return (
+    <div
+      className="lex-post-html"
+      style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: "pre-wrap" }}
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: safe }}
+    />
+  );
+}
+
+const ALLOWED_TAGS = new Set(["b", "i", "u", "blockquote", "br"]);
+function sanitizeTgHtml(html: string): string {
+  // Стрипаем все теги кроме whitelist. Атрибуты не разрешаем вообще.
+  return html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g, (m, tag) => {
+    const t = String(tag).toLowerCase();
+    if (!ALLOWED_TAGS.has(t)) return "";
+    return m.startsWith("</") ? `</${t}>` : `<${t}>`;
+  });
 }
 
 function PostActions({
@@ -717,9 +840,7 @@ function PostActions({
         <div style={{ fontSize: 11, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>
           Выбранный пост
         </div>
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap", color: INK }}>
-          {variant.body}
-        </p>
+        <HtmlPostBody html={variant.body} />
       </div>
 
       {!scheduleMode && (

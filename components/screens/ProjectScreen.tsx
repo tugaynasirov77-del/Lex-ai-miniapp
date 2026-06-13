@@ -50,6 +50,32 @@ function stripHtml(text: string): string {
   return text.replace(/<[^>]*>/g, "");
 }
 
+// Превращает технические коды ошибок в человеческие тексты.
+function humanError(e: unknown, fallback: string): string {
+  const raw =
+    e instanceof ApiError
+      ? e.message
+      : e instanceof Error
+        ? e.message
+        : "";
+  if (!raw) return fallback;
+  // Маппинг известных кодов
+  if (/no_competitors/i.test(raw)) {
+    return "Сначала добавь хотя бы 1 конкурента в форме выше.";
+  }
+  if (/no_insights/i.test(raw)) {
+    return "Сначала запусти анализ конкурентов — план собирается на его основе.";
+  }
+  if (/unauthorized/i.test(raw)) {
+    return "Перезайди в приложение — сессия Telegram истекла.";
+  }
+  if (/project not found|проект не найден/i.test(raw)) {
+    return "Проект не найден. Вернись на главную и открой его заново.";
+  }
+  // По умолчанию — обрезаем длинные технические тексты
+  return raw.length > 140 ? fallback : raw;
+}
+
 export default function ProjectScreen({ onBack }: Props) {
   const { state } = useFlow();
   const actions = useFlowActions();
@@ -1446,13 +1472,7 @@ function ScoutTab({
       onRefresh();
     } catch (e) {
       hapticNotify("error");
-      setActionErr(
-        e instanceof ApiError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Не получилось.",
-      );
+      setActionErr(humanError(e, "Не получилось запустить анализ."));
     } finally {
       setAnalysisBusy(false);
     }
@@ -1469,13 +1489,7 @@ function ScoutTab({
       onRefresh();
     } catch (e) {
       hapticNotify("error");
-      setActionErr(
-        e instanceof ApiError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Не получилось.",
-      );
+      setActionErr(humanError(e, "Не получилось собрать план."));
     } finally {
       setPlanBusy(false);
     }
@@ -1558,7 +1572,7 @@ function ScoutTab({
             marginBottom: 6,
           }}
         >
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Анализ Анны</div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Анализ ниши</div>
           {analysis?.created_at && (
             <span style={{ fontSize: 11, color: MUTED }}>
               {formatDate(analysis.created_at)}
@@ -1567,7 +1581,7 @@ function ScoutTab({
         </div>
         {!analysis ? (
           <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-            Анализа пока нет. Запустите его в полной версии.
+            Добавь конкурентов выше — LEX AI разберёт их и соберёт insights для ниши.
           </p>
         ) : (
           <>

@@ -114,3 +114,23 @@ button:active, a:active, [role="button"]:active { transform: scale(0.98); }
   50% { opacity: 1; transform: translateY(-2px); }
 }
 .animate-typing { animation: typing 1s ease-in-out infinite; }
+
+/* HTML formatting inside generated post preview (Telegram-compatible) */
+.lex-post-html b,
+.lex-post-html strong {
+  color: #FFFFFF;
+  font-weight: 800;
+}
+.lex-post-html i,
+.lex-post-html em {
+  font-style: italic;
+  color: rgba(255,255,255,0.85);
+}
+.lex-post-html blockquote {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #F5E70A;
+  background: rgba(245,231,10,0.06);
+  border-radius: 0 8px 8px 0;
+  color: #FFFFFF;
+}
