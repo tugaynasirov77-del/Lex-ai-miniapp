@@ -597,14 +597,21 @@ export default function ProjectScreen({ onBack }: Props) {
             handle={handle}
             attached={attached}
             onContinueSetup={() => {
-              // Возврат в единый onboarding. projectId уже в стейте,
-              // CreateProjectScreen auto-resume прыгнет на шаг 2 (attach).
               actions.navigate("create-project");
             }}
             onOpenBilling={() => actions.navigate("billing")}
             onProjectUpdated={(p) => {
               setProject(p);
               setRefreshTick((t) => t + 1);
+            }}
+            onBrandSaved={() => {
+              // После сохранения Brand Setup → перетянуть project с
+              // обновлёнными lex_insights + auto-переключиться на «Идеи».
+              setTimeout(() => {
+                setRefreshTick((t) => t + 1);
+                setTab("scout");
+                hapticNotify("success");
+              }, 1500);
             }}
             onDeleted={() => {
               actions.resetFlow();
@@ -2424,6 +2431,7 @@ function SettingsTab({
   onContinueSetup,
   onOpenBilling,
   onProjectUpdated,
+  onBrandSaved,
   onDeleted,
 }: {
   project: ProjectDTO;
@@ -2433,6 +2441,7 @@ function SettingsTab({
   onContinueSetup: () => void;
   onOpenBilling: () => void;
   onProjectUpdated: (project: ProjectDTO) => void;
+  onBrandSaved?: () => void;
   onDeleted: () => void;
 }) {
   return (
@@ -2481,7 +2490,9 @@ function SettingsTab({
       )}
 
       {/* Профиль бренда — ядро IG-проекта, заменяет «разведку конкурентов» */}
-      {isIg && <BrandSetupCard projectId={project.id} />}
+      {isIg && (
+        <BrandSetupCard projectId={project.id} onSaved={() => onBrandSaved?.()} />
+      )}
 
       <RenameCard project={project} onUpdated={onProjectUpdated} />
 
