@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
 import {
   getBillingSummary,
+  getStreak,
   listProjects,
   type BillingSummary,
   type ProjectDTO,
+  type StreakDTO,
 } from "../../lib/api";
 import { hapticImpact, hapticSelection } from "../../lib/telegram";
 
@@ -23,19 +25,22 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
   const [data, setData] = useState<ProjectDTO[] | null>(null);
   const [billing, setBilling] = useState<BillingSummary | null>(null);
+  const [streak, setStreak] = useState<StreakDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 
   const load = async () => {
     setError(null);
     try {
-      const [pr, bl] = await Promise.allSettled([
+      const [pr, bl, st] = await Promise.allSettled([
         listProjects(),
         getBillingSummary(),
+        getStreak(),
       ]);
       if (pr.status === "fulfilled") setData(pr.value.projects || []);
       else throw pr.reason;
       if (bl.status === "fulfilled") setBilling(bl.value);
+      if (st.status === "fulfilled") setStreak(st.value);
       // billing — мягкая ошибка, плашка просто скрывается
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить");
@@ -83,6 +88,11 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
       {/* Тонкая плашка тарифа (тап → /billing) */}
       {billing && <BillingPill billing={billing} onTap={goBilling} />}
+
+      {/* Streak badge — Duolingo-механика */}
+      {streak && data && data.length > 0 && streak.current > 0 && (
+        <StreakBadge streak={streak} />
+      )}
 
       {/* Update banner для существующих юзеров */}
       {data && data.length > 0 && <UpdateBanner />}
@@ -194,6 +204,64 @@ function SupportLink() {
 // --- pieces ---
 
 const UPDATE_BANNER_KEY = "lex.updateBanner.v1.dismissed";
+
+function StreakBadge({ streak }: { streak: StreakDTO }) {
+  const { current, longest, today } = streak;
+  const isRecord = longest === current && current >= 3;
+  const subtitle = today
+    ? isRecord
+      ? "Личный рекорд 🏆 Так держать!"
+      : "Сегодня уже в плюсе. Не сбавляй темп."
+    : "Один пост сегодня — и серия продолжится.";
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: `linear-gradient(135deg, #FF7A00 14%, #FF3D00 100%)`,
+        borderRadius: 16,
+        padding: "14px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        color: "#FFFFFF",
+        boxShadow: "0 8px 24px rgba(255,77,0,0.28)",
+      }}
+    >
+      <div style={{ fontSize: 32, lineHeight: 1 }}>🔥</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em" }}>
+          {current} {pluralDay(current)} подряд
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2, lineHeight: 1.35 }}>
+          {subtitle}
+        </div>
+      </div>
+      {longest > current && (
+        <div
+          style={{
+            background: "rgba(255,255,255,0.18)",
+            borderRadius: 10,
+            padding: "6px 10px",
+            fontSize: 11,
+            fontWeight: 700,
+            textAlign: "center",
+            whiteSpace: "nowrap",
+          }}
+        >
+          рекорд<br />{longest}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function pluralDay(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "день";
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return "дня";
+  return "дней";
+}
 
 function UpdateBanner() {
   const [dismissed, setDismissed] = useState(false);

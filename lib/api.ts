@@ -93,6 +93,11 @@ export function getBillingSummary(): Promise<BillingSummary> {
   return getJSON("/api/billing");
 }
 
+export type StreakDTO = { current: number; longest: number; today: boolean };
+export function getStreak(): Promise<StreakDTO> {
+  return getJSON("/api/streak");
+}
+
 export function getProject(projectId: string): Promise<{ project: ProjectDTO }> {
   return getJSON(`/api/projects/${projectId}`);
 }
