@@ -264,39 +264,71 @@ async function analyzeHooks(args: {
   return { partial: parsed, cost };
 }
 
-async function analyzeStructures(args: {
+async function analyzeCarousels(args: {
   client: Anthropic;
   projectId: string;
   tgId: number;
   contextText: string;
 }): Promise<{ partial: Partial<LexInsights>; cost: number }> {
   const { client, projectId, tgId, contextText } = args;
-  const task = `ЗАДАЧА: для Instagram-проекта собери идеи каруселей, Reels-форматов и хэштеги.
+  const task = `ЗАДАЧА: для Instagram-проекта собери 5 идей каруселей со структурой слайдов.
 
 Верни JSON:
 {
   "carousel_themes": [
     {"title": "название", "structure": "1: X / 2: Y / 3: Z / CTA"},
-    ... 5 штук
-  ],
-  "reel_formats": [
-    {"format": "название", "example": "как снять, 1 предложение"},
-    ... 4 штуки
-  ],
-  "posting_schedule": "1-2 предложения: какие форматы когда (пн-вс)",
-  "hashtag_strategy": ["#tag1", "#tag2", ... 8 хэштегов]
+    ... ровно 5 штук
+  ]
 }
-Только JSON.`;
+Только JSON. Каждый structure 80-150 символов.`;
   const res = await client.messages.create({
     model: LEX_MODEL,
-    max_tokens: 1800,
+    max_tokens: 1200,
     temperature: 0.7,
     system: LEX_SYSTEM + "\n\n" + task,
     messages: [{ role: "user", content: sanitizeForAnthropic(contextText) }],
   });
   const cost = await recordSpend({
     projectId,
-    agentRole: "lex_structures",
+    agentRole: "lex_carousels",
+    model: LEX_MODEL,
+    usage: res.usage as any,
+    tgId,
+  });
+  const raw = extractText(res);
+  const parsed = safeJson<any>(raw) || {};
+  return { partial: parsed, cost };
+}
+
+async function analyzeReelsAndMeta(args: {
+  client: Anthropic;
+  projectId: string;
+  tgId: number;
+  contextText: string;
+}): Promise<{ partial: Partial<LexInsights>; cost: number }> {
+  const { client, projectId, tgId, contextText } = args;
+  const task = `ЗАДАЧА: для Instagram-проекта собери Reels-форматы, расписание и хэштеги.
+
+Верни JSON:
+{
+  "reel_formats": [
+    {"format": "название", "example": "как снять, 1 предложение"},
+    ... ровно 4 штуки
+  ],
+  "posting_schedule": "1-2 предложения: какие форматы когда (пн-вс)",
+  "hashtag_strategy": ["#tag1", "#tag2", ... ровно 8 хэштегов]
+}
+Только JSON.`;
+  const res = await client.messages.create({
+    model: LEX_MODEL,
+    max_tokens: 900,
+    temperature: 0.7,
+    system: LEX_SYSTEM + "\n\n" + task,
+    messages: [{ role: "user", content: sanitizeForAnthropic(contextText) }],
+  });
+  const cost = await recordSpend({
+    projectId,
+    agentRole: "lex_reels_meta",
     model: LEX_MODEL,
     usage: res.usage as any,
     tgId,
@@ -344,13 +376,14 @@ export async function analyzeCompetitors(args: {
   let cost = 0;
 
   if (isIg) {
-    const [basic, hooks, structures] = await Promise.all([
+    const [basic, hooks, carousels, reelsMeta] = await Promise.all([
       analyzeBasic({ client, projectId, tgId, contextText }),
       analyzeHooks({ client, projectId, tgId, contextText }),
-      analyzeStructures({ client, projectId, tgId, contextText }),
+      analyzeCarousels({ client, projectId, tgId, contextText }),
+      analyzeReelsAndMeta({ client, projectId, tgId, contextText }),
     ]);
-    parsed = { ...basic.partial, ...hooks.partial, ...structures.partial };
-    cost = basic.cost + hooks.cost + structures.cost;
+    parsed = { ...basic.partial, ...hooks.partial, ...carousels.partial, ...reelsMeta.partial };
+    cost = basic.cost + hooks.cost + carousels.cost + reelsMeta.cost;
   } else {
     const basic = await analyzeBasic({ client, projectId, tgId, contextText });
     parsed = basic.partial;
