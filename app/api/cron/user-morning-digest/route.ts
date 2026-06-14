@@ -108,29 +108,113 @@ function pickIdea(p: Project): Idea | null {
   return null;
 }
 
+const KIND_LABEL: Record<Idea["kind"], string> = {
+  hook: "хук",
+  carousel: "карусель",
+  reel: "Reels-формат",
+  theme: "тема",
+};
+
+const KIND_EMOJI: Record<Idea["kind"], string> = {
+  hook: "💡",
+  carousel: "🎴",
+  reel: "🎬",
+  theme: "📌",
+};
+
+type Ctx = { project: Project; idea: Idea };
+
+// Каждый шаблон возвращает готовый HTML. Аргумент idea-text уже escaped.
+const TEMPLATES: Array<(c: Ctx, ideaHtml: string, projectName: string) => string> = [
+  // 0 — Классика
+  (c, i, n) =>
+    `🌅 <b>Доброе утро!</b>\n\n${KIND_EMOJI[c.idea.kind]} <b>${cap(KIND_LABEL[c.idea.kind])} дня</b> для «${n}»:\n\n<i>${i}</i>\n\nОдин тап — и LEX соберёт пост.`,
+
+  // 1 — Челлендж
+  (c, i, n) =>
+    `⚡ Слабо запостить до обеда?\n\nВот ${KIND_LABEL[c.idea.kind]} для «${n}»:\n\n<i>${i}</i>\n\n5 минут — и готово.`,
+
+  // 2 — Инсайт
+  (c, i) =>
+    `🔍 <b>Подсмотрел закономерность</b>\n\nВ твоей нише такие ${pluralKind(c.idea.kind)} стабильно дают охваты. Сегодняшний:\n\n<i>${i}</i>`,
+
+  // 3 — Тренд
+  (c, i) =>
+    `📈 <b>Что сегодня залетит</b>\n\nЭтот ${KIND_LABEL[c.idea.kind]} попадает в текущий вайб ниши:\n\n<i>${i}</i>\n\nЛови момент.`,
+
+  // 4 — Кофе
+  (c, i) =>
+    `☕ Пока ты пьёшь кофе, я подобрал тебе ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nНе остывай — жми кнопку.`,
+
+  // 5 — Цифра
+  (c, i) =>
+    `📊 <b>Хочешь лайфхак?</b>\n\nЮзеры с таким ${KIND_LABEL[c.idea.kind]} в среднем получают в 2× больше реакций. Бери:\n\n<i>${i}</i>`,
+
+  // 6 — Дружеский пинок
+  (c, i) =>
+    `👋 Не выдумывай с нуля сегодня.\n\nГотовый ${KIND_LABEL[c.idea.kind]} уже здесь:\n\n<i>${i}</i>\n\nЖми — соберу за минуту.`,
+
+  // 7 — Интрига
+  (c, i, n) =>
+    `🎯 <b>Один ${KIND_LABEL[c.idea.kind]}</b>, на который аудитория «${n}» реагирует сильнее всего сегодня:\n\n<i>${i}</i>`,
+
+  // 8 — Время
+  (c, i) =>
+    `⏱ <b>5 минут до готового поста</b>\n\nИдея:\n\n<i>${i}</i>\n\nЖми и проверь сам.`,
+
+  // 9 — Voice of LEX
+  (c, i, n) =>
+    `🧠 LEX на связи.\n\nДля «${n}» подобрал ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nЕсли заходит — соберу полный пост.`,
+
+  // 10 — Понедельник
+  (c, i) =>
+    `🚀 <b>Новая неделя — новая серия</b>\n\nСтартуй с этого ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nЗадай темп с понедельника.`,
+
+  // 11 — Пятница
+  (c, i) =>
+    `🎁 <b>Лёгкая победа до выходных</b>\n\nЕщё один ${KIND_LABEL[c.idea.kind]} — и закроешь неделю:\n\n<i>${i}</i>`,
+];
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function pluralKind(k: Idea["kind"]): string {
+  return k === "hook"
+    ? "хуки"
+    : k === "carousel"
+    ? "карусели"
+    : k === "reel"
+    ? "Reels-форматы"
+    : "темы";
+}
+
 function formatMessage(p: Project, idea: Idea): string {
   const projectName = p.title || "твоего проекта";
-  const kindEmoji: Record<Idea["kind"], string> = {
-    hook: "💡",
-    carousel: "🎴",
-    reel: "🎬",
-    theme: "📌",
-  };
-  const kindLabel: Record<Idea["kind"], string> = {
-    hook: "Хук дня",
-    carousel: "Карусель дня",
-    reel: "Reels-формат дня",
-    theme: "Тема дня",
-  };
-  const lines: string[] = [];
-  lines.push(`🌅 <b>Доброе утро!</b>`);
-  lines.push("");
-  lines.push(`${kindEmoji[idea.kind]} <b>${kindLabel[idea.kind]}</b> для «${projectName}»:`);
-  lines.push("");
-  lines.push(`<i>${escapeHtml(idea.text)}</i>`);
-  lines.push("");
-  lines.push(`Один тап — и LEX AI соберёт пост.`);
-  return lines.join("\n");
+  const ideaHtml = `<i>${escapeHtml(idea.text)}</i>`.replace(/<\/?i>/g, ""); // text без обёртки, обёрнем в шаблоне
+  const safeIdea = escapeHtml(idea.text);
+  const doy = dayOfYear();
+  const weekday = new Date().getUTCDay(); // 0=вс ... 6=сб (UTC; +3ч МСК не критично для дня)
+
+  // Спец-шаблоны: пн = 10, пт = 11. Иначе ротация 0..9 по дню года.
+  let tpl: number;
+  if (weekday === 1) tpl = 10;
+  else if (weekday === 5) tpl = 11;
+  else tpl = doy % 10;
+
+  void ideaHtml;
+  return TEMPLATES[tpl]({ project: p, idea }, safeIdea, projectName);
+}
+
+const CTA_TEXTS_POST = ["🚀 Сгенерить пост", "✍️ Написать за 1 тап", "⚡ Готово за минуту", "🎯 Взять идею"];
+const CTA_TEXTS_CAROUSEL = ["🎴 Собрать карусель", "🎴 Сделать карусель за минуту", "🎴 Готовая карусель в 1 тап"];
+const CTA_TEXTS_REEL = ["🎬 Написать сценарий", "🎬 Готовый сценарий", "🎬 Раскадровка за минуту"];
+
+function pickCta(kind: Idea["kind"]): string {
+  const doy = dayOfYear();
+  const arr =
+    kind === "carousel" ? CTA_TEXTS_CAROUSEL : kind === "reel" ? CTA_TEXTS_REEL : CTA_TEXTS_POST;
+  return arr[doy % arr.length];
 }
 
 function escapeHtml(s: string): string {
@@ -141,12 +225,7 @@ function buildKeyboard(p: Project, idea: Idea) {
   const topic = encodeURIComponent(idea.text.slice(0, 200));
   const kind = idea.kind === "carousel" ? "carousel" : idea.kind === "reel" ? "reel" : "post";
   const url = `${APP_URL}/?p=${p.id}&topic=${topic}&kind=${kind}`;
-  const ctaText =
-    idea.kind === "carousel"
-      ? "🎴 Собрать карусель"
-      : idea.kind === "reel"
-      ? "🎬 Написать сценарий"
-      : "🚀 Сгенерить пост";
+  const ctaText = pickCta(idea.kind);
   return {
     inline_keyboard: [
       [{ text: ctaText, web_app: { url } }],
