@@ -11,14 +11,10 @@ export const maxDuration = 300;
  * самогейт на час МСК = 9. Анти-дубль через projects.last_digest_sent_at
  * (skip если отправлено < 20ч назад).
  *
- * Логика:
- *   1. Берём все проекты с непустым lex_insights.
- *   2. Группируем по tg_id → один юзер = одно сообщение/день.
- *   3. Для каждого юзера выбираем "primary" проект (свежий insights).
- *   4. Из playbook выбираем ОДНУ идею (ротация по дню года):
- *      IG → ready_hooks → carousel_themes → reel_formats
- *      TG → working_hooks → content_themes
- *   5. Шлём с web_app кнопкой «🚀 Сгенерить» (deep link).
+ * Текст универсальный, без зависимости от playbook. Две ветки:
+ *   active   (вчера ≥1 драфт) — спокойное «продолжаем»
+ *   inactive (вчера 0)        — мягкий пинок без снисхождения
+ * + спец пн/пт.
  *
  * Force-режим (для теста): ?force=1 — игнорирует час МСК.
  *                          ?only=<tg_id> — отправить только этому юзеру.
@@ -39,105 +35,14 @@ function authOk(req: Request): boolean {
 }
 
 function mskHour(): number {
-  // UTC+3, без DST
-  const now = new Date();
-  return (now.getUTCHours() + 3) % 24;
+  return (new Date().getUTCHours() + 3) % 24;
 }
 
 function dayOfYear(): number {
   const now = new Date();
   const start = Date.UTC(now.getUTCFullYear(), 0, 0);
-  const diff = now.getTime() - start;
-  return Math.floor(diff / 86400000);
+  return Math.floor((now.getTime() - start) / 86400000);
 }
-
-type Project = {
-  id: string;
-  tg_id: number;
-  title: string | null;
-  platform: string | null;
-  lex_insights: any;
-  lex_brand_kit: any;
-  lex_insights_updated_at: string | null;
-  last_digest_sent_at: string | null;
-};
-
-function brandQuality(p: Project): number {
-  // Чем выше — тем приоритетнее проект для дайджеста.
-  // Учитываем: наличие brand_kit, заполненную нишу, наличие hooks.
-  const bk = p.lex_brand_kit || {};
-  const ins = p.lex_insights || {};
-  let s = 0;
-  if (bk.niche && String(bk.niche).trim().length > 2) s += 100;
-  if (bk.short_description && String(bk.short_description).trim().length > 10) s += 30;
-  if (bk.audience && String(bk.audience).trim().length > 5) s += 20;
-  if (Array.isArray(ins.ready_hooks) && ins.ready_hooks.length > 0) s += 10;
-  return s;
-}
-
-type Idea = { kind: "hook" | "carousel" | "reel" | "theme"; text: string };
-
-function pickIdea(p: Project): Idea | null {
-  const ins = p.lex_insights || {};
-  const doy = dayOfYear();
-  const isIg = (p.platform || "").toLowerCase() === "instagram";
-
-  if (isIg) {
-    const hooks: string[] = Array.isArray(ins.ready_hooks) ? ins.ready_hooks : [];
-    const carousels: { title: string; structure: string }[] = Array.isArray(
-      ins.carousel_themes,
-    )
-      ? ins.carousel_themes
-      : [];
-    const reels: { format: string; example: string }[] = Array.isArray(
-      ins.reel_formats,
-    )
-      ? ins.reel_formats
-      : [];
-    // Чередуем по дню: hooks → carousels → reels
-    const cycle = doy % 3;
-    if (cycle === 0 && hooks.length > 0) {
-      return { kind: "hook", text: hooks[doy % hooks.length] };
-    }
-    if (cycle === 1 && carousels.length > 0) {
-      const c = carousels[doy % carousels.length];
-      return { kind: "carousel", text: c.title };
-    }
-    if (cycle === 2 && reels.length > 0) {
-      const r = reels[doy % reels.length];
-      return { kind: "reel", text: r.format };
-    }
-    // fallback
-    if (hooks.length > 0) return { kind: "hook", text: hooks[doy % hooks.length] };
-    if (carousels.length > 0)
-      return { kind: "carousel", text: carousels[doy % carousels.length].title };
-    if (reels.length > 0) return { kind: "reel", text: reels[doy % reels.length].format };
-  }
-
-  // TG fallback
-  const wh: string[] = Array.isArray(ins.working_hooks) ? ins.working_hooks : [];
-  const themes: string[] = Array.isArray(ins.content_themes) ? ins.content_themes : [];
-  if (wh.length > 0) return { kind: "hook", text: wh[doy % wh.length] };
-  if (themes.length > 0) return { kind: "theme", text: themes[doy % themes.length] };
-  return null;
-}
-
-const KIND_LABEL: Record<Idea["kind"], string> = {
-  hook: "хук",
-  carousel: "карусель",
-  reel: "Reels-формат",
-  theme: "тема",
-};
-
-const KIND_EMOJI: Record<Idea["kind"], string> = {
-  hook: "💡",
-  carousel: "🎴",
-  reel: "🎬",
-  theme: "📌",
-};
-
-
-// ----- Шаблоны: тёплые, мотивирующие, с учётом активности -----
 
 function pluralMaterials(n: number): string {
   const mod10 = n % 10;
@@ -147,122 +52,74 @@ function pluralMaterials(n: number): string {
   return "материалов";
 }
 
-// Шаблоны для активного юзера (вчера ≥1 драфт).
-// Тон: спокойный, партнёрский. Без снисхождения и калек.
-const TEMPLATES_ACTIVE: Array<(idea: string, name: string, kind: Idea["kind"], n: number) => string> = [
-  (i, _n, k, count) =>
-    `☀️ <b>С добрым утром.</b>\n\nВчера в работе было ${count} ${pluralMaterials(count)} — хороший ритм. Сегодня держим:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
+// ----- Шаблоны -----
 
-  (i, _n, k, count) =>
-    `☀️ <b>Доброе утро.</b>\n\n${count} ${pluralMaterials(count)} за вчера — это уже система, а не случай. Свежая идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☀️ <b>Утро.</b>\n\nТы в потоке — каждый день что-то выходит. Сегодняшняя идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k, count) =>
-    `☕ <b>Доброе утро.</b>\n\nВчера получилось ${count} — уверенный темп. Не теряем:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k, count) =>
-    `🌞 <b>С добрым утром.</b>\n\n+${count} ко вчерашнему — заметно. Продолжаем:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☀️ <b>Привет.</b>\n\nТы выдерживаешь ритм — это уже половина успеха в контенте. На сегодня:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
+const TEMPLATES_ACTIVE: Array<(n: number) => string> = [
+  (n) =>
+    `☀️ <b>С добрым утром.</b>\n\nВчера ${n} ${pluralMaterials(n)} в работе — хороший ритм. Один пост в день складывается в большую базу. Не теряем темп.`,
+  (n) =>
+    `☕ <b>Утро.</b>\n\n${n} ${pluralMaterials(n)} за вчера — это уже система, а не случай. На сегодня — ещё один шаг.`,
+  () =>
+    `🌞 <b>Доброе утро.</b>\n\nЭффект приходит не от одного идеального поста, а от регулярных. Ты двигаешься — продолжай.`,
+  (n) =>
+    `☀️ <b>Привет.</b>\n\nКаждый день +${n} — и через месяц у тебя контент-актив, который работает на тебя. Сегодня ещё один шаг.`,
+  () =>
+    `☕ <b>С добрым утром.</b>\n\nТы выдерживаешь ритм — это уже половина успеха в контенте. На сегодня — ещё немного.`,
+  (n) =>
+    `🌞 <b>Утро.</b>\n\nВчера ${n} ${pluralMaterials(n)}. Маленькие усилия складываются в большие результаты. Не сбавляем.`,
 ];
 
-// Шаблоны для неактивного юзера (0 драфтов вчера) — без снисхождения,
-// без "ты молодец", без "ты справишься"
-const TEMPLATES_INACTIVE: Array<(idea: string, name: string, kind: Idea["kind"]) => string> = [
-  (i, _n, k) =>
-    `☀️ <b>Доброе утро.</b>\n\nДень начинается лучше с одного небольшого дела. Готовая идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☀️ <b>Привет.</b>\n\nПять минут — и в ленте новый пост. Без раздумий:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☀️ <b>С добрым утром.</b>\n\nЕсли вчера было не до контента — это нормально. Возвращаемся без напряжения:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☕ <b>Утро.</b>\n\nОдин пост в день складывается в 30 за месяц. Сегодняшний:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `☀️ <b>Доброе утро.</b>\n\nВсё уже подготовлено — нужен только тап:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `✨ <b>Утро.</b>\n\nХороший день вернуться к ленте. Свежая идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
-
-  (i, _n, k) =>
-    `🌞 <b>Привет.</b>\n\nЛента живёт ритмом — не идеальностью. Простая идея на сегодня:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
+const TEMPLATES_INACTIVE: Array<() => string> = [
+  () =>
+    `☀️ <b>Доброе утро.</b>\n\nЛента растёт от ритма, не от идеальности. Один пост сегодня — и движение возобновлено.`,
+  () =>
+    `☕ <b>Утро.</b>\n\nПять минут — и в твоей ленте новый материал. Без раздумий и перфекционизма.`,
+  () =>
+    `🌞 <b>С добрым утром.</b>\n\nЕсли вчера было не до контента — это нормально. Сегодня хороший день вернуться к ритму.`,
+  () =>
+    `☀️ <b>Привет.</b>\n\nОдин пост в день складывается в 30 за месяц. Старт — сейчас.`,
+  () =>
+    `☕ <b>Доброе утро.</b>\n\nНе сравнивай себя со вчера. Сравнивай с тем, кто не начал. Один шаг — и ты впереди.`,
+  () =>
+    `🌞 <b>Утро.</b>\n\nЛента живёт ритмом. Достаточно одного действия в день, чтобы она оставалась живой.`,
+  () =>
+    `☀️ <b>Привет.</b>\n\nИногда лучшее, что можно сделать — просто начать. Без планирования, без сомнений. Сегодня — твой день.`,
 ];
 
-// Спец-понедельник
-const TEMPLATE_MONDAY_ACTIVE = (i: string, _n: string, k: Idea["kind"], count: number) =>
-  `🚀 <b>С понедельником.</b>\n\nЗа выходные накопилось ${count} ${pluralMaterials(count)} — сильный задел. Новую неделю начинаем так же:\n\n${KIND_EMOJI[k]} <i>${i}</i>`;
+const TEMPLATE_MONDAY_ACTIVE = (n: number) =>
+  `🚀 <b>С понедельником.</b>\n\nЗа вчера накопилось ${n} ${pluralMaterials(n)} — сильный задел. Новую неделю начинаем так же.`;
 
-const TEMPLATE_MONDAY_INACTIVE = (i: string, _n: string, k: Idea["kind"]) =>
-  `🚀 <b>Новая неделя.</b>\n\nПонедельничный пост задаёт ритм всей семёрке дней. Идея уже готова:\n\n${KIND_EMOJI[k]} <i>${i}</i>`;
+const TEMPLATE_MONDAY_INACTIVE = () =>
+  `🚀 <b>Новая неделя.</b>\n\nПонедельничный пост задаёт настроение всей семёрке дней. Самое время начать.`;
 
-// Спец-пятница
-const TEMPLATE_FRIDAY_ACTIVE = (i: string, _n: string, k: Idea["kind"], count: number) =>
-  `🎉 <b>Пятница.</b>\n\nВчера +${count} — неделя в плюсе. Закрываем красиво:\n\n${KIND_EMOJI[k]} <i>${i}</i>`;
+const TEMPLATE_FRIDAY_ACTIVE = (n: number) =>
+  `🎉 <b>Пятница.</b>\n\nВчера +${n} — неделя в плюсе. Закрываем её красиво.`;
 
-const TEMPLATE_FRIDAY_INACTIVE = (i: string, _n: string, k: Idea["kind"]) =>
-  `🎉 <b>Пятница.</b>\n\nОдин пост — и неделя закрыта. Готовая идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`;
+const TEMPLATE_FRIDAY_INACTIVE = () =>
+  `🎉 <b>Пятница.</b>\n\nОдин пост — и неделя закрыта. Лёгкий финал перед выходными.`;
 
-function formatMessage(p: Project, idea: Idea, yesterdayCount: number): string {
-  const projectName = (p.title || "").trim();
-  const niceName =
-    projectName && projectName.length > 1 && !/^\d+$/.test(projectName)
-      ? projectName
-      : "";
-  const safeIdea = escapeHtml(idea.text);
-  const safeName = escapeHtml(niceName);
-  const projectLabel = safeName ? `\n\n<i>Идея для «${safeName}»</i>` : "";
-  const doy = dayOfYear();
+function formatMessage(yesterdayCount: number): string {
   const mskNow = new Date(Date.now() + 3 * 3600 * 1000);
-  const weekday = mskNow.getUTCDay(); // 0=вс ... 6=сб
+  const weekday = mskNow.getUTCDay(); // 0=вс
   const active = yesterdayCount > 0;
-
-  let body: string;
-  if (weekday === 1) {
-    body = active
-      ? TEMPLATE_MONDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
-      : TEMPLATE_MONDAY_INACTIVE(safeIdea, safeName, idea.kind);
-  } else if (weekday === 5) {
-    body = active
-      ? TEMPLATE_FRIDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
-      : TEMPLATE_FRIDAY_INACTIVE(safeIdea, safeName, idea.kind);
-  } else if (active) {
-    body = TEMPLATES_ACTIVE[doy % TEMPLATES_ACTIVE.length](safeIdea, safeName, idea.kind, yesterdayCount);
-  } else {
-    body = TEMPLATES_INACTIVE[doy % TEMPLATES_INACTIVE.length](safeIdea, safeName, idea.kind);
-  }
-  return body + projectLabel;
-}
-
-const CTA_TEXTS_POST = ["🚀 Сгенерить пост", "✍️ Написать за 1 тап", "⚡ Готово за минуту", "🎯 Взять идею"];
-const CTA_TEXTS_CAROUSEL = ["🎴 Собрать карусель", "🎴 Сделать карусель за минуту", "🎴 Готовая карусель в 1 тап"];
-const CTA_TEXTS_REEL = ["🎬 Написать сценарий", "🎬 Готовый сценарий", "🎬 Раскадровка за минуту"];
-
-function pickCta(kind: Idea["kind"]): string {
   const doy = dayOfYear();
-  const arr =
-    kind === "carousel" ? CTA_TEXTS_CAROUSEL : kind === "reel" ? CTA_TEXTS_REEL : CTA_TEXTS_POST;
-  return arr[doy % arr.length];
+
+  if (weekday === 1) {
+    return active ? TEMPLATE_MONDAY_ACTIVE(yesterdayCount) : TEMPLATE_MONDAY_INACTIVE();
+  }
+  if (weekday === 5) {
+    return active ? TEMPLATE_FRIDAY_ACTIVE(yesterdayCount) : TEMPLATE_FRIDAY_INACTIVE();
+  }
+  if (active) {
+    return TEMPLATES_ACTIVE[doy % TEMPLATES_ACTIVE.length](yesterdayCount);
+  }
+  return TEMPLATES_INACTIVE[doy % TEMPLATES_INACTIVE.length]();
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function buildKeyboard(p: Project, idea: Idea) {
-  const topic = encodeURIComponent(idea.text.slice(0, 200));
-  const kind = idea.kind === "carousel" ? "carousel" : idea.kind === "reel" ? "reel" : "post";
-  const url = `${APP_URL}/?p=${p.id}&topic=${topic}&kind=${kind}`;
-  const ctaText = pickCta(idea.kind);
+function buildKeyboard() {
   return {
     inline_keyboard: [
-      [{ text: ctaText, web_app: { url } }],
-      [{ text: "Открыть LEX AI", web_app: { url: APP_URL } }],
+      [{ text: "🚀 Открыть LEX AI", web_app: { url: APP_URL } }],
     ],
   };
 }
@@ -271,7 +128,6 @@ async function tgSend(
   token: string,
   chatId: number,
   text: string,
-  kb: any,
 ): Promise<{ ok: boolean; err?: string }> {
   try {
     const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -282,7 +138,7 @@ async function tgSend(
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
-        reply_markup: kb,
+        reply_markup: buildKeyboard(),
       }),
     });
     const j = await r.json();
@@ -302,8 +158,6 @@ export async function GET(req: Request) {
   const only = url.searchParams.get("only");
   const onlyId = only ? Number(only) : null;
 
-  // Гейт: только в 9:00 МСК (час == 9), tick пинг каждые 15 мин,
-  // поэтому окно — один час раз в день. Анти-дубль через last_digest_sent_at.
   if (!force && mskHour() !== 9) {
     return Response.json({ skipped: "not 9 MSK", hour_msk: mskHour() });
   }
@@ -313,64 +167,30 @@ export async function GET(req: Request) {
     return Response.json({ error: "TELEGRAM_BOT_TOKEN missing" }, { status: 500 });
 
   const sb = getSupabase();
-  const { data, error } = await sb
-    .from("projects")
-    .select(
-      "id,tg_id,title,platform,lex_insights,lex_brand_kit,lex_insights_updated_at,last_digest_sent_at",
-    )
-    .not("lex_insights", "is", null)
-    .not("tg_id", "is", null)
-    .order("lex_insights_updated_at", { ascending: false });
 
+  // Все юзеры с хотя бы одним проектом
+  const { data: projs, error } = await sb
+    .from("projects")
+    .select("id,tg_id,last_digest_sent_at")
+    .not("tg_id", "is", null);
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  // Группируем по tg_id, выбираем БЕСТ проект: сначала по brandQuality,
-  // при равенстве — самый свежий. Это спасает от тестовых проектов «111».
-  const byUser = new Map<number, Project>();
-  for (const r of (data || []) as Project[]) {
-    const tg = Number(r.tg_id);
+  // Группируем по tg_id, собираем все project_id и cutoff для анти-спама
+  const cutoff = Date.now() - 20 * 60 * 60 * 1000;
+  const userProjectIds = new Map<number, string[]>();
+  const recentSent = new Set<number>();
+  for (const r of projs || []) {
+    const tg = Number((r as any).tg_id);
     if (!Number.isFinite(tg)) continue;
     if (onlyId && tg !== onlyId) continue;
-    const prev = byUser.get(tg);
-    if (!prev) {
-      byUser.set(tg, r);
-      continue;
-    }
-    if (brandQuality(r) > brandQuality(prev)) byUser.set(tg, r);
+    const list = userProjectIds.get(tg) || [];
+    list.push((r as any).id);
+    userProjectIds.set(tg, list);
+    const ts = (r as any).last_digest_sent_at;
+    if (!force && ts && new Date(ts).getTime() > cutoff) recentSent.add(tg);
   }
 
-  // Анти-спам: если у юзера ЛЮБОЙ проект имеет last_digest_sent_at < 20ч,
-  // пропускаем (force-флаг это снимает).
-  const cutoff = Date.now() - 20 * 60 * 60 * 1000;
-  const recentSent = new Set<number>();
-  if (!force) {
-    for (const r of (data || []) as Project[]) {
-      if (!r.last_digest_sent_at) continue;
-      const t = new Date(r.last_digest_sent_at).getTime();
-      if (t > cutoff) recentSent.add(Number(r.tg_id));
-    }
-  }
-
-  // Подтягиваем все project_id юзеров-кандидатов чтобы посчитать вчерашнюю
-  // активность по ВСЕМ их проектам, а не только по primary.
-  const userProjectIds = new Map<number, string[]>();
-  {
-    const tgIds = Array.from(byUser.keys());
-    if (tgIds.length > 0) {
-      const { data: allProjs } = await sb
-        .from("projects")
-        .select("id,tg_id")
-        .in("tg_id", tgIds);
-      for (const r of allProjs || []) {
-        const tg = Number((r as any).tg_id);
-        const list = userProjectIds.get(tg) || [];
-        list.push((r as any).id);
-        userProjectIds.set(tg, list);
-      }
-    }
-  }
-
-  // Вчерашние драфты (24ч окно МСК → грубо последние 24ч UTC, ок для retention)
+  // Вчерашние драфты
   const yesterdayFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const draftCountByProject = new Map<string, number>();
   {
@@ -388,27 +208,26 @@ export async function GET(req: Request) {
     }
   }
 
-  const targets: { project: Project; idea: Idea; yesterdayCount: number }[] = [];
-  for (const [tg, p] of byUser) {
+  const targets: { tg_id: number; projectIds: string[]; yesterdayCount: number }[] = [];
+  for (const [tg, projectIds] of userProjectIds) {
     if (recentSent.has(tg)) continue;
-    const idea = pickIdea(p);
-    if (!idea) continue;
-    const projIds = userProjectIds.get(tg) || [p.id];
     let count = 0;
-    for (const pid of projIds) count += draftCountByProject.get(pid) || 0;
-    targets.push({ project: p, idea, yesterdayCount: count });
+    for (const pid of projectIds) count += draftCountByProject.get(pid) || 0;
+    targets.push({ tg_id: tg, projectIds, yesterdayCount: count });
   }
 
   if (dry) {
+    const previewActive = formatMessage(3);
+    const previewInactive = formatMessage(0);
     return Response.json({
       dry: true,
-      candidates: byUser.size,
+      candidates: userProjectIds.size,
       ready: targets.length,
       skipped_recent: recentSent.size,
+      preview_active: previewActive,
+      preview_inactive: previewInactive,
       sample: targets.slice(0, 5).map((t) => ({
-        tg_id: t.project.tg_id,
-        kind: t.idea.kind,
-        text: t.idea.text.slice(0, 80),
+        tg_id: t.tg_id,
         yesterday: t.yesterdayCount,
       })),
     });
@@ -420,24 +239,22 @@ export async function GET(req: Request) {
   const errors: { tg_id: number; err: string }[] = [];
   const sentProjectIds: string[] = [];
 
-  for (const { project, idea, yesterdayCount } of targets) {
-    const text = formatMessage(project, idea, yesterdayCount);
-    const kb = buildKeyboard(project, idea);
-    const r = await tgSend(token!, Number(project.tg_id), text, kb);
+  for (const { tg_id, projectIds, yesterdayCount } of targets) {
+    const text = formatMessage(yesterdayCount);
+    const r = await tgSend(token!, tg_id, text);
     if (r.ok) {
       sent++;
-      sentProjectIds.push(project.id);
+      sentProjectIds.push(...projectIds);
     } else {
       if (/forbidden|blocked|deactivated|chat not found/i.test(r.err || "")) blocked++;
       else {
         failed++;
-        if (errors.length < 20) errors.push({ tg_id: project.tg_id, err: r.err || "" });
+        if (errors.length < 20) errors.push({ tg_id, err: r.err || "" });
       }
     }
     await new Promise((res) => setTimeout(res, 50));
   }
 
-  // Помечаем отправленные проекты
   if (sentProjectIds.length > 0) {
     await sb
       .from("projects")
@@ -446,7 +263,7 @@ export async function GET(req: Request) {
   }
 
   return Response.json({
-    candidates: byUser.size,
+    candidates: userProjectIds.size,
     targets: targets.length,
     sent,
     blocked,
