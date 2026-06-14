@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getSupabase } from "../../../../lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +73,44 @@ function openAppKeyboard() {
   };
 }
 
+async function answerCallback(callbackId: string, text?: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackId, text }),
+  }).catch(() => {});
+}
+
+async function handleCallback(cb: any) {
+  const data = String(cb.data || "");
+  const fromId = cb.from?.id;
+  if (data === "reminders:off" && typeof fromId === "number") {
+    const sb = getSupabase();
+    await sb
+      .from("user_prefs")
+      .upsert(
+        {
+          tg_id: fromId,
+          reminder_frequency: "off",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "tg_id" },
+      );
+    await answerCallback(cb.id, "Напоминания выключены ✓");
+    // Дополнительное подтверждение в чат
+    if (cb.message?.chat?.id) {
+      await sendMessage(
+        cb.message.chat.id,
+        "Готово, напоминания выключены. Включить обратно можно в самом приложении (раздел «Настройки» → «Напоминания»).",
+      );
+    }
+    return;
+  }
+  await answerCallback(cb.id);
+}
+
 export async function POST(req: NextRequest) {
   if (!authOk(req)) return new Response("forbidden", { status: 403 });
 
@@ -79,6 +118,11 @@ export async function POST(req: NextRequest) {
   try {
     update = await req.json();
   } catch {
+    return Response.json({ ok: true });
+  }
+
+  if (update?.callback_query) {
+    await handleCallback(update.callback_query);
     return Response.json({ ok: true });
   }
 
