@@ -122,88 +122,102 @@ const KIND_EMOJI: Record<Idea["kind"], string> = {
   theme: "📌",
 };
 
-type Ctx = { project: Project; idea: Idea };
 
-// Каждый шаблон возвращает готовый HTML. Аргумент idea-text уже escaped.
-const TEMPLATES: Array<(c: Ctx, ideaHtml: string, projectName: string) => string> = [
-  // 0 — Классика
-  (c, i, n) =>
-    `🌅 <b>Доброе утро!</b>\n\n${KIND_EMOJI[c.idea.kind]} <b>${cap(KIND_LABEL[c.idea.kind])} дня</b> для «${n}»:\n\n<i>${i}</i>\n\nОдин тап — и LEX соберёт пост.`,
+// ----- Шаблоны: тёплые, мотивирующие, с учётом активности -----
 
-  // 1 — Челлендж
-  (c, i, n) =>
-    `⚡ Слабо запостить до обеда?\n\nВот ${KIND_LABEL[c.idea.kind]} для «${n}»:\n\n<i>${i}</i>\n\n5 минут — и готово.`,
+function pluralDrafts(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "контент";
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return "контента";
+  return "контента";
+}
 
-  // 2 — Инсайт
-  (c, i) =>
-    `🔍 <b>Подсмотрел закономерность</b>\n\nВ твоей нише такие ${pluralKind(c.idea.kind)} стабильно дают охваты. Сегодняшний:\n\n<i>${i}</i>`,
+// Шаблоны для активного юзера (вчера ≥1 драфт). Аргументы — уже escaped.
+const TEMPLATES_ACTIVE: Array<(idea: string, name: string, kind: Idea["kind"], n: number) => string> = [
+  (i, n, k, count) =>
+    `🌟 <b>Доброе утро!</b>\n\nВчера ты собрал ${count} ${pluralDrafts(count)} — респект 🙌\nНе сбавляй темп, ты в потоке.\n\n${KIND_EMOJI[k]} Сегодняшняя идея:\n<i>${i}</i>\n\nОдин тап — и готово.`,
 
-  // 3 — Тренд
-  (c, i) =>
-    `📈 <b>Что сегодня залетит</b>\n\nЭтот ${KIND_LABEL[c.idea.kind]} попадает в текущий вайб ниши:\n\n<i>${i}</i>\n\nЛови момент.`,
+  (i, n, k, count) =>
+    `🔥 <b>С добрым утром!</b>\n\n+${count} ${pluralDrafts(count)} за вчера — так и растёт контент-актив. Продолжаем:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nТы молодец, не останавливайся.`,
 
-  // 4 — Кофе
-  (c, i) =>
-    `☕ Пока ты пьёшь кофе, я подобрал тебе ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nНе остывай — жми кнопку.`,
+  (i, n, k, count) =>
+    `🌅 Привет!\n\nВчера +${count} — каждый день делает тебя сильнее как автора 💪\nСегодня дам что-то лёгкое:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
 
-  // 5 — Цифра
-  (c, i) =>
-    `📊 <b>Хочешь лайфхак?</b>\n\nЮзеры с таким ${KIND_LABEL[c.idea.kind]} в среднем получают в 2× больше реакций. Бери:\n\n<i>${i}</i>`,
+  (i, n, k, count) =>
+    `☀️ Доброе утро!\n\nТы постарался вчера — ${count} ${pluralDrafts(count)} в копилку. Это уровень.\n\n${KIND_EMOJI[k]} Сегодня попробуй:\n<i>${i}</i>\n\nУ тебя получается — продолжай.`,
 
-  // 6 — Дружеский пинок
-  (c, i) =>
-    `👋 Не выдумывай с нуля сегодня.\n\nГотовый ${KIND_LABEL[c.idea.kind]} уже здесь:\n\n<i>${i}</i>\n\nЖми — соберу за минуту.`,
+  (i, n, k) =>
+    `🙌 <b>Ты в потоке.</b>\n\nКаждый день = +1 шаг к аудитории. Сегодня:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nДержим темп.`,
 
-  // 7 — Интрига
-  (c, i, n) =>
-    `🎯 <b>Один ${KIND_LABEL[c.idea.kind]}</b>, на который аудитория «${n}» реагирует сильнее всего сегодня:\n\n<i>${i}</i>`,
-
-  // 8 — Время
-  (c, i) =>
-    `⏱ <b>5 минут до готового поста</b>\n\nИдея:\n\n<i>${i}</i>\n\nЖми и проверь сам.`,
-
-  // 9 — Voice of LEX
-  (c, i, n) =>
-    `🧠 LEX на связи.\n\nДля «${n}» подобрал ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nЕсли заходит — соберу полный пост.`,
-
-  // 10 — Понедельник
-  (c, i) =>
-    `🚀 <b>Новая неделя — новая серия</b>\n\nСтартуй с этого ${KIND_LABEL[c.idea.kind]}:\n\n<i>${i}</i>\n\nЗадай темп с понедельника.`,
-
-  // 11 — Пятница
-  (c, i) =>
-    `🎁 <b>Лёгкая победа до выходных</b>\n\nЕщё один ${KIND_LABEL[c.idea.kind]} — и закроешь неделю:\n\n<i>${i}</i>`,
+  (i, n, k, count) =>
+    `✨ Уже ${count} вчера — и это только начало.\n\nГотовая идея для тебя:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nЖми, я соберу пост за минуту.`,
 ];
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// Шаблоны для неактивного юзера (0 драфтов вчера) — мягкие, мотивирующие
+const TEMPLATES_INACTIVE: Array<(idea: string, name: string, kind: Idea["kind"]) => string> = [
+  (i, n, k) =>
+    `☀️ <b>Доброе утро!</b>\n\nОдин пост за сегодня — и ты уже двигаешься вперёд. Готовая идея ждёт:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nНе нужно идеально. Нужно сделать.`,
 
-function pluralKind(k: Idea["kind"]): string {
-  return k === "hook"
-    ? "хуки"
-    : k === "carousel"
-    ? "карусели"
-    : k === "reel"
-    ? "Reels-форматы"
-    : "темы";
-}
+  (i, n, k) =>
+    `💪 <b>Привет!</b>\n\nМаленькое действие > идеальный план. Возьми готовое:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nТы справишься — это правда 5 минут.`,
 
-function formatMessage(p: Project, idea: Idea): string {
+  (i, n, k) =>
+    `🌱 <b>Сегодня — отличный день начать снова.</b>\n\nЯ подобрал самое простое:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nОдин тап — и пост готов.`,
+
+  (i, n, k) =>
+    `🤗 С добрым утром!\n\nИногда контент пропадает с радара — это нормально. Возвращаемся легко:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nЯ всё подготовил, тебе только нажать.`,
+
+  (i, n, k) =>
+    `📊 <b>Маленькая математика:</b>\n\nОдин пост в день = 30 постов в месяц. Старт — сегодня:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nТы можешь.`,
+
+  (i, n, k) =>
+    `🎁 <b>Доброе утро!</b>\n\nЯ уже всё сделал за тебя — осталось нажать одну кнопку:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nЭто займёт минуту, обещаю.`,
+
+  (i, n, k) =>
+    `✨ <b>Привет!</b>\n\nНе сравнивай себя со вчера — сравнивай с тем, кто не начал. Сегодня твой день:\n\n${KIND_EMOJI[k]} <i>${i}</i>`,
+];
+
+// Спец-понедельник
+const TEMPLATE_MONDAY_ACTIVE = (i: string, n: string, k: Idea["kind"], count: number) =>
+  `🚀 <b>С понедельником!</b>\n\nВчера +${count} ${pluralDrafts(count)} — сильный финал недели. Стартуем новую так же мощно:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nТы задаёшь темп.`;
+
+const TEMPLATE_MONDAY_INACTIVE = (i: string, n: string, k: Idea["kind"]) =>
+  `🚀 <b>Новая неделя — чистый лист.</b>\n\nОдин пост в понедельник задаёт настроение на 7 дней вперёд:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nДавай вместе.`;
+
+// Спец-пятница
+const TEMPLATE_FRIDAY_ACTIVE = (i: string, n: string, k: Idea["kind"], count: number) =>
+  `🎉 <b>Пятница!</b>\n\nЭта неделя у тебя в плюсе — вчера +${count}. Закроем её красиво:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\nЕщё один — и заслуженные выходные.`;
+
+const TEMPLATE_FRIDAY_INACTIVE = (i: string, n: string, k: Idea["kind"]) =>
+  `🌟 <b>Пятница — отличный день начать.</b>\n\nЛёгкая победа до выходных:\n\n${KIND_EMOJI[k]} <i>${i}</i>\n\n5 минут — и можно с чистой совестью отдыхать.`;
+
+function formatMessage(p: Project, idea: Idea, yesterdayCount: number): string {
   const projectName = p.title || "твоего проекта";
-  const ideaHtml = `<i>${escapeHtml(idea.text)}</i>`.replace(/<\/?i>/g, ""); // text без обёртки, обёрнем в шаблоне
   const safeIdea = escapeHtml(idea.text);
+  const safeName = escapeHtml(projectName);
   const doy = dayOfYear();
-  const weekday = new Date().getUTCDay(); // 0=вс ... 6=сб (UTC; +3ч МСК не критично для дня)
+  const mskNow = new Date(Date.now() + 3 * 3600 * 1000);
+  const weekday = mskNow.getUTCDay(); // 0=вс ... 6=сб
+  const active = yesterdayCount > 0;
 
-  // Спец-шаблоны: пн = 10, пт = 11. Иначе ротация 0..9 по дню года.
-  let tpl: number;
-  if (weekday === 1) tpl = 10;
-  else if (weekday === 5) tpl = 11;
-  else tpl = doy % 10;
+  if (weekday === 1) {
+    return active
+      ? TEMPLATE_MONDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
+      : TEMPLATE_MONDAY_INACTIVE(safeIdea, safeName, idea.kind);
+  }
+  if (weekday === 5) {
+    return active
+      ? TEMPLATE_FRIDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
+      : TEMPLATE_FRIDAY_INACTIVE(safeIdea, safeName, idea.kind);
+  }
 
-  void ideaHtml;
-  return TEMPLATES[tpl]({ project: p, idea }, safeIdea, projectName);
+  if (active) {
+    const t = TEMPLATES_ACTIVE[doy % TEMPLATES_ACTIVE.length];
+    return t(safeIdea, safeName, idea.kind, yesterdayCount);
+  }
+  const t = TEMPLATES_INACTIVE[doy % TEMPLATES_INACTIVE.length];
+  return t(safeIdea, safeName, idea.kind);
 }
 
 const CTA_TEXTS_POST = ["🚀 Сгенерить пост", "✍️ Написать за 1 тап", "⚡ Готово за минуту", "🎯 Взять идею"];
@@ -312,12 +326,52 @@ export async function GET(req: Request) {
     }
   }
 
-  const targets: { project: Project; idea: Idea }[] = [];
+  // Подтягиваем все project_id юзеров-кандидатов чтобы посчитать вчерашнюю
+  // активность по ВСЕМ их проектам, а не только по primary.
+  const userProjectIds = new Map<number, string[]>();
+  {
+    const tgIds = Array.from(byUser.keys());
+    if (tgIds.length > 0) {
+      const { data: allProjs } = await sb
+        .from("projects")
+        .select("id,tg_id")
+        .in("tg_id", tgIds);
+      for (const r of allProjs || []) {
+        const tg = Number((r as any).tg_id);
+        const list = userProjectIds.get(tg) || [];
+        list.push((r as any).id);
+        userProjectIds.set(tg, list);
+      }
+    }
+  }
+
+  // Вчерашние драфты (24ч окно МСК → грубо последние 24ч UTC, ок для retention)
+  const yesterdayFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const draftCountByProject = new Map<string, number>();
+  {
+    const allProjIds = Array.from(new Set(Array.from(userProjectIds.values()).flat()));
+    if (allProjIds.length > 0) {
+      const { data: drafts } = await sb
+        .from("content_drafts")
+        .select("project_id")
+        .in("project_id", allProjIds)
+        .gte("created_at", yesterdayFrom);
+      for (const d of drafts || []) {
+        const pid = (d as any).project_id as string;
+        draftCountByProject.set(pid, (draftCountByProject.get(pid) || 0) + 1);
+      }
+    }
+  }
+
+  const targets: { project: Project; idea: Idea; yesterdayCount: number }[] = [];
   for (const [tg, p] of byUser) {
     if (recentSent.has(tg)) continue;
     const idea = pickIdea(p);
     if (!idea) continue;
-    targets.push({ project: p, idea });
+    const projIds = userProjectIds.get(tg) || [p.id];
+    let count = 0;
+    for (const pid of projIds) count += draftCountByProject.get(pid) || 0;
+    targets.push({ project: p, idea, yesterdayCount: count });
   }
 
   if (dry) {
@@ -330,6 +384,7 @@ export async function GET(req: Request) {
         tg_id: t.project.tg_id,
         kind: t.idea.kind,
         text: t.idea.text.slice(0, 80),
+        yesterday: t.yesterdayCount,
       })),
     });
   }
@@ -340,8 +395,8 @@ export async function GET(req: Request) {
   const errors: { tg_id: number; err: string }[] = [];
   const sentProjectIds: string[] = [];
 
-  for (const { project, idea } of targets) {
-    const text = formatMessage(project, idea);
+  for (const { project, idea, yesterdayCount } of targets) {
+    const text = formatMessage(project, idea, yesterdayCount);
     const kb = buildKeyboard(project, idea);
     const r = await tgSend(token!, Number(project.tg_id), text, kb);
     if (r.ok) {
