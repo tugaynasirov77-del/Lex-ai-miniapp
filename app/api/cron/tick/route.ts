@@ -39,6 +39,7 @@ function authOk(req: Request): boolean {
 const PIPELINE = [
   "publish-scheduled",
   "ig-publish-scheduled",
+  "user-morning-digest",
 ] as const;
 
 export async function GET(req: Request) {
