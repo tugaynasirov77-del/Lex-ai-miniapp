@@ -57,9 +57,23 @@ type Project = {
   title: string | null;
   platform: string | null;
   lex_insights: any;
+  lex_brand_kit: any;
   lex_insights_updated_at: string | null;
   last_digest_sent_at: string | null;
 };
+
+function brandQuality(p: Project): number {
+  // Чем выше — тем приоритетнее проект для дайджеста.
+  // Учитываем: наличие brand_kit, заполненную нишу, наличие hooks.
+  const bk = p.lex_brand_kit || {};
+  const ins = p.lex_insights || {};
+  let s = 0;
+  if (bk.niche && String(bk.niche).trim().length > 2) s += 100;
+  if (bk.short_description && String(bk.short_description).trim().length > 10) s += 30;
+  if (bk.audience && String(bk.audience).trim().length > 5) s += 20;
+  if (Array.isArray(ins.ready_hooks) && ins.ready_hooks.length > 0) s += 10;
+  return s;
+}
 
 type Idea = { kind: "hook" | "carousel" | "reel" | "theme"; text: string };
 
@@ -195,31 +209,34 @@ const TEMPLATE_FRIDAY_INACTIVE = (i: string, _n: string, k: Idea["kind"]) =>
   `🎉 <b>Пятница.</b>\n\nОдин пост — и неделя закрыта. Готовая идея:\n\n${KIND_EMOJI[k]} <i>${i}</i>`;
 
 function formatMessage(p: Project, idea: Idea, yesterdayCount: number): string {
-  const projectName = p.title || "твоего проекта";
+  const projectName = (p.title || "").trim();
+  const niceName =
+    projectName && projectName.length > 1 && !/^\d+$/.test(projectName)
+      ? projectName
+      : "";
   const safeIdea = escapeHtml(idea.text);
-  const safeName = escapeHtml(projectName);
+  const safeName = escapeHtml(niceName);
+  const projectLabel = safeName ? `\n\n<i>Идея для «${safeName}»</i>` : "";
   const doy = dayOfYear();
   const mskNow = new Date(Date.now() + 3 * 3600 * 1000);
   const weekday = mskNow.getUTCDay(); // 0=вс ... 6=сб
   const active = yesterdayCount > 0;
 
+  let body: string;
   if (weekday === 1) {
-    return active
+    body = active
       ? TEMPLATE_MONDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
       : TEMPLATE_MONDAY_INACTIVE(safeIdea, safeName, idea.kind);
-  }
-  if (weekday === 5) {
-    return active
+  } else if (weekday === 5) {
+    body = active
       ? TEMPLATE_FRIDAY_ACTIVE(safeIdea, safeName, idea.kind, yesterdayCount)
       : TEMPLATE_FRIDAY_INACTIVE(safeIdea, safeName, idea.kind);
+  } else if (active) {
+    body = TEMPLATES_ACTIVE[doy % TEMPLATES_ACTIVE.length](safeIdea, safeName, idea.kind, yesterdayCount);
+  } else {
+    body = TEMPLATES_INACTIVE[doy % TEMPLATES_INACTIVE.length](safeIdea, safeName, idea.kind);
   }
-
-  if (active) {
-    const t = TEMPLATES_ACTIVE[doy % TEMPLATES_ACTIVE.length];
-    return t(safeIdea, safeName, idea.kind, yesterdayCount);
-  }
-  const t = TEMPLATES_INACTIVE[doy % TEMPLATES_INACTIVE.length];
-  return t(safeIdea, safeName, idea.kind);
+  return body + projectLabel;
 }
 
 const CTA_TEXTS_POST = ["🚀 Сгенерить пост", "✍️ Написать за 1 тап", "⚡ Готово за минуту", "🎯 Взять идею"];
@@ -299,7 +316,7 @@ export async function GET(req: Request) {
   const { data, error } = await sb
     .from("projects")
     .select(
-      "id,tg_id,title,platform,lex_insights,lex_insights_updated_at,last_digest_sent_at",
+      "id,tg_id,title,platform,lex_insights,lex_brand_kit,lex_insights_updated_at,last_digest_sent_at",
     )
     .not("lex_insights", "is", null)
     .not("tg_id", "is", null)
@@ -307,13 +324,19 @@ export async function GET(req: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  // Группируем по tg_id, оставляем самый свежий проект
+  // Группируем по tg_id, выбираем БЕСТ проект: сначала по brandQuality,
+  // при равенстве — самый свежий. Это спасает от тестовых проектов «111».
   const byUser = new Map<number, Project>();
   for (const r of (data || []) as Project[]) {
     const tg = Number(r.tg_id);
     if (!Number.isFinite(tg)) continue;
     if (onlyId && tg !== onlyId) continue;
-    if (!byUser.has(tg)) byUser.set(tg, r);
+    const prev = byUser.get(tg);
+    if (!prev) {
+      byUser.set(tg, r);
+      continue;
+    }
+    if (brandQuality(r) > brandQuality(prev)) byUser.set(tg, r);
   }
 
   // Анти-спам: если у юзера ЛЮБОЙ проект имеет last_digest_sent_at < 20ч,
