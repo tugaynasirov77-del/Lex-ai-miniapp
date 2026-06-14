@@ -54,7 +54,7 @@ function dayOfYear(): number {
 type Project = {
   id: string;
   tg_id: number;
-  name: string | null;
+  title: string | null;
   platform: string | null;
   lex_insights: any;
   lex_insights_updated_at: string | null;
@@ -109,7 +109,7 @@ function pickIdea(p: Project): Idea | null {
 }
 
 function formatMessage(p: Project, idea: Idea): string {
-  const projectName = p.name || "твоего проекта";
+  const projectName = p.title || "твоего проекта";
   const kindEmoji: Record<Idea["kind"], string> = {
     hook: "💡",
     carousel: "🎴",
@@ -204,7 +204,7 @@ export async function GET(req: Request) {
   const { data, error } = await sb
     .from("projects")
     .select(
-      "id,tg_id,name,platform,lex_insights,lex_insights_updated_at,last_digest_sent_at",
+      "id,tg_id,title,platform,lex_insights,lex_insights_updated_at,last_digest_sent_at",
     )
     .not("lex_insights", "is", null)
     .not("tg_id", "is", null)
