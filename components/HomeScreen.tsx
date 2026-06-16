@@ -451,40 +451,12 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
         <BannerCarousel />
       </div>
 
-      {/* BOTTOM CTA — отступ снизу учитывает safe-area iPhone */}
+      {/* CTA убран — навигация теперь через нижний таб-бар */}
       <div
         style={{
-          padding: "12px 22px max(calc(env(safe-area-inset-bottom) + 140px), 160px)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
+          padding: "12px 22px max(calc(env(safe-area-inset-bottom) + 100px), 116px)",
         }}
-      >
-        <button
-          onClick={() => {
-            hapticImpact("medium");
-            onStart?.();
-          }}
-          style={{
-            width: "100%",
-            minHeight: 56,
-            padding: "18px 0",
-            border: "none",
-            borderRadius: 999,
-            background: YELLOW,
-            color: "#0A0608",
-            fontSize: 17,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            boxShadow:
-              "0 22px 52px rgba(245,231,10,0.30), 0 0 0 1px rgba(255,255,255,0.12) inset",
-            cursor: "pointer",
-          }}
-        >
-          Начать
-        </button>
-      </div>
+      />
     </div>
   );
 }

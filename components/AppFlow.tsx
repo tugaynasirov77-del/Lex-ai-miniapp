@@ -10,6 +10,8 @@ import CreateProjectScreen from "./screens/CreateProjectScreen";
 import AddCompetitorsScreen from "./screens/AddCompetitorsScreen";
 import BillingScreen from "./screens/BillingScreen";
 import LexCreateScreen from "./screens/LexCreateScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import BottomTabBar from "./BottomTabBar";
 import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
@@ -109,11 +111,17 @@ export default function AppFlow() {
           {currentScreen === "project" && <ProjectScreen onBack={goBack} />}
           {currentScreen === "billing" && <BillingScreen onBack={goBack} />}
           {currentScreen === "lex-create" && <LexCreateScreen onBack={goBack} />}
+          {currentScreen === "settings" && <SettingsScreen onBack={goBack} />}
           {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
               удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
               старый currentScreen, useResumeFlow сбросит на home. */}
         </motion.div>
       </AnimatePresence>
+
+      {/* Нижний таб-бар — показываем на верхнеуровневых экранах */}
+      {["home", "dashboard", "billing", "settings"].includes(currentScreen) && (
+        <BottomTabBar />
+      )}
     </div>
   );
 }
