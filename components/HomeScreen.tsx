@@ -22,27 +22,17 @@ function LexLogo({ height = 40 }: { height?: number }) {
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <svg
-        viewBox="0 0 100 100"
-        width={height * 1.05}
-        height={height * 1.05}
-        fill="none"
-        style={{ display: "block" }}
-      >
-        <path
-          d="M50 14 L82 78 Q86 88 76 88 L24 88 Q14 88 18 78 Z"
-          stroke={YELLOW}
-          strokeWidth="9"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <path
-          d="M54 38 L66 72"
-          stroke={YELLOW}
-          strokeWidth="9"
-          strokeLinecap="round"
-        />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.jpg"
+        alt=""
+        style={{
+          height: height * 1.15,
+          width: height * 1.15,
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
       <div
         style={{
           fontSize: height * 0.62,
