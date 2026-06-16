@@ -449,15 +449,16 @@ export default function ProjectScreen({ onBack }: Props) {
             width: "100%",
             minHeight: 56,
             border: "none",
-            borderRadius: 16,
-            background: YELLOW,
+            borderRadius: 999,
+            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 45%, #E5C500 100%)`,
             color: "#0A0608",
             fontSize: 15,
             fontWeight: 800,
-            letterSpacing: "0.06em",
+            letterSpacing: "0.04em",
             textTransform: "uppercase",
             cursor: "pointer",
-            boxShadow: `0 18px 40px ${YELLOW}33`,
+            boxShadow:
+              `0 18px 44px ${YELLOW}40, 0 4px 14px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.20) inset, 0 -2px 6px rgba(0,0,0,0.20) inset`,
           }}
         >
           + Создать контент
@@ -465,7 +466,17 @@ export default function ProjectScreen({ onBack }: Props) {
       )}
 
       {!settingsOnly && (
-      <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          marginTop: 18,
+          padding: 4,
+          background: "rgba(255,255,255,0.04)",
+          border: `1px solid rgba(255,255,255,0.08)`,
+          borderRadius: 999,
+        }}
+      >
         {(["content", "scout"] as Tab[]).map((t) => {
           const on = tab === t;
           return (
@@ -478,16 +489,22 @@ export default function ProjectScreen({ onBack }: Props) {
               style={{
                 appearance: "none",
                 flex: 1,
-                padding: "10px 4px",
-                borderRadius: 10,
+                padding: "10px 16px",
+                borderRadius: 999,
                 border: "none",
-                background: on ? "rgba(245,231,10,0.10)" : "transparent",
-                color: on ? YELLOW : MUTED,
+                background: on
+                  ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`
+                  : "transparent",
+                color: on ? "#0A0608" : MUTED,
                 fontFamily: "inherit",
                 fontSize: 13,
-                fontWeight: on ? 700 : 500,
+                fontWeight: on ? 800 : 600,
+                letterSpacing: on ? "0.02em" : "0.01em",
                 cursor: "pointer",
-                borderBottom: on ? `2px solid ${YELLOW}` : `2px solid transparent`,
+                boxShadow: on
+                  ? `0 6px 18px ${YELLOW}40, 0 0 0 1px rgba(255,255,255,0.15) inset`
+                  : "none",
+                transition: "background 200ms, color 200ms, box-shadow 200ms",
               }}
             >
               {t === "content"

@@ -673,12 +673,13 @@ const primaryBtn: React.CSSProperties = {
   padding: "18px 0",
   border: "none",
   borderRadius: 999,
-  background: YELLOW,
+  background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 45%, #E5C500 100%)`,
   color: "#0A0608",
   fontSize: 16,
   fontWeight: 800,
-  letterSpacing: "0.06em",
+  letterSpacing: "0.04em",
   textTransform: "uppercase",
   cursor: "pointer",
-  boxShadow: `0 20px 48px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
+  boxShadow:
+    `0 18px 44px ${YELLOW}40, 0 4px 14px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.20) inset, 0 -2px 6px rgba(0,0,0,0.20) inset`,
 };
