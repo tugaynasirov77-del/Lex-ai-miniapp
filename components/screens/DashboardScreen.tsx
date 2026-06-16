@@ -12,11 +12,18 @@ import {
 } from "../../lib/api";
 import { hapticImpact, hapticSelection } from "../../lib/telegram";
 
-const YELLOW = "#F5E70A";
+// --- Radiate-inspired palette (только для Dashboard, остальные экраны не трогаем) ---
 const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.08)";
+const MUTED = "rgba(255,255,255,0.62)";
+const CARD_BG = "rgba(255,255,255,0.05)";
+const CARD_BORDER = "rgba(255,255,255,0.10)";
+const PEACH = "#F5A77E";
+const PINK = "#C8579D";
+const VIOLET = "#6B4FBB";
+const LAVENDER = "#C8A2C8";
+const CREAM = "#F5F0E8";
+// YELLOW оставлен только чтобы не сломать импорты ниже (используется в одном чипе тарифа)
+const YELLOW = PEACH;
 
 type Props = { onBack: () => void };
 type Filter = "all" | "telegram" | "instagram";
@@ -109,13 +116,13 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
               }}
               style={{
                 appearance: "none",
-                border: `1px solid ${filter === f ? YELLOW : CARD_BORDER}`,
-                background: filter === f ? YELLOW : "transparent",
+                border: `1px solid ${filter === f ? CREAM : CARD_BORDER}`,
+                background: filter === f ? CREAM : "transparent",
                 color: filter === f ? "#0A0608" : INK,
                 fontFamily: "inherit",
                 fontSize: 13,
                 fontWeight: filter === f ? 700 : 500,
-                padding: "8px 14px",
+                padding: "9px 16px",
                 borderRadius: 999,
                 cursor: "pointer",
               }}
@@ -258,14 +265,14 @@ function StreakBadge({ streak }: { streak: StreakDTO }) {
     <div
       style={{
         marginTop: 12,
-        background: `linear-gradient(135deg, #FF7A00 14%, #FF3D00 100%)`,
-        borderRadius: 16,
-        padding: "14px 16px",
+        background: `linear-gradient(135deg, ${PEACH} 0%, ${PINK} 100%)`,
+        borderRadius: 22,
+        padding: "16px 18px",
         display: "flex",
         alignItems: "center",
         gap: 14,
         color: "#FFFFFF",
-        boxShadow: "0 8px 24px rgba(255,77,0,0.28)",
+        boxShadow: "0 16px 40px rgba(200,87,157,0.32)",
       }}
     >
       <div style={{ fontSize: 32, lineHeight: 1 }}>🔥</div>
@@ -325,11 +332,13 @@ function UpdateBanner() {
     <div
       style={{
         marginTop: 12,
-        background: `linear-gradient(135deg, ${YELLOW}18, ${YELLOW}08)`,
-        border: `1px solid ${YELLOW}50`,
-        borderRadius: 14,
-        padding: 14,
+        background: `linear-gradient(135deg, rgba(200,162,200,0.14), rgba(107,79,187,0.06))`,
+        border: `1px solid rgba(200,162,200,0.30)`,
+        borderRadius: 20,
+        padding: 16,
         position: "relative",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <button
@@ -385,17 +394,19 @@ function BillingPill({
       style={{
         appearance: "none",
         width: "100%",
-        marginTop: 14,
-        padding: "10px 14px",
-        borderRadius: 12,
-        border: `1px solid ${isFree ? "rgba(245,231,10,0.35)" : CARD_BORDER}`,
-        background: isFree ? "rgba(245,231,10,0.08)" : CARD_BG,
+        marginTop: 16,
+        padding: "12px 16px",
+        borderRadius: 18,
+        border: `1px solid ${isFree ? "rgba(245,167,126,0.30)" : CARD_BORDER}`,
+        background: isFree ? "rgba(245,167,126,0.08)" : CARD_BG,
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         gap: 10,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <span
@@ -406,7 +417,7 @@ function BillingPill({
           textTransform: "uppercase",
           padding: "3px 8px",
           borderRadius: 999,
-          background: isFree ? YELLOW : "rgba(255,255,255,0.08)",
+          background: isFree ? CREAM : "rgba(255,255,255,0.10)",
           color: isFree ? "#0A0608" : INK,
         }}
       >
@@ -415,7 +426,7 @@ function BillingPill({
       <span style={{ fontSize: 13, flex: 1, textAlign: "left", color: isFree ? INK : MUTED }}>
         {isFree ? (
           <>
-            Pro со скидкой <b style={{ color: YELLOW }}>−30%</b> · 690 ₽/мес
+            Pro со скидкой <b style={{ color: PEACH }}>−30%</b> · 690 ₽/мес
           </>
         ) : expires ? (
           <>Активен до {expires}</>
@@ -445,11 +456,10 @@ function Header() {
       <h1
         style={{
           margin: "10px 0 0",
-          fontSize: 30,
-          lineHeight: 1.02,
-          fontWeight: 800,
+          fontSize: 34,
+          lineHeight: 1.05,
+          fontWeight: 700,
           letterSpacing: "-0.02em",
-          textTransform: "uppercase",
         }}
       >
         Мои проекты
@@ -484,14 +494,16 @@ function ProjectCard({
         textAlign: "left",
         background: CARD_BG,
         border: `1px solid ${CARD_BORDER}`,
-        borderRadius: 16,
-        padding: 14,
+        borderRadius: 22,
+        padding: 16,
         display: "flex",
-        gap: 12,
+        gap: 14,
         alignItems: "center",
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <PlatformIcon platform={project.platform} />
@@ -539,10 +551,12 @@ function PlatformIcon({ platform }: { platform: "telegram" | "instagram" }) {
   return (
     <div
       style={{
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        background: tg ? "rgba(40,160,235,0.14)" : "rgba(225,48,108,0.14)",
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        background: tg
+          ? "linear-gradient(135deg, rgba(107,79,187,0.30), rgba(107,79,187,0.10))"
+          : "linear-gradient(135deg, rgba(200,87,157,0.30), rgba(245,167,126,0.12))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -551,9 +565,10 @@ function PlatformIcon({ platform }: { platform: "telegram" | "instagram" }) {
     >
       <span
         style={{
-          fontSize: 18,
-          fontWeight: 800,
-          color: tg ? "#28A0EB" : "#E1306C",
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: "0.04em",
+          color: tg ? "#B4A4F0" : "#F5A8C8",
         }}
       >
         {tg ? "TG" : "IG"}
@@ -571,9 +586,9 @@ function SkeletonList() {
           style={{
             background: CARD_BG,
             border: `1px solid ${CARD_BORDER}`,
-            borderRadius: 16,
-            padding: 14,
-            height: 68,
+            borderRadius: 22,
+            padding: 16,
+            height: 76,
             opacity: 0.5 - i * 0.1,
           }}
         />
@@ -642,17 +657,32 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
+        position: "relative",
         flex: 1,
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
         color: INK,
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
           "max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
       }}
     >
+      {/* Радужно-фиолетовый фоновый слой — перекрывает body-градиент */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: -1,
+          background:
+            "radial-gradient(ellipse 700px 500px at 90% -50px, rgba(200,87,157,0.30), transparent 60%)," +
+            "radial-gradient(ellipse 600px 500px at -10% 110%, rgba(107,79,187,0.28), transparent 60%)," +
+            "radial-gradient(ellipse 500px 400px at 50% 50%, rgba(245,167,126,0.10), transparent 70%)," +
+            "linear-gradient(180deg, #0A0A12 0%, #14101F 100%)",
+          pointerEvents: "none",
+        }}
+      />
       {children}
     </div>
   );
@@ -671,12 +701,11 @@ const primaryBtn: React.CSSProperties = {
   padding: "18px 0",
   border: "none",
   borderRadius: 999,
-  background: YELLOW,
+  background: CREAM,
   color: "#0A0608",
-  fontSize: 16,
-  fontWeight: 800,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
+  fontSize: 15,
+  fontWeight: 700,
+  letterSpacing: "0.02em",
   cursor: "pointer",
-  boxShadow: `0 20px 48px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
+  boxShadow: `0 12px 32px rgba(245,240,232,0.12), 0 0 0 1px rgba(255,255,255,0.06) inset`,
 };
