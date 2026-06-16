@@ -29,8 +29,9 @@ function LexLogo({ height = 40 }: { height?: number }) {
         style={{
           height: height * 1.15,
           width: height * 1.15,
-          objectFit: "contain",
+          objectFit: "cover",
           display: "block",
+          borderRadius: height * 0.32,
         }}
       />
       <div
