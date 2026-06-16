@@ -416,6 +416,10 @@ export default function ProjectScreen({ onBack }: Props) {
             ? ig?.snapshots?.[0]?.followers ?? project.instagram_followers ?? null
             : project.channel_subscribers ?? null
         }
+        onOpenSettings={() => {
+          hapticSelection();
+          setTab("settings");
+        }}
       />
 
       <FirstTimeTip />
@@ -472,7 +476,7 @@ export default function ProjectScreen({ onBack }: Props) {
       />
 
       <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
-        {(["content", "scout", "settings"] as Tab[]).map((t) => {
+        {(["content", "scout"] as Tab[]).map((t) => {
           const on = tab === t;
           return (
             <button
@@ -500,11 +504,9 @@ export default function ProjectScreen({ onBack }: Props) {
                 ? isIg
                   ? "Архив"
                   : "Контент"
-                : t === "scout"
-                  ? isIg
-                    ? "Идеи"
-                    : "Разведка"
-                  : "Настройки"}
+                : isIg
+                  ? "Идеи"
+                  : "Разведка"}
             </button>
           );
         })}
@@ -633,10 +635,12 @@ function Header({
   project,
   handle,
   followers,
+  onOpenSettings,
 }: {
   project: ProjectDTO;
   handle: string | null;
   followers: number | null;
+  onOpenSettings?: () => void;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -664,6 +668,35 @@ function Header({
             : ""}
         </div>
       </div>
+      {onOpenSettings && (
+        <button
+          onClick={onOpenSettings}
+          aria-label="Настройки проекта"
+          style={{
+            appearance: "none",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            color: "rgba(255,255,255,0.85)",
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+            <path
+              d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"
+              stroke="currentColor"
+              strokeWidth="1.4"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
