@@ -26,11 +26,11 @@ function LexLogo({ height = 40 }: { height?: number }) {
         src="/logo.jpg"
         alt=""
         style={{
-          height,
-          width: height,
-          borderRadius: height * 0.22,
-          objectFit: "cover",
+          height: height * 1.1,
+          width: height * 1.1,
+          objectFit: "contain",
           display: "block",
+          mixBlendMode: "screen",
         }}
       />
       <div

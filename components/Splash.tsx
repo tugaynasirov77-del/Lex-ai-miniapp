@@ -60,12 +60,12 @@ export default function Splash() {
         src="/logo.jpg"
         alt=""
         style={{
-          height: 80,
-          width: 80,
-          borderRadius: 20,
-          objectFit: "cover",
+          height: 88,
+          width: 88,
+          objectFit: "contain",
           display: "block",
-          filter: `drop-shadow(0 0 30px ${YELLOW}55)`,
+          mixBlendMode: "screen",
+          filter: `drop-shadow(0 0 30px ${YELLOW}66)`,
           opacity: 0,
           transform: "scale(0.6)",
           animation:
