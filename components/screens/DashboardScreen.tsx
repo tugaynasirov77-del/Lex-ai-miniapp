@@ -171,7 +171,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
       {data && data.length > 0 && (
         <button onClick={goCreate} style={primaryBtn}>
-          + ПОДКЛЮЧИТЬ КАНАЛ
+          + Подключить канал
         </button>
       )}
 
@@ -618,7 +618,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         соберут план и предложат посты.
       </p>
       <button onClick={onCreate} style={{ ...primaryBtn, marginTop: 10 }}>
-        НАЧАТЬ
+        Начать
       </button>
     </div>
   );
@@ -647,7 +647,7 @@ function ErrorBlock({
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Не удалось загрузить</h2>
       <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 280 }}>{body}</p>
       <button onClick={onCta} style={primaryBtn}>
-        {ctaLabel}
+        {ctaLabel === "ПОВТОРИТЬ" ? "Повторить" : ctaLabel}
       </button>
     </div>
   );
@@ -667,20 +667,34 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
           "max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
+        isolation: "isolate",
       }}
     >
-      {/* Радужно-фиолетовый фоновый слой — перекрывает body-градиент */}
+      {/* Насыщенный фон в духе Radiate — полностью перекрывает body */}
       <div
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: -1,
+          zIndex: 0,
           background:
-            "radial-gradient(ellipse 700px 500px at 90% -50px, rgba(200,87,157,0.30), transparent 60%)," +
-            "radial-gradient(ellipse 600px 500px at -10% 110%, rgba(107,79,187,0.28), transparent 60%)," +
-            "radial-gradient(ellipse 500px 400px at 50% 50%, rgba(245,167,126,0.10), transparent 70%)," +
-            "linear-gradient(180deg, #0A0A12 0%, #14101F 100%)",
+            "radial-gradient(ellipse 800px 600px at 85% -80px, rgba(200,87,157,0.85), transparent 55%)," +
+            "radial-gradient(ellipse 700px 600px at -10% 30%, rgba(107,79,187,0.78), transparent 55%)," +
+            "radial-gradient(ellipse 600px 500px at 50% 110%, rgba(245,167,126,0.55), transparent 55%)," +
+            "radial-gradient(ellipse 400px 400px at 90% 70%, rgba(200,162,200,0.40), transparent 60%)," +
+            "linear-gradient(180deg, #1B1230 0%, #0F0820 100%)",
           pointerEvents: "none",
+        }}
+      />
+      {/* Тонкий шум поверх для премиум-вайба (через SVG) */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 0,
+          opacity: 0.06,
+          pointerEvents: "none",
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
         }}
       />
       {children}
