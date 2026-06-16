@@ -2489,31 +2489,6 @@ function SettingsTab({
 
       <RenameCard project={project} onUpdated={onProjectUpdated} />
 
-      <Card>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-          Тариф и подписка
-        </div>
-        <p style={{ margin: "0 0 10px", fontSize: 13, color: MUTED, lineHeight: 1.5 }}>
-          Free / Pro / Business — лимиты на Reels, карусели, планы и анализы.
-          Оплата картой ₽ или Telegram Stars.
-        </p>
-        <button
-          onClick={() => {
-            hapticImpact("light");
-            onOpenBilling();
-          }}
-          style={{
-            ...miniBtn,
-            background: YELLOW,
-            color: "#0A0608",
-          }}
-        >
-          ОТКРЫТЬ ПОДПИСКУ →
-        </button>
-      </Card>
-
-      <SupportCard />
-
       <DeleteCard project={project} onDeleted={onDeleted} />
     </div>
   );
