@@ -36,16 +36,17 @@ export default function BottomTabBar() {
     <div
       style={{
         position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 0,
+        left: 12,
+        right: 12,
+        bottom: "max(calc(env(safe-area-inset-bottom) + 10px), 16px)",
         zIndex: 100,
-        padding:
-          "10px 16px max(calc(env(safe-area-inset-bottom) + 10px), 18px)",
-        background: "rgba(10,7,5,0.78)",
-        backdropFilter: "blur(28px)",
-        WebkitBackdropFilter: "blur(28px)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
+        padding: "8px 6px",
+        background: "rgba(20,16,14,0.62)",
+        backdropFilter: "blur(36px) saturate(180%)",
+        WebkitBackdropFilter: "blur(36px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 28,
+        boxShadow: "0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset",
         display: "flex",
         gap: 4,
       }}
@@ -61,19 +62,21 @@ export default function BottomTabBar() {
             }}
             style={{
               flex: 1,
-              background: "transparent",
+              background: isActive ? "rgba(245,231,10,0.10)" : "transparent",
               border: "none",
+              borderRadius: 22,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 4,
-              padding: "6px 0",
+              gap: 3,
+              padding: "8px 0",
               cursor: "pointer",
               color: isActive ? YELLOW : MUTED,
               fontFamily: "inherit",
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: "0.02em",
+              transition: "background 200ms, color 200ms",
             }}
           >
             <div style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>

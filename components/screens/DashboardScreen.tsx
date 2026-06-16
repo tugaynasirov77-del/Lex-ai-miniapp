@@ -168,8 +168,6 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
         </button>
       )}
 
-      <SupportLink />
-      <LegalLinks />
     </ScreenWrap>
   );
 }
