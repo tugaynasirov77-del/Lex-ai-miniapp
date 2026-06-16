@@ -70,8 +70,8 @@ const TABS = [
 export default function BottomNav() {
   const path = usePathname();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  // Скрываем на главной flow-странице и на legacy /billing — у них свой layout.
-  if (path === "/" || path === "/billing") return null;
+  // Скрываем на главной flow-странице, /billing и legal — у них свой layout.
+  if (path === "/" || path === "/billing" || path?.startsWith("/legal")) return null;
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;

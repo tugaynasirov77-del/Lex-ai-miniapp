@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { hapticImpact } from "../lib/telegram";
 
 const YELLOW = "#F5E70A";
 
 export default function Splash() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    if (pathname?.startsWith("/legal")) return;
     hapticImpact("light");
     const t1 = setTimeout(() => setFading(true), 1600);
     const t2 = setTimeout(() => setVisible(false), 2000);
@@ -19,6 +22,7 @@ export default function Splash() {
     };
   }, []);
 
+  if (pathname?.startsWith("/legal")) return null;
   if (!visible) return null;
 
   return (

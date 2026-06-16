@@ -5,7 +5,7 @@ import AtomLogo from "./AtomLogo";
 
 export default function TopBar() {
   const pathname = usePathname();
-  if (pathname === "/" || pathname === "/billing") return null;
+  if (pathname === "/" || pathname === "/billing" || pathname?.startsWith("/legal")) return null;
   return (
     <header
       style={{
