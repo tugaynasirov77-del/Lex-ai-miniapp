@@ -88,7 +88,10 @@ export default function ProjectScreen({ onBack }: Props) {
 
   const [project, setProject] = useState<ProjectDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("content");
+  // Поддержка инициализации таба из flow.screenMeta.projectInitialTab
+  // (используется когда заходим из глобальных Настроек в "настройки проекта")
+  const initialTab = (state.screenMeta?.projectInitialTab as Tab) || "content";
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   // aggregate per platform
   const [ig, setIg] = useState<IgAggregateDTO | null>(null);
@@ -416,10 +419,6 @@ export default function ProjectScreen({ onBack }: Props) {
             ? ig?.snapshots?.[0]?.followers ?? project.instagram_followers ?? null
             : project.channel_subscribers ?? null
         }
-        onOpenSettings={() => {
-          hapticSelection();
-          setTab("settings");
-        }}
       />
 
       <FirstTimeTip />
@@ -623,12 +622,10 @@ function Header({
   project,
   handle,
   followers,
-  onOpenSettings,
 }: {
   project: ProjectDTO;
   handle: string | null;
   followers: number | null;
-  onOpenSettings?: () => void;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -656,39 +653,6 @@ function Header({
             : ""}
         </div>
       </div>
-      {onOpenSettings && (
-        <button
-          onClick={onOpenSettings}
-          aria-label="Настройки проекта"
-          style={{
-            appearance: "none",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.92)",
-            padding: "9px 14px",
-            borderRadius: 999,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            cursor: "pointer",
-            flexShrink: 0,
-            fontFamily: "inherit",
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: "0.01em",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
-            <path
-              d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"
-              stroke="currentColor"
-              strokeWidth="1.4"
-            />
-          </svg>
-          Настройки
-        </button>
-      )}
     </div>
   );
 }

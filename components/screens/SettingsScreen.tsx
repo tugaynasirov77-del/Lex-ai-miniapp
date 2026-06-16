@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
-import { getBillingSummary, getStreak, peekBilling, peekStreak, type BillingSummary, type StreakDTO } from "../../lib/api";
+import {
+  getBillingSummary,
+  getStreak,
+  listProjects,
+  peekBilling,
+  peekProjects,
+  peekStreak,
+  type BillingSummary,
+  type ProjectDTO,
+  type StreakDTO,
+} from "../../lib/api";
 import { hapticImpact } from "../../lib/telegram";
 
 const YELLOW = "#F5E70A";
@@ -17,14 +27,29 @@ export default function SettingsScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
   const [billing, setBilling] = useState<BillingSummary | null>(() => peekBilling());
   const [streak, setStreak] = useState<StreakDTO | null>(() => peekStreak());
+  const [projects, setProjects] = useState<ProjectDTO[] | null>(
+    () => peekProjects()?.projects ?? null,
+  );
 
   useEffect(() => {
     (async () => {
-      const [b, s] = await Promise.allSettled([getBillingSummary(), getStreak()]);
+      const [b, s, p] = await Promise.allSettled([
+        getBillingSummary(),
+        getStreak(),
+        listProjects(),
+      ]);
       if (b.status === "fulfilled") setBilling(b.value);
       if (s.status === "fulfilled") setStreak(s.value);
+      if (p.status === "fulfilled") setProjects(p.value.projects);
     })();
   }, []);
+
+  const goProjectSettings = (id: string) => {
+    hapticImpact("light");
+    actions.setIds({ projectId: id });
+    actions.setScreenMeta("projectInitialTab", "settings");
+    actions.navigate("project");
+  };
 
   const openLink = (url: string) => {
     const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
@@ -126,6 +151,25 @@ export default function SettingsScreen({ onBack: _onBack }: Props) {
         </div>
       ) : (
         <SkeletonCard height={68} />
+      )}
+
+      {/* Настройки проектов */}
+      {projects && projects.length > 0 && (
+        <>
+          <SectionTitle style={{ marginTop: 22 }}>Настройки проекта</SectionTitle>
+          {projects.map((p) => (
+            <Row
+              key={p.id}
+              label={p.title || "Без названия"}
+              sub={
+                p.platform === "instagram"
+                  ? `Instagram${p.instagram_username ? ` · @${p.instagram_username}` : ""}`
+                  : `Telegram${p.channel_username ? ` · @${p.channel_username}` : ""}`
+              }
+              onClick={() => goProjectSettings(p.id)}
+            />
+          ))}
+        </>
       )}
 
       {/* Помощь */}
