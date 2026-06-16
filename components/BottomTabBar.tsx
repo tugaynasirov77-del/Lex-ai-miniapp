@@ -26,10 +26,13 @@ export default function BottomTabBar() {
 
   // Маппинг текущего экрана → активная вкладка
   const cs = state.currentScreen;
+  const projectFromSettings = state.screenMeta?.projectInitialTab === "settings";
   const active: Tab["key"] =
     cs === "home"
       ? "main"
       : cs === "settings" || cs === "billing"
+      ? "settings"
+      : cs === "project" && projectFromSettings
       ? "settings"
       : "profile";
 

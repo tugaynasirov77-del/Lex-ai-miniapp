@@ -92,6 +92,8 @@ export default function ProjectScreen({ onBack }: Props) {
   // (используется когда заходим из глобальных Настроек в "настройки проекта")
   const initialTab = (state.screenMeta?.projectInitialTab as Tab) || "content";
   const [tab, setTab] = useState<Tab>(initialTab);
+  // Если зашли именно за настройками — прячем кнопку "Создать контент" и табы
+  const settingsOnly = initialTab === "settings";
 
   // aggregate per platform
   const [ig, setIg] = useState<IgAggregateDTO | null>(null);
@@ -435,33 +437,34 @@ export default function ProjectScreen({ onBack }: Props) {
         />
       )}
 
-      {/* Главная кнопка LEX AI — создание контента */}
-      <button
-        onClick={() => {
-          hapticImpact("medium");
-          actions.navigate("lex-create");
-        }}
-        style={{
-          marginTop: 14,
-          width: "100%",
-          minHeight: 56,
-          border: "none",
-          borderRadius: 16,
-          background: YELLOW,
-          color: "#0A0608",
-          fontSize: 15,
-          fontWeight: 800,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          cursor: "pointer",
-          boxShadow: `0 18px 40px ${YELLOW}33`,
-        }}
-      >
-        + Создать контент
-      </button>
+      {/* Главная кнопка + табы скрыты в режиме settingsOnly */}
+      {!settingsOnly && (
+        <button
+          onClick={() => {
+            hapticImpact("medium");
+            actions.navigate("lex-create");
+          }}
+          style={{
+            marginTop: 14,
+            width: "100%",
+            minHeight: 56,
+            border: "none",
+            borderRadius: 16,
+            background: YELLOW,
+            color: "#0A0608",
+            fontSize: 15,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+            boxShadow: `0 18px 40px ${YELLOW}33`,
+          }}
+        >
+          + Создать контент
+        </button>
+      )}
 
-      {/* QuickHub удалён — действия доступны через основную кнопку и табы */}
-
+      {!settingsOnly && (
       <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
         {(["content", "scout"] as Tab[]).map((t) => {
           const on = tab === t;
@@ -498,8 +501,9 @@ export default function ProjectScreen({ onBack }: Props) {
           );
         })}
       </div>
+      )}
 
-      <TabHint tab={tab} isIg={isIg} />
+      {!settingsOnly && <TabHint tab={tab} isIg={isIg} />}
 
       <div
         style={{
