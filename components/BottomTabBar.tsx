@@ -15,8 +15,8 @@ type Tab = {
 };
 
 const TABS: Tab[] = [
-  { key: "main", label: "Главный", icon: <HomeIcon />, screen: "dashboard" },
-  { key: "profile", label: "Профиль", icon: <UserIcon />, screen: "billing" },
+  { key: "main", label: "Главный", icon: <HomeIcon />, screen: "home" },
+  { key: "profile", label: "Профиль", icon: <UserIcon />, screen: "dashboard" },
   { key: "settings", label: "Настройки", icon: <CogIcon />, screen: "settings" },
 ];
 
@@ -25,12 +25,13 @@ export default function BottomTabBar() {
   const { state } = useFlow();
 
   // Маппинг текущего экрана → активная вкладка
+  const cs = state.currentScreen;
   const active: Tab["key"] =
-    state.currentScreen === "billing"
-      ? "profile"
-      : state.currentScreen === "settings"
+    cs === "home"
+      ? "main"
+      : cs === "settings" || cs === "billing"
       ? "settings"
-      : "main";
+      : "profile";
 
   return (
     <div
