@@ -10,20 +10,20 @@ import {
   type ProjectDTO,
   type StreakDTO,
 } from "../../lib/api";
-import { hapticImpact, hapticSelection } from "../../lib/telegram";
+import { getTgUser, hapticImpact, hapticSelection } from "../../lib/telegram";
 
-// --- Radiate-inspired palette (только для Dashboard, остальные экраны не трогаем) ---
+// --- Studio palette: deep violet base + amber energy accents ---
 const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.62)";
-const CARD_BG = "rgba(255,255,255,0.05)";
+const MUTED = "rgba(255,255,255,0.58)";
+const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
+const AMBER = "#F0A030"; // primary CTA (энергия + AI-сигнал)
+const AMBER_DEEP = "#D87520";
 const PEACH = "#F5A77E";
-const PINK = "#C8579D";
-const VIOLET = "#6B4FBB";
-const LAVENDER = "#C8A2C8";
+const PINK = "#D85590";
+const VIOLET = "#7A52D0";
 const CREAM = "#F5F0E8";
-// YELLOW оставлен только чтобы не сломать импорты ниже (используется в одном чипе тарифа)
-const YELLOW = PEACH;
+const YELLOW = AMBER; // обратная совместимость
 
 type Props = { onBack: () => void };
 type Filter = "all" | "telegram" | "instagram";
@@ -91,15 +91,14 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
   return (
     <ScreenWrap>
-      <Header />
+      <Hero
+        projectCount={data?.length ?? 0}
+        streakDays={streak?.current ?? 0}
+        streakToday={streak?.today ?? false}
+      />
 
       {/* Тонкая плашка тарифа (тап → /billing) */}
       {billing && <BillingPill billing={billing} onTap={goBilling} />}
-
-      {/* Streak badge — Duolingo-механика */}
-      {streak && data && data.length > 0 && streak.current > 0 && (
-        <StreakBadge streak={streak} />
-      )}
 
       {/* Update banner для существующих юзеров */}
       {data && data.length > 0 && <UpdateBanner />}
@@ -439,33 +438,103 @@ function BillingPill({
   );
 }
 
-function Header() {
+function Hero({
+  projectCount,
+  streakDays,
+  streakToday,
+}: {
+  projectCount: number;
+  streakDays: number;
+  streakToday: boolean;
+}) {
+  const user = getTgUser();
+  const name = (user?.first_name || "").trim();
+  const greeting = name ? `Привет, ${name}` : "Студия";
+
   return (
-    <div>
+    <div style={{ marginBottom: 4 }}>
       <div
         style={{
           fontSize: 11,
           color: MUTED,
-          letterSpacing: "0.12em",
+          letterSpacing: "0.14em",
           textTransform: "uppercase",
           fontWeight: 600,
         }}
       >
-        Личный кабинет
+        Lex Studio
       </div>
       <h1
         style={{
-          margin: "10px 0 0",
-          fontSize: 34,
-          lineHeight: 1.05,
-          fontWeight: 700,
-          letterSpacing: "-0.02em",
+          margin: "10px 0 14px",
+          fontSize: 36,
+          lineHeight: 1.02,
+          fontWeight: 800,
+          letterSpacing: "-0.025em",
+          background: `linear-gradient(180deg, #FFFFFF 0%, #E8DAFF 100%)`,
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          WebkitTextFillColor: "transparent",
         }}
       >
-        Мои проекты
+        {greeting}
       </h1>
+      {/* Stats strip */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Chip icon="📁" label={`${projectCount} ${pluralProj(projectCount)}`} />
+        {streakDays > 0 && (
+          <Chip
+            icon="🔥"
+            label={`${streakDays} ${pluralDay(streakDays)} подряд`}
+            highlight
+          />
+        )}
+        {streakDays === 0 && projectCount > 0 && (
+          <Chip icon="✨" label="Начни серию сегодня" muted />
+        )}
+        {streakToday && streakDays > 0 && (
+          <Chip icon="✓" label="Сегодня в плюсе" muted />
+        )}
+      </div>
     </div>
   );
+}
+
+function Chip({ icon, label, highlight, muted }: { icon: string; label: string; highlight?: boolean; muted?: boolean }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "7px 12px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        color: highlight ? "#0A0608" : INK,
+        background: highlight
+          ? `linear-gradient(135deg, ${PEACH}, ${PINK})`
+          : muted
+          ? "rgba(255,255,255,0.06)"
+          : "rgba(255,255,255,0.10)",
+        border: highlight ? "none" : `1px solid ${CARD_BORDER}`,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ fontSize: 13 }}>{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function pluralProj(n: number): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return "проект";
+  if ([2, 3, 4].includes(m10) && ![12, 13, 14].includes(m100)) return "проекта";
+  return "проектов";
 }
 
 function ProjectCard({
@@ -534,7 +603,16 @@ function ProjectCard({
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: MUTED, display: "flex", gap: 8 }}>
+        <div style={{ fontSize: 12, color: MUTED, display: "flex", gap: 8, alignItems: "center" }}>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 999,
+              background: handle ? "#54E0A0" : "rgba(255,255,255,0.30)",
+              flexShrink: 0,
+            }}
+          />
           {handle ? <span>{handle}</span> : <span>Не подключено</span>}
           {typeof followers === "number" && followers > 0 && (
             <span>· {formatCount(followers)}</span>
@@ -670,18 +748,17 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         isolation: "isolate",
       }}
     >
-      {/* Насыщенный фон в духе Radiate — полностью перекрывает body */}
+      {/* Studio фон: глубокий фиолет + янтарный hot-spot снизу */}
       <div
         style={{
           position: "fixed",
           inset: 0,
           zIndex: 0,
           background:
-            "radial-gradient(ellipse 800px 600px at 85% -80px, rgba(200,87,157,0.85), transparent 55%)," +
-            "radial-gradient(ellipse 700px 600px at -10% 30%, rgba(107,79,187,0.78), transparent 55%)," +
-            "radial-gradient(ellipse 600px 500px at 50% 110%, rgba(245,167,126,0.55), transparent 55%)," +
-            "radial-gradient(ellipse 400px 400px at 90% 70%, rgba(200,162,200,0.40), transparent 60%)," +
-            "linear-gradient(180deg, #1B1230 0%, #0F0820 100%)",
+            "radial-gradient(ellipse 700px 500px at 100% -50px, rgba(122,82,208,0.65), transparent 55%)," +
+            "radial-gradient(ellipse 600px 500px at 0% 20%, rgba(216,85,144,0.50), transparent 55%)," +
+            "radial-gradient(ellipse 800px 600px at 50% 120%, rgba(240,160,48,0.55), transparent 55%)," +
+            "linear-gradient(180deg, #14082A 0%, #0A0418 100%)",
           pointerEvents: "none",
         }}
       />
@@ -714,12 +791,12 @@ const primaryBtn: React.CSSProperties = {
   marginTop: 14,
   padding: "18px 0",
   border: "none",
-  borderRadius: 999,
-  background: CREAM,
-  color: "#0A0608",
+  borderRadius: 18,
+  background: `linear-gradient(135deg, ${AMBER} 0%, ${AMBER_DEEP} 100%)`,
+  color: "#1A0A00",
   fontSize: 15,
   fontWeight: 700,
-  letterSpacing: "0.02em",
+  letterSpacing: "0.01em",
   cursor: "pointer",
-  boxShadow: `0 12px 32px rgba(245,240,232,0.12), 0 0 0 1px rgba(255,255,255,0.06) inset`,
+  boxShadow: `0 16px 36px rgba(240,160,48,0.32), 0 0 0 1px rgba(255,255,255,0.10) inset`,
 };
