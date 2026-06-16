@@ -100,18 +100,6 @@ export default function SettingsScreen({ onBack: _onBack }: Props) {
         Настройки
       </h1>
 
-      {/* Premium card сверху */}
-      {billing ? (
-        <PremiumCard
-          isFree={isFree}
-          tierLabel={tierLabel}
-          expiresAt={billing.subscription?.expires_at ?? null}
-          onTap={goBilling}
-        />
-      ) : (
-        <SkeletonBlock height={108} />
-      )}
-
       {/* Группа 1: Аккаунт + проекты */}
       <Group>
         {projects && projects.length > 0 && (
@@ -138,26 +126,7 @@ export default function SettingsScreen({ onBack: _onBack }: Props) {
         )}
       </Group>
 
-      {/* Группа 2: Активность */}
-      {streak && (streak.current > 0 || streak.longest > 0) && (
-        <Group title="Активность">
-          <Row
-            icon={<StreakIcon />}
-            label="Текущая серия"
-            value={streak.current > 0 ? `🔥 ${streak.current}` : "—"}
-            readOnly
-          />
-          <Row
-            icon={<TrophyIcon />}
-            label="Личный рекорд"
-            value={streak.longest > 0 ? `${streak.longest} дн` : "—"}
-            readOnly
-            last
-          />
-        </Group>
-      )}
-
-      {/* Группа 3: Подписка и поддержка */}
+      {/* Группа 2: Подписка и поддержка */}
       <Group>
         <Row
           icon={<CardIcon />}
