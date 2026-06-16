@@ -40,7 +40,7 @@ export default function BottomTabBar() {
         left: 12,
         right: 12,
         bottom: "max(calc(env(safe-area-inset-bottom) + 10px), 16px)",
-        zIndex: 100,
+        zIndex: 50,
         padding: "8px 6px",
         background: "rgba(20,16,14,0.62)",
         backdropFilter: "blur(36px) saturate(180%)",
