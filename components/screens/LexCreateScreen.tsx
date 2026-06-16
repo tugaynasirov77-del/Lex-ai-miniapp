@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getInitData } from "../../lib/telegram";
 import { useFlow, useFlowActions } from "../../flow";
 import {
   lexWritePost,
@@ -312,6 +313,8 @@ export default function LexCreateScreen({ onBack }: Props) {
         <PostActions
           variant={pickedVariant}
           hasTgChannel={hasTgChannel !== false}
+          projectId={projectId}
+          draftId={draftId}
           onPublishNow={publishNow}
           onPublishAt={publishAt}
           onRegenerate={regenerate}
@@ -838,6 +841,8 @@ function sanitizeTgHtml(html: string): string {
 function PostActions({
   variant,
   hasTgChannel,
+  projectId,
+  draftId,
   onPublishNow,
   onPublishAt,
   onRegenerate,
@@ -847,6 +852,8 @@ function PostActions({
 }: {
   variant: LexPostVariant;
   hasTgChannel: boolean;
+  projectId: string;
+  draftId: string | null;
   onPublishNow: () => void;
   onPublishAt: (iso: string) => void;
   onRegenerate: () => void;
@@ -862,6 +869,46 @@ function PostActions({
 
   const [scheduleMode, setScheduleMode] = useState(false);
   const [dt, setDt] = useState(defaultLocal);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function uploadPhoto(file: File) {
+    if (!draftId) return;
+    setPhotoBusy(true);
+    setPhotoErr(null);
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      const r = await fetch(`/api/projects/${projectId}/drafts/${draftId}/photo`, {
+        method: "POST",
+        headers: { "x-telegram-init-data": getInitData() },
+        body: fd,
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "не удалось загрузить");
+      setPhotoUrl(j.photo_url);
+    } catch (e: any) {
+      setPhotoErr(e?.message || "ошибка");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (!draftId) return;
+    setPhotoBusy(true);
+    try {
+      await fetch(`/api/projects/${projectId}/drafts/${draftId}/photo`, {
+        method: "DELETE",
+        headers: { "x-telegram-init-data": getInitData() },
+      });
+      setPhotoUrl(null);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   function tryPublishAt() {
     const local = new Date(dt);
@@ -884,6 +931,102 @@ function PostActions({
         </div>
         <HtmlPostBody html={variant.body} />
       </div>
+
+      {hasTgChannel && draftId && (
+        <div
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 14,
+            padding: 14,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: MUTED,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: 10,
+              fontWeight: 700,
+            }}
+          >
+            Фото к посту
+          </div>
+          {photoUrl ? (
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photoUrl}
+                alt=""
+                style={{
+                  width: 88,
+                  height: 88,
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={photoBusy}
+                  style={{ ...btnSecondary(), fontSize: 12, padding: "8px 12px" }}
+                >
+                  {photoBusy ? "ЗАГРУЗКА…" : "ЗАМЕНИТЬ"}
+                </button>
+                <button
+                  onClick={removePhoto}
+                  disabled={photoBusy}
+                  style={{
+                    ...btnSecondary(),
+                    fontSize: 12,
+                    padding: "8px 12px",
+                    color: "#FF7373",
+                    border: "1px solid rgba(255,115,115,0.40)",
+                  }}
+                >
+                  УБРАТЬ
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={photoBusy}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                background: "transparent",
+                border: "1.5px dashed rgba(255,255,255,0.18)",
+                borderRadius: 12,
+                color: "rgba(255,255,255,0.75)",
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {photoBusy ? "ЗАГРУЗКА…" : "📎 Прикрепить фото"}
+            </button>
+          )}
+          {photoErr && (
+            <div style={{ marginTop: 6, fontSize: 11, color: "#FF7373" }}>{photoErr}</div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadPhoto(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      )}
 
       {!scheduleMode && hasTgChannel && (
         <>
