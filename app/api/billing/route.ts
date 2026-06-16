@@ -3,6 +3,7 @@ import { verifyInitData } from "../../../lib/verifyTelegram";
 import { getSupabase } from "../../../lib/supabase";
 import { TIERS } from "../../../lib/tiers";
 import { getActiveTier, countUsage } from "../../../lib/gating";
+import { yookassaConfigured } from "../../../lib/yookassa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,11 @@ export async function GET(req: NextRequest) {
       carousel: { used: carouselsUsed, limit: cfg.limits.carousel.count, period: cfg.limits.carousel.period },
       reel: { used: reelsUsed, limit: cfg.limits.reel.count, period: cfg.limits.reel.period },
     },
-    available_tiers: Object.values(TIERS),
-    payments_enabled: false, // ЮKassa на верификации — пока всем free
+    // Авто-включение Pro/Business когда ENV ЮKassa прописаны.
+    // Без второго деплоя — достаточно прокинуть YOOKASSA_SHOP_ID + YOOKASSA_SECRET_KEY.
+    available_tiers: Object.values(TIERS).map((t) =>
+      t.tier === "free" ? t : { ...t, available: yookassaConfigured() },
+    ),
+    payments_enabled: yookassaConfigured(),
   });
 }
