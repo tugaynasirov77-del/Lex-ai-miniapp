@@ -234,9 +234,7 @@ function BannerCarousel() {
         borderRadius: 28,
         background:
           "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        boxShadow:
-          "0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         overflow: "hidden",
         maxHeight: "52vh",
       }}
@@ -412,7 +410,7 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
         style={{
           flex: 1,
           minHeight: 0,
-          padding: "16px 22px 12px",
+          padding: "16px 22px max(calc(env(safe-area-inset-bottom) + 110px), 130px)",
           display: "flex",
           flexDirection: "column",
           gap: 16,
@@ -451,8 +449,6 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
         <BannerCarousel />
       </div>
 
-      {/* CTA убран — навигация теперь через нижний таб-бар */}
-      <div style={{ height: "max(calc(env(safe-area-inset-bottom) + 110px), 130px)" }} />
     </div>
   );
 }
