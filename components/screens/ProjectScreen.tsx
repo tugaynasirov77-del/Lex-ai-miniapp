@@ -425,17 +425,7 @@ export default function ProjectScreen({ onBack }: Props) {
 
       <FirstTimeTip />
 
-      {(autoStart.active ||
-        (autoStart.error && !(autoStart.analysisDone && autoStart.planDone))) && (
-        <AutoStartBanner
-          analysisRunning={autoStart.analysisRunning}
-          planRunning={autoStart.planRunning}
-          analysisDone={autoStart.analysisDone}
-          planDone={autoStart.planDone}
-          error={autoStart.error}
-          onRetry={retryAutoStart}
-        />
-      )}
+      {/* AutoStartBanner удалён — больше не показываем "Агенты работают" */}
 
       {/* Главная кнопка + табы скрыты в режиме settingsOnly */}
       {!settingsOnly && (
@@ -2932,17 +2922,32 @@ function PlatformIcon({ platform }: { platform: "telegram" | "instagram" }) {
         width: 40,
         height: 40,
         borderRadius: 12,
-        background: tg ? "rgba(40,160,235,0.14)" : "rgba(225,48,108,0.14)",
+        background: tg
+          ? "linear-gradient(135deg, #37BBFE 0%, #1D8AC9 100%)"
+          : "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
-        color: tg ? "#28A0EB" : "#E1306C",
-        fontWeight: 800,
-        fontSize: 16,
+        boxShadow: tg
+          ? "0 6px 16px rgba(40,160,235,0.32)"
+          : "0 6px 16px rgba(221,42,123,0.30)",
       }}
     >
-      {tg ? "TG" : "IG"}
+      {tg ? (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M21.5 3.5L2.8 10.7c-1.1.4-1.1 1.1-.2 1.4l4.8 1.5 1.9 5.9c.2.7.4.9 1 .9.5 0 .7-.2 1-.5l2.4-2.3 4.9 3.6c.9.5 1.5.2 1.7-.8L23 5.2c.3-1.3-.5-1.9-1.5-1.7z"
+            fill="#FFFFFF"
+          />
+        </svg>
+      ) : (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#FFFFFF" strokeWidth="1.8" />
+          <circle cx="12" cy="12" r="4" stroke="#FFFFFF" strokeWidth="1.8" />
+          <circle cx="17.2" cy="6.8" r="1.1" fill="#FFFFFF" />
+        </svg>
+      )}
     </div>
   );
 }
