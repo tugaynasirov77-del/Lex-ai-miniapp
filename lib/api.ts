@@ -77,8 +77,19 @@ export type ProjectDTO = {
   updated_at?: string;
 };
 
-export function listProjects(): Promise<{ projects: ProjectDTO[] }> {
-  return getJSON("/api/projects");
+import * as clientCache from "./clientCache";
+
+const CK_PROJECTS = "projects";
+const CK_BILLING = "billing";
+const CK_STREAK = "streak";
+
+export async function listProjects(): Promise<{ projects: ProjectDTO[] }> {
+  const r = await getJSON<{ projects: ProjectDTO[] }>("/api/projects");
+  clientCache.set(CK_PROJECTS, r);
+  return r;
+}
+export function peekProjects(): { projects: ProjectDTO[] } | null {
+  return clientCache.peek<{ projects: ProjectDTO[] }>(CK_PROJECTS);
 }
 
 // --- billing summary (для тонкой плашки на Dashboard) ---
@@ -89,13 +100,27 @@ export type BillingSummary = {
   subscription: { expires_at?: string | null } | null;
 };
 
-export function getBillingSummary(): Promise<BillingSummary> {
-  return getJSON("/api/billing");
+export async function getBillingSummary(): Promise<BillingSummary> {
+  const r = await getJSON<BillingSummary>("/api/billing");
+  clientCache.set(CK_BILLING, r);
+  return r;
+}
+export function peekBilling(): BillingSummary | null {
+  return clientCache.peek<BillingSummary>(CK_BILLING);
 }
 
 export type StreakDTO = { current: number; longest: number; today: boolean };
-export function getStreak(): Promise<StreakDTO> {
-  return getJSON("/api/streak");
+export async function getStreak(): Promise<StreakDTO> {
+  const r = await getJSON<StreakDTO>("/api/streak");
+  clientCache.set(CK_STREAK, r);
+  return r;
+}
+export function peekStreak(): StreakDTO | null {
+  return clientCache.peek<StreakDTO>(CK_STREAK);
+}
+
+export function bustClientCache(key?: "projects" | "billing" | "streak"): void {
+  clientCache.bust(key);
 }
 
 export type CheckoutResp = { confirmation_url: string; payment_id: string };

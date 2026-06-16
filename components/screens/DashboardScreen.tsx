@@ -6,6 +6,9 @@ import {
   getBillingSummary,
   getStreak,
   listProjects,
+  peekBilling,
+  peekProjects,
+  peekStreak,
   type BillingSummary,
   type ProjectDTO,
   type StreakDTO,
@@ -23,9 +26,10 @@ type Filter = "all" | "telegram" | "instagram";
 
 export default function DashboardScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
-  const [data, setData] = useState<ProjectDTO[] | null>(null);
-  const [billing, setBilling] = useState<BillingSummary | null>(null);
-  const [streak, setStreak] = useState<StreakDTO | null>(null);
+  // Стартовое значение из кеша → мгновенный рендер при возврате
+  const [data, setData] = useState<ProjectDTO[] | null>(() => peekProjects()?.projects ?? null);
+  const [billing, setBilling] = useState<BillingSummary | null>(() => peekBilling());
+  const [streak, setStreak] = useState<StreakDTO | null>(() => peekStreak());
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 

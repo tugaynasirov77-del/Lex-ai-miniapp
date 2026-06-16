@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
-import { getBillingSummary, getStreak, type BillingSummary, type StreakDTO } from "../../lib/api";
+import { getBillingSummary, getStreak, peekBilling, peekStreak, type BillingSummary, type StreakDTO } from "../../lib/api";
 import { hapticImpact } from "../../lib/telegram";
 
 const YELLOW = "#F5E70A";
@@ -15,8 +15,8 @@ type Props = { onBack: () => void };
 
 export default function SettingsScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
-  const [billing, setBilling] = useState<BillingSummary | null>(null);
-  const [streak, setStreak] = useState<StreakDTO | null>(null);
+  const [billing, setBilling] = useState<BillingSummary | null>(() => peekBilling());
+  const [streak, setStreak] = useState<StreakDTO | null>(() => peekStreak());
 
   useEffect(() => {
     (async () => {
