@@ -874,6 +874,38 @@ function PostActions({
   const [photoErr, setPhotoErr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ─── Iteration / refine ───
+  const [currentBody, setCurrentBody] = useState<string>(variant.body);
+  const [refineBusy, setRefineBusy] = useState<null | "shorter" | "sharper" | "emotional" | "specific">(null);
+  const [refineErr, setRefineErr] = useState<string | null>(null);
+
+  async function refine(direction: "shorter" | "sharper" | "emotional" | "specific") {
+    if (refineBusy || !draftId) return;
+    setRefineBusy(direction);
+    setRefineErr(null);
+    try {
+      const { refinePost } = await import("../../lib/api");
+      const { post } = await refinePost(projectId, {
+        currentPost: currentBody,
+        direction,
+      });
+      setCurrentBody(post.body);
+      // Сохраняем новую версию в draft.body чтобы publish её использовал
+      await fetch(`/api/drafts/${draftId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": getInitData(),
+        },
+        body: JSON.stringify({ body: post.body }),
+      });
+    } catch (e: any) {
+      setRefineErr(e?.message || "Не удалось переделать");
+    } finally {
+      setRefineBusy(null);
+    }
+  }
+
   async function uploadPhoto(file: File) {
     if (!draftId) return;
     setPhotoBusy(true);
@@ -929,8 +961,76 @@ function PostActions({
         <div style={{ fontSize: 11, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>
           Выбранный пост
         </div>
-        <HtmlPostBody html={variant.body} />
+        <HtmlPostBody html={currentBody} />
       </div>
+
+      {/* Iteration buttons */}
+      {draftId && (
+        <div
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 14,
+            padding: 14,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: MUTED,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: 10,
+              fontWeight: 700,
+            }}
+          >
+            Сделать лучше
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {([
+              { key: "shorter" as const, icon: "✂️", label: "Короче" },
+              { key: "sharper" as const, icon: "🔥", label: "Острее" },
+              { key: "emotional" as const, icon: "💗", label: "Эмоциональнее" },
+              { key: "specific" as const, icon: "📊", label: "Конкретнее" },
+            ]).map((b) => {
+              const busy = refineBusy === b.key;
+              const anyBusy = refineBusy !== null;
+              return (
+                <button
+                  key={b.key}
+                  onClick={() => refine(b.key)}
+                  disabled={anyBusy}
+                  style={{
+                    appearance: "none",
+                    padding: "12px 10px",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 12,
+                    background: busy
+                      ? "rgba(245,231,10,0.10)"
+                      : "rgba(255,255,255,0.04)",
+                    color: busy ? "#F5E70A" : "#FFFFFF",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: anyBusy ? "wait" : "pointer",
+                    opacity: anyBusy && !busy ? 0.4 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>{b.icon}</span>
+                  {busy ? "…" : b.label}
+                </button>
+              );
+            })}
+          </div>
+          {refineErr && (
+            <div style={{ marginTop: 8, fontSize: 11, color: "#FF7373" }}>{refineErr}</div>
+          )}
+        </div>
+      )}
 
       {hasTgChannel && draftId && (
         <div

@@ -38,6 +38,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const inspirations: string[] = Array.isArray(body?.inspirations)
     ? body.inspirations.slice(0, 5).map((s: any) => String(s).trim().replace(/^@/, ""))
     : [];
+  const reference_posts: string[] = Array.isArray(body?.reference_posts)
+    ? body.reference_posts
+        .slice(0, 5)
+        .map((s: any) => String(s).trim().slice(0, 1200))
+        .filter((s: string) => s.length >= 30)
+    : [];
 
   if (!niche || !description) {
     return Response.json(
@@ -55,6 +61,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     audience,
     goals: ["рост подписчиков", "вовлечение", "продажи"],
     inspirations,
+    reference_posts,
   };
 
   await sb.from("projects").update({ lex_brand_kit: brand_kit }).eq("id", id);

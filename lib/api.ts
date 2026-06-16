@@ -128,6 +128,15 @@ export function createYooKassaCheckout(tier: "pro" | "business"): Promise<Checko
   return postJSON("/api/billing/yookassa-checkout", { tier });
 }
 
+export type RefineDirection = "shorter" | "sharper" | "emotional" | "specific";
+export type RefinedPost = { hook: string; body: string; title: string };
+export function refinePost(
+  projectId: string,
+  payload: { currentPost: string; direction: RefineDirection },
+): Promise<{ post: RefinedPost }> {
+  return postJSON(`/api/projects/${projectId}/lex/refine`, payload);
+}
+
 export function getProject(projectId: string): Promise<{ project: ProjectDTO }> {
   return getJSON(`/api/projects/${projectId}`);
 }
@@ -527,6 +536,7 @@ export type BrandSetupPayload = {
   audience: string;
   tone: string;
   inspirations?: string[];
+  reference_posts?: string[];
 };
 
 export function getBrandKit(projectId: string): Promise<{ brand_kit: BrandKit | null }> {

@@ -45,6 +45,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
   const [audience, setAudience] = useState("");
   const [tone, setTone] = useState("");
   const [inspirations, setInspirations] = useState("");
+  const [referencePosts, setReferencePosts] = useState("");
 
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -66,6 +67,11 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
           setAudience(k.audience || "");
           setTone(k.voice || "");
           setInspirations((k.inspirations || []).map((h) => `@${h}`).join(", "));
+          setReferencePosts(
+            Array.isArray((k as any).reference_posts)
+              ? ((k as any).reference_posts as string[]).join("\n\n---\n\n")
+              : "",
+          );
           setHasSavedKit(true);
         }
         setLoaded(true);
@@ -98,12 +104,18 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
         .map((s) => s.trim().replace(/^@/, ""))
         .filter((s) => s.length >= 2)
         .slice(0, 5);
+      const refs = referencePosts
+        .split(/\n\s*---\s*\n/)
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 30)
+        .slice(0, 5);
       const r = await saveBrandSetup(projectId, {
         niche,
         description,
         audience,
         tone,
         inspirations: insps,
+        reference_posts: refs,
       });
       hapticNotify("success");
       setHasSavedKit(true);
@@ -203,6 +215,20 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
             );
           })}
         </div>
+      </Field>
+
+      {/* Reference posts — для копирования tone-of-voice */}
+      <Field
+        label="Твои лучшие посты (опционально)"
+        hint="до 5 постов через '---' на отдельной строке. Каждый ≥30 символов. Помогает LEX AI писать твоим голосом."
+      >
+        <textarea
+          value={referencePosts}
+          onChange={(e) => onChange(setReferencePosts)(e.target.value)}
+          rows={6}
+          placeholder={"Текст первого поста...\n\n---\n\nТекст второго поста...\n\n---\n\nТекст третьего поста..."}
+          style={textareaStyle}
+        />
       </Field>
 
       {/* Inspirations */}
