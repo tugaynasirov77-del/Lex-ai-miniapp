@@ -255,23 +255,37 @@ function PlatformStep({
             >
               <div
                 style={{
-                  width: 44,
-                  height: 44,
-                  margin: "0 auto 10px",
-                  borderRadius: 12,
+                  width: 52,
+                  height: 52,
+                  margin: "0 auto 12px",
+                  borderRadius: 14,
                   background:
                     p === "telegram"
-                      ? "rgba(40,160,235,0.14)"
-                      : "rgba(225,48,108,0.14)",
+                      ? "linear-gradient(135deg, #37BBFE 0%, #1D8AC9 100%)"
+                      : "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: p === "telegram" ? "#28A0EB" : "#E1306C",
-                  fontSize: 18,
-                  fontWeight: 800,
+                  boxShadow:
+                    p === "telegram"
+                      ? "0 8px 22px rgba(40,160,235,0.38), 0 0 0 1px rgba(255,255,255,0.14) inset"
+                      : "0 8px 22px rgba(221,42,123,0.36), 0 0 0 1px rgba(255,255,255,0.14) inset",
                 }}
               >
-                {p === "telegram" ? "TG" : "IG"}
+                {p === "telegram" ? (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M21.5 3.5L2.8 10.7c-1.1.4-1.1 1.1-.2 1.4l4.8 1.5 1.9 5.9c.2.7.4.9 1 .9.5 0 .7-.2 1-.5l2.4-2.3 4.9 3.6c.9.5 1.5.2 1.7-.8L23 5.2c.3-1.3-.5-1.9-1.5-1.7z"
+                      fill="#FFFFFF"
+                    />
+                  </svg>
+                ) : (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#FFFFFF" strokeWidth="1.9" />
+                    <circle cx="12" cy="12" r="4" stroke="#FFFFFF" strokeWidth="1.9" />
+                    <circle cx="17.2" cy="6.8" r="1.2" fill="#FFFFFF" />
+                  </svg>
+                )}
               </div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>
                 {p === "telegram" ? "Telegram" : "Instagram"}
