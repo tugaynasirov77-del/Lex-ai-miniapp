@@ -471,10 +471,7 @@ function Hero({
           lineHeight: 1.02,
           fontWeight: 800,
           letterSpacing: "-0.025em",
-          background: `linear-gradient(180deg, #FFFFFF 0%, #E8DAFF 100%)`,
-          WebkitBackgroundClip: "text",
-          backgroundClip: "text",
-          WebkitTextFillColor: "transparent",
+          color: "#FFFFFF",
         }}
       >
         {greeting}
@@ -755,10 +752,11 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
           inset: 0,
           zIndex: 0,
           background:
-            "radial-gradient(ellipse 700px 500px at 100% -50px, rgba(122,82,208,0.65), transparent 55%)," +
-            "radial-gradient(ellipse 600px 500px at 0% 20%, rgba(216,85,144,0.50), transparent 55%)," +
-            "radial-gradient(ellipse 800px 600px at 50% 120%, rgba(240,160,48,0.55), transparent 55%)," +
-            "linear-gradient(180deg, #14082A 0%, #0A0418 100%)",
+            "radial-gradient(circle 600px at 100% -100px, rgba(240,160,48,0.50), transparent 50%)," +
+            "radial-gradient(ellipse 700px 600px at 0% 0%, rgba(216,85,144,0.70), transparent 55%)," +
+            "radial-gradient(ellipse 600px 500px at 100% 60%, rgba(122,82,208,0.75), transparent 55%)," +
+            "radial-gradient(ellipse 700px 500px at 30% 110%, rgba(240,160,48,0.65), transparent 50%)," +
+            "linear-gradient(180deg, #1A0A30 0%, #0A0418 100%)",
           pointerEvents: "none",
         }}
       />
