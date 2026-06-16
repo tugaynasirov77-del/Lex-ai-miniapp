@@ -389,9 +389,6 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
         }}
       >
         <LexLogo height={36} />
-        <span style={{ fontSize: 12, color: MUTED, letterSpacing: "0.01em" }}>
-          AI для контента
-        </span>
       </header>
 
       {/* CONTENT — статичный, без скролла */}

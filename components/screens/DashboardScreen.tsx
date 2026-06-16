@@ -433,17 +433,6 @@ function BillingPill({
 function Header() {
   return (
     <div>
-      <div
-        style={{
-          fontSize: 11,
-          color: MUTED,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          fontWeight: 600,
-        }}
-      >
-        Личный кабинет
-      </div>
       <h1
         style={{
           margin: "10px 0 0",
