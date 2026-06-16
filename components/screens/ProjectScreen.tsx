@@ -461,19 +461,7 @@ export default function ProjectScreen({ onBack }: Props) {
         + Создать контент
       </button>
 
-      <QuickHub
-        isIg={isIg}
-        feedEmpty={feed?.length === 0}
-        hasAnalysis={!!analysis}
-        hasPlan={!!plan && (plan.items?.length ?? 0) > 0}
-        topPlanIdea={plan?.items?.[0] ?? null}
-        onCreate={quickCreate}
-        onPickIdea={pickIdea}
-        onOpenTab={(t) => {
-          hapticSelection();
-          setTab(t);
-        }}
-      />
+      {/* QuickHub удалён — действия доступны через основную кнопку и табы */}
 
       <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
         {(["content", "scout"] as Tab[]).map((t) => {
@@ -675,19 +663,22 @@ function Header({
           style={{
             appearance: "none",
             background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.85)",
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            display: "flex",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.92)",
+            padding: "9px 14px",
+            borderRadius: 999,
+            display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 6,
             cursor: "pointer",
             flexShrink: 0,
+            fontFamily: "inherit",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.01em",
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
             <path
               d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"
@@ -695,6 +686,7 @@ function Header({
               strokeWidth="1.4"
             />
           </svg>
+          Настройки
         </button>
       )}
     </div>
