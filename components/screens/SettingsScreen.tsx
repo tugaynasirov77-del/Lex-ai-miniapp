@@ -68,60 +68,64 @@ export default function SettingsScreen({ onBack: _onBack }: Props) {
 
       {/* Подписка */}
       <SectionTitle>Подписка</SectionTitle>
-      <button onClick={goBilling} style={subscriptionCard(isFree)}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: isFree ? YELLOW : "rgba(255,255,255,0.10)",
-              color: isFree ? "#0A0608" : INK,
-            }}
-          >
-            {tierLabel}
-          </span>
-          {!isFree && billing?.subscription?.expires_at && (
-            <span style={{ fontSize: 11, color: MUTED }}>
-              до {new Date(billing.subscription.expires_at).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })}
+      {billing ? (
+        <button onClick={goBilling} style={subscriptionCard(isFree)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: isFree ? YELLOW : "rgba(255,255,255,0.10)",
+                color: isFree ? "#0A0608" : INK,
+              }}
+            >
+              {tierLabel}
             </span>
-          )}
-        </div>
-        <div style={{ fontSize: 15, fontWeight: 600 }}>
-          {isFree ? "Перейти на Pro" : "Управление подпиской"}
-        </div>
-        <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>
-          {isFree
-            ? "2 поста / 2 карусели / 2 Reels в неделю"
-            : "Изменить тариф или посмотреть лимиты"}
-        </div>
-      </button>
+            {!isFree && billing?.subscription?.expires_at && (
+              <span style={{ fontSize: 11, color: MUTED }}>
+                до {new Date(billing.subscription.expires_at).toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>
+            {isFree ? "Перейти на Pro" : "Управление подпиской"}
+          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>
+            {isFree
+              ? "2 поста / 2 карусели / 2 Reels в неделю"
+              : "Изменить тариф или посмотреть лимиты"}
+          </div>
+        </button>
+      ) : (
+        <SkeletonCard height={92} />
+      )}
 
       {/* Активность */}
-      {streak && (
-        <>
-          <SectionTitle style={{ marginTop: 22 }}>Активность</SectionTitle>
-          <div style={infoCard}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: MUTED }}>Серия</span>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>
-                {streak.current > 0 ? `🔥 ${streak.current}` : "—"}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <span style={{ fontSize: 13, color: MUTED }}>Рекорд</span>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>
-                {streak.longest > 0 ? `${streak.longest} дн` : "—"}
-              </span>
-            </div>
+      <SectionTitle style={{ marginTop: 22 }}>Активность</SectionTitle>
+      {streak ? (
+        <div style={infoCard}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: MUTED }}>Серия</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              {streak.current > 0 ? `🔥 ${streak.current}` : "—"}
+            </span>
           </div>
-        </>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+            <span style={{ fontSize: 13, color: MUTED }}>Рекорд</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              {streak.longest > 0 ? `${streak.longest} дн` : "—"}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <SkeletonCard height={68} />
       )}
 
       {/* Помощь */}
@@ -229,3 +233,20 @@ const infoCard: React.CSSProperties = {
   borderRadius: 14,
   padding: 14,
 };
+
+function SkeletonCard({ height }: { height: number }) {
+  return (
+    <div
+      style={{
+        background: CARD_BG,
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: 16,
+        height,
+        opacity: 0.6,
+        position: "relative",
+        overflow: "hidden",
+      }}
+      className="shimmer"
+    />
+  );
+}

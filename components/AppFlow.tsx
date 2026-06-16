@@ -17,12 +17,12 @@ import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
 import { hapticImpact } from "../lib/telegram";
 
-const ENTER = { opacity: 0, y: 10 };
-const SHOW = { opacity: 1, y: 0 };
-const EXIT = { opacity: 0, y: -8 };
+const ENTER = { opacity: 0 };
+const SHOW = { opacity: 1 };
+const EXIT = { opacity: 0 };
 const TRANS = {
-  duration: 0.24,
-  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+  duration: 0.14,
+  ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
 };
 
 /**

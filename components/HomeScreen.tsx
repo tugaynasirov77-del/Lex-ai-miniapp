@@ -452,11 +452,7 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
       </div>
 
       {/* CTA убран — навигация теперь через нижний таб-бар */}
-      <div
-        style={{
-          padding: "12px 22px max(calc(env(safe-area-inset-bottom) + 100px), 116px)",
-        }}
-      />
+      <div style={{ height: "max(calc(env(safe-area-inset-bottom) + 110px), 130px)" }} />
     </div>
   );
 }
