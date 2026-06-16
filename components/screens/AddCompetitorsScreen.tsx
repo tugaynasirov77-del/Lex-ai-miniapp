@@ -365,7 +365,7 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
-          "max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
+          "max(calc(env(safe-area-inset-bottom) + 100px), 116px)",
       }}
     >
       {children}

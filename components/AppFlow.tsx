@@ -118,10 +118,8 @@ export default function AppFlow() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Нижний таб-бар — показываем на верхнеуровневых экранах */}
-      {["home", "dashboard", "billing", "settings"].includes(currentScreen) && (
-        <BottomTabBar />
-      )}
+      {/* Нижний таб-бар — всегда видим */}
+      <BottomTabBar />
     </div>
   );
 }
