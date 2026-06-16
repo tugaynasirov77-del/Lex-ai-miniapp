@@ -98,6 +98,11 @@ export function getStreak(): Promise<StreakDTO> {
   return getJSON("/api/streak");
 }
 
+export type CheckoutResp = { confirmation_url: string; payment_id: string };
+export function createYooKassaCheckout(tier: "pro" | "business"): Promise<CheckoutResp> {
+  return postJSON("/api/billing/yookassa-checkout", { tier });
+}
+
 export function getProject(projectId: string): Promise<{ project: ProjectDTO }> {
   return getJSON(`/api/projects/${projectId}`);
 }

@@ -233,6 +233,28 @@ function UsageRow({
 }
 
 function TierPreview({ tier, disabled }: { tier: TierConfig; disabled: boolean }) {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const buy = async () => {
+    if (disabled || loading) return;
+    if (tier.tier !== "pro" && tier.tier !== "business") return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const { createYooKassaCheckout } = await import("../../lib/api");
+      const { confirmation_url } = await createYooKassaCheckout(tier.tier);
+      const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+      if (tg?.openLink) tg.openLink(confirmation_url);
+      else if (tg?.openTelegramLink) tg.openTelegramLink(confirmation_url);
+      else window.open(confirmation_url, "_blank");
+    } catch (e: any) {
+      setErr(e?.message || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -257,7 +279,7 @@ function TierPreview({ tier, disabled }: { tier: TierConfig; disabled: boolean }
           </li>
         ))}
       </ul>
-      {disabled && (
+      {disabled ? (
         <div
           style={{
             marginTop: 10,
@@ -274,6 +296,31 @@ function TierPreview({ tier, disabled }: { tier: TierConfig; disabled: boolean }
         >
           скоро будет доступно
         </div>
+      ) : (
+        <button
+          onClick={buy}
+          disabled={loading}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            padding: "10px 14px",
+            background: YELLOW,
+            color: "#0A0608",
+            border: "none",
+            borderRadius: 999,
+            fontSize: 14,
+            fontWeight: 700,
+            fontFamily: "inherit",
+            cursor: loading ? "wait" : "pointer",
+            letterSpacing: "0.02em",
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? "Открываю оплату…" : `Подключить за ${tier.priceRub} ₽`}
+        </button>
+      )}
+      {err && (
+        <div style={{ marginTop: 8, fontSize: 12, color: WARN }}>{err}</div>
       )}
     </div>
   );
