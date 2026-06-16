@@ -56,22 +56,34 @@ export default function Splash() {
     >
       {/* MARK — появляется первым */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/logo.jpg"
-        alt=""
+      <svg
+        viewBox="0 0 100 100"
+        width="88"
+        height="88"
+        fill="none"
         style={{
-          height: 88,
-          width: 88,
-          objectFit: "contain",
           display: "block",
-          mixBlendMode: "screen",
           filter: `drop-shadow(0 0 30px ${YELLOW}66)`,
           opacity: 0,
           transform: "scale(0.6)",
           animation:
             "lex-mark-in 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms forwards",
         }}
-      />
+      >
+        <path
+          d="M50 14 L82 78 Q86 88 76 88 L24 88 Q14 88 18 78 Z"
+          stroke={YELLOW}
+          strokeWidth="9"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path
+          d="M54 38 L66 72"
+          stroke={YELLOW}
+          strokeWidth="9"
+          strokeLinecap="round"
+        />
+      </svg>
 
       {/* WORDMARK — появляется после логотипа */}
       <div
