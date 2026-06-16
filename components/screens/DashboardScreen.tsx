@@ -169,9 +169,50 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
       )}
 
       <SupportLink />
+      <LegalLinks />
     </ScreenWrap>
   );
 }
+
+function LegalLinks() {
+  const open = (path: string) => {
+    hapticImpact("light");
+    const url = `https://lex-ai-miniapp.vercel.app${path}`;
+    const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+    if (tg?.openLink) tg.openLink(url);
+    else window.open(url, "_blank");
+  };
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 14,
+        justifyContent: "center",
+        padding: "0 0 8px",
+        fontSize: 11,
+        color: MUTED,
+      }}
+    >
+      <button onClick={() => open("/legal/terms")} style={legalLinkBtn}>
+        Условия
+      </button>
+      <span style={{ opacity: 0.4 }}>·</span>
+      <button onClick={() => open("/legal/privacy")} style={legalLinkBtn}>
+        Конфиденциальность
+      </button>
+    </div>
+  );
+}
+
+const legalLinkBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: "rgba(255,255,255,0.45)",
+  fontSize: 11,
+  fontFamily: "inherit",
+  cursor: "pointer",
+  padding: 0,
+};
 
 function SupportLink() {
   const open = () => {

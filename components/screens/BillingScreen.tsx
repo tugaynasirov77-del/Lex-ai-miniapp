@@ -297,27 +297,64 @@ function TierPreview({ tier, disabled }: { tier: TierConfig; disabled: boolean }
           скоро будет доступно
         </div>
       ) : (
-        <button
-          onClick={buy}
-          disabled={loading}
-          style={{
-            marginTop: 12,
-            width: "100%",
-            padding: "10px 14px",
-            background: YELLOW,
-            color: "#0A0608",
-            border: "none",
-            borderRadius: 999,
-            fontSize: 14,
-            fontWeight: 700,
-            fontFamily: "inherit",
-            cursor: loading ? "wait" : "pointer",
-            letterSpacing: "0.02em",
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? "Открываю оплату…" : `Подключить за ${tier.priceRub} ₽`}
-        </button>
+        <>
+          <button
+            onClick={buy}
+            disabled={loading}
+            style={{
+              marginTop: 12,
+              width: "100%",
+              padding: "10px 14px",
+              background: YELLOW,
+              color: "#0A0608",
+              border: "none",
+              borderRadius: 999,
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: loading ? "wait" : "pointer",
+              letterSpacing: "0.02em",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Открываю оплату…" : `Подключить за ${tier.priceRub} ₽`}
+          </button>
+          <div style={{ marginTop: 8, fontSize: 10.5, color: MUTED, lineHeight: 1.4, textAlign: "center" }}>
+            Нажимая «Подключить», вы соглашаетесь с{" "}
+            <a
+              href="https://lex-ai-miniapp.vercel.app/legal/terms"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: YELLOW, textDecoration: "none" }}
+              onClick={(e) => {
+                e.preventDefault();
+                const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+                const url = "https://lex-ai-miniapp.vercel.app/legal/terms";
+                if (tg?.openLink) tg.openLink(url);
+                else window.open(url, "_blank");
+              }}
+            >
+              условиями
+            </a>{" "}
+            и{" "}
+            <a
+              href="https://lex-ai-miniapp.vercel.app/legal/privacy"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: YELLOW, textDecoration: "none" }}
+              onClick={(e) => {
+                e.preventDefault();
+                const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
+                const url = "https://lex-ai-miniapp.vercel.app/legal/privacy";
+                if (tg?.openLink) tg.openLink(url);
+                else window.open(url, "_blank");
+              }}
+            >
+              политикой конфиденциальности
+            </a>
+            . Автопродление подписки отсутствует.
+          </div>
+        </>
       )}
       {err && (
         <div style={{ marginTop: 8, fontSize: 12, color: WARN }}>{err}</div>
