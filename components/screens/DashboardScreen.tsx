@@ -10,20 +10,13 @@ import {
   type ProjectDTO,
   type StreakDTO,
 } from "../../lib/api";
-import { getTgUser, hapticImpact, hapticSelection } from "../../lib/telegram";
+import { hapticImpact, hapticSelection } from "../../lib/telegram";
 
-// --- Studio palette: deep violet base + amber energy accents ---
+const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.10)";
-const AMBER = "#F0A030"; // primary CTA (энергия + AI-сигнал)
-const AMBER_DEEP = "#D87520";
-const PEACH = "#F5A77E";
-const PINK = "#D85590";
-const VIOLET = "#7A52D0";
-const CREAM = "#F5F0E8";
-const YELLOW = AMBER; // обратная совместимость
+const CARD_BORDER = "rgba(255,255,255,0.08)";
 
 type Props = { onBack: () => void };
 type Filter = "all" | "telegram" | "instagram";
@@ -91,14 +84,15 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
   return (
     <ScreenWrap>
-      <Hero
-        projectCount={data?.length ?? 0}
-        streakDays={streak?.current ?? 0}
-        streakToday={streak?.today ?? false}
-      />
+      <Header />
 
       {/* Тонкая плашка тарифа (тап → /billing) */}
       {billing && <BillingPill billing={billing} onTap={goBilling} />}
+
+      {/* Streak badge — Duolingo-механика */}
+      {streak && data && data.length > 0 && streak.current > 0 && (
+        <StreakBadge streak={streak} />
+      )}
 
       {/* Update banner для существующих юзеров */}
       {data && data.length > 0 && <UpdateBanner />}
@@ -115,13 +109,13 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
               }}
               style={{
                 appearance: "none",
-                border: `1px solid ${filter === f ? CREAM : CARD_BORDER}`,
-                background: filter === f ? CREAM : "transparent",
+                border: `1px solid ${filter === f ? YELLOW : CARD_BORDER}`,
+                background: filter === f ? YELLOW : "transparent",
                 color: filter === f ? "#0A0608" : INK,
                 fontFamily: "inherit",
                 fontSize: 13,
                 fontWeight: filter === f ? 700 : 500,
-                padding: "9px 16px",
+                padding: "8px 14px",
                 borderRadius: 999,
                 cursor: "pointer",
               }}
@@ -170,7 +164,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
       {data && data.length > 0 && (
         <button onClick={goCreate} style={primaryBtn}>
-          + Подключить канал
+          + ПОДКЛЮЧИТЬ КАНАЛ
         </button>
       )}
 
@@ -264,14 +258,14 @@ function StreakBadge({ streak }: { streak: StreakDTO }) {
     <div
       style={{
         marginTop: 12,
-        background: `linear-gradient(135deg, ${PEACH} 0%, ${PINK} 100%)`,
-        borderRadius: 22,
-        padding: "16px 18px",
+        background: `linear-gradient(135deg, #FF7A00 14%, #FF3D00 100%)`,
+        borderRadius: 16,
+        padding: "14px 16px",
         display: "flex",
         alignItems: "center",
         gap: 14,
         color: "#FFFFFF",
-        boxShadow: "0 16px 40px rgba(200,87,157,0.32)",
+        boxShadow: "0 8px 24px rgba(255,77,0,0.28)",
       }}
     >
       <div style={{ fontSize: 32, lineHeight: 1 }}>🔥</div>
@@ -331,13 +325,11 @@ function UpdateBanner() {
     <div
       style={{
         marginTop: 12,
-        background: `linear-gradient(135deg, rgba(200,162,200,0.14), rgba(107,79,187,0.06))`,
-        border: `1px solid rgba(200,162,200,0.30)`,
-        borderRadius: 20,
-        padding: 16,
+        background: `linear-gradient(135deg, ${YELLOW}18, ${YELLOW}08)`,
+        border: `1px solid ${YELLOW}50`,
+        borderRadius: 14,
+        padding: 14,
         position: "relative",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <button
@@ -393,19 +385,17 @@ function BillingPill({
       style={{
         appearance: "none",
         width: "100%",
-        marginTop: 16,
-        padding: "12px 16px",
-        borderRadius: 18,
-        border: `1px solid ${isFree ? "rgba(245,167,126,0.30)" : CARD_BORDER}`,
-        background: isFree ? "rgba(245,167,126,0.08)" : CARD_BG,
+        marginTop: 14,
+        padding: "10px 14px",
+        borderRadius: 12,
+        border: `1px solid ${isFree ? "rgba(245,231,10,0.35)" : CARD_BORDER}`,
+        background: isFree ? "rgba(245,231,10,0.08)" : CARD_BG,
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         gap: 10,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <span
@@ -416,7 +406,7 @@ function BillingPill({
           textTransform: "uppercase",
           padding: "3px 8px",
           borderRadius: 999,
-          background: isFree ? CREAM : "rgba(255,255,255,0.10)",
+          background: isFree ? YELLOW : "rgba(255,255,255,0.08)",
           color: isFree ? "#0A0608" : INK,
         }}
       >
@@ -425,7 +415,7 @@ function BillingPill({
       <span style={{ fontSize: 13, flex: 1, textAlign: "left", color: isFree ? INK : MUTED }}>
         {isFree ? (
           <>
-            Pro со скидкой <b style={{ color: PEACH }}>−30%</b> · 690 ₽/мес
+            Pro со скидкой <b style={{ color: YELLOW }}>−30%</b> · 690 ₽/мес
           </>
         ) : expires ? (
           <>Активен до {expires}</>
@@ -438,100 +428,34 @@ function BillingPill({
   );
 }
 
-function Hero({
-  projectCount,
-  streakDays,
-  streakToday,
-}: {
-  projectCount: number;
-  streakDays: number;
-  streakToday: boolean;
-}) {
-  const user = getTgUser();
-  const name = (user?.first_name || "").trim();
-  const greeting = name ? `Привет, ${name}` : "Студия";
-
+function Header() {
   return (
-    <div style={{ marginBottom: 4 }}>
+    <div>
       <div
         style={{
           fontSize: 11,
           color: MUTED,
-          letterSpacing: "0.14em",
+          letterSpacing: "0.12em",
           textTransform: "uppercase",
           fontWeight: 600,
         }}
       >
-        Lex Studio
+        Личный кабинет
       </div>
       <h1
         style={{
-          margin: "10px 0 14px",
-          fontSize: 36,
+          margin: "10px 0 0",
+          fontSize: 30,
           lineHeight: 1.02,
           fontWeight: 800,
-          letterSpacing: "-0.025em",
-          color: "#FFFFFF",
+          letterSpacing: "-0.02em",
+          textTransform: "uppercase",
         }}
       >
-        {greeting}
+        Мои проекты
       </h1>
-      {/* Stats strip */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Chip icon="📁" label={`${projectCount} ${pluralProj(projectCount)}`} />
-        {streakDays > 0 && (
-          <Chip
-            icon="🔥"
-            label={`${streakDays} ${pluralDay(streakDays)} подряд`}
-            highlight
-          />
-        )}
-        {streakDays === 0 && projectCount > 0 && (
-          <Chip icon="✨" label="Начни серию сегодня" muted />
-        )}
-        {streakToday && streakDays > 0 && (
-          <Chip icon="✓" label="Сегодня в плюсе" muted />
-        )}
-      </div>
     </div>
   );
-}
-
-function Chip({ icon, label, highlight, muted }: { icon: string; label: string; highlight?: boolean; muted?: boolean }) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "7px 12px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 600,
-        color: highlight ? "#0A0608" : INK,
-        background: highlight
-          ? `linear-gradient(135deg, ${PEACH}, ${PINK})`
-          : muted
-          ? "rgba(255,255,255,0.06)"
-          : "rgba(255,255,255,0.10)",
-        border: highlight ? "none" : `1px solid ${CARD_BORDER}`,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span style={{ fontSize: 13 }}>{icon}</span>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function pluralProj(n: number): string {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return "проект";
-  if ([2, 3, 4].includes(m10) && ![12, 13, 14].includes(m100)) return "проекта";
-  return "проектов";
 }
 
 function ProjectCard({
@@ -560,16 +484,14 @@ function ProjectCard({
         textAlign: "left",
         background: CARD_BG,
         border: `1px solid ${CARD_BORDER}`,
-        borderRadius: 22,
-        padding: 16,
+        borderRadius: 16,
+        padding: 14,
         display: "flex",
-        gap: 14,
+        gap: 12,
         alignItems: "center",
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       <PlatformIcon platform={project.platform} />
@@ -600,16 +522,7 @@ function ProjectCard({
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: MUTED, display: "flex", gap: 8, alignItems: "center" }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 999,
-              background: handle ? "#54E0A0" : "rgba(255,255,255,0.30)",
-              flexShrink: 0,
-            }}
-          />
+        <div style={{ fontSize: 12, color: MUTED, display: "flex", gap: 8 }}>
           {handle ? <span>{handle}</span> : <span>Не подключено</span>}
           {typeof followers === "number" && followers > 0 && (
             <span>· {formatCount(followers)}</span>
@@ -626,12 +539,10 @@ function PlatformIcon({ platform }: { platform: "telegram" | "instagram" }) {
   return (
     <div
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        background: tg
-          ? "linear-gradient(135deg, rgba(107,79,187,0.30), rgba(107,79,187,0.10))"
-          : "linear-gradient(135deg, rgba(200,87,157,0.30), rgba(245,167,126,0.12))",
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        background: tg ? "rgba(40,160,235,0.14)" : "rgba(225,48,108,0.14)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -640,10 +551,9 @@ function PlatformIcon({ platform }: { platform: "telegram" | "instagram" }) {
     >
       <span
         style={{
-          fontSize: 14,
-          fontWeight: 700,
-          letterSpacing: "0.04em",
-          color: tg ? "#B4A4F0" : "#F5A8C8",
+          fontSize: 18,
+          fontWeight: 800,
+          color: tg ? "#28A0EB" : "#E1306C",
         }}
       >
         {tg ? "TG" : "IG"}
@@ -661,9 +571,9 @@ function SkeletonList() {
           style={{
             background: CARD_BG,
             border: `1px solid ${CARD_BORDER}`,
-            borderRadius: 22,
-            padding: 16,
-            height: 76,
+            borderRadius: 16,
+            padding: 14,
+            height: 68,
             opacity: 0.5 - i * 0.1,
           }}
         />
@@ -693,7 +603,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         соберут план и предложат посты.
       </p>
       <button onClick={onCreate} style={{ ...primaryBtn, marginTop: 10 }}>
-        Начать
+        НАЧАТЬ
       </button>
     </div>
   );
@@ -722,7 +632,7 @@ function ErrorBlock({
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Не удалось загрузить</h2>
       <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 280 }}>{body}</p>
       <button onClick={onCta} style={primaryBtn}>
-        {ctaLabel === "ПОВТОРИТЬ" ? "Повторить" : ctaLabel}
+        {ctaLabel}
       </button>
     </div>
   );
@@ -732,46 +642,17 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        position: "relative",
         flex: 1,
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
         color: INK,
-        fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
+        fontFamily: "'Inter', system-ui, sans-serif",
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
           "max(calc(env(safe-area-inset-bottom) + 24px), 36px)",
-        isolation: "isolate",
       }}
     >
-      {/* Studio фон: глубокий фиолет + янтарный hot-spot снизу */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          background:
-            "radial-gradient(circle 600px at 100% -100px, rgba(240,160,48,0.50), transparent 50%)," +
-            "radial-gradient(ellipse 700px 600px at 0% 0%, rgba(216,85,144,0.70), transparent 55%)," +
-            "radial-gradient(ellipse 600px 500px at 100% 60%, rgba(122,82,208,0.75), transparent 55%)," +
-            "radial-gradient(ellipse 700px 500px at 30% 110%, rgba(240,160,48,0.65), transparent 50%)," +
-            "linear-gradient(180deg, #1A0A30 0%, #0A0418 100%)",
-          pointerEvents: "none",
-        }}
-      />
-      {/* Тонкий шум поверх для премиум-вайба (через SVG) */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          opacity: 0.06,
-          pointerEvents: "none",
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-        }}
-      />
       {children}
     </div>
   );
@@ -789,12 +670,13 @@ const primaryBtn: React.CSSProperties = {
   marginTop: 14,
   padding: "18px 0",
   border: "none",
-  borderRadius: 18,
-  background: `linear-gradient(135deg, ${AMBER} 0%, ${AMBER_DEEP} 100%)`,
-  color: "#1A0A00",
-  fontSize: 15,
-  fontWeight: 700,
-  letterSpacing: "0.01em",
+  borderRadius: 999,
+  background: YELLOW,
+  color: "#0A0608",
+  fontSize: 16,
+  fontWeight: 800,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
   cursor: "pointer",
-  boxShadow: `0 16px 36px rgba(240,160,48,0.32), 0 0 0 1px rgba(255,255,255,0.10) inset`,
+  boxShadow: `0 20px 48px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
 };
