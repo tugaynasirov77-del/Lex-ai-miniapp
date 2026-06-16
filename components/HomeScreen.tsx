@@ -9,42 +9,30 @@ const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
 function LexLogo({ height = 40 }: { height?: number }) {
-  // Inline-SVG логотип в стиле референса — жёлтый знак + "LEX AI" (LEX белый, AI жёлтый).
-  // Никаких файлов и mix-blend-mode, прозрачный задний фон по определению.
+  // PNG/JPG логотип из public/logo.jpg (треугольная "A" с жёлтым контуром).
   return (
     <div
       aria-label="LEX AI"
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: height * 0.32,
+        gap: height * 0.34,
         height,
         lineHeight: 1,
       }}
     >
-      <svg
-        viewBox="0 0 110 90"
-        style={{ height: "100%", width: "auto", overflow: "visible" }}
-        fill="none"
-        aria-hidden
-      >
-        {/* Зигзаг-знак: верхняя длинная пилюля → вниз справа → короткая средняя → вниз слева → нижняя длинная */}
-        <path
-          d="M 14 20 H 70 C 86 20 86 45 70 45 H 40 C 24 45 24 70 40 70 H 96"
-          stroke={YELLOW}
-          strokeWidth="16"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* Яркая белая точка на конце змейки */}
-        <circle
-          cx="96"
-          cy="70"
-          r="9"
-          fill="#FFFFFF"
-          style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.9))" }}
-        />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.jpg"
+        alt=""
+        style={{
+          height,
+          width: height,
+          borderRadius: height * 0.22,
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
       <div
         style={{
           fontSize: height * 0.62,

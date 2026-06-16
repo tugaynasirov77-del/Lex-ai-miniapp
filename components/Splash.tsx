@@ -47,41 +47,22 @@ export default function Splash() {
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* MARK — рисуется stroke-by-stroke */}
-      <svg
-        viewBox="0 0 110 90"
-        style={{ height: 56, width: "auto", overflow: "visible" }}
-        fill="none"
-        aria-hidden
-      >
-        <path
-          d="M 14 20 H 70 C 86 20 86 45 70 45 H 40 C 24 45 24 70 40 70 H 96"
-          stroke={YELLOW}
-          strokeWidth="16"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          pathLength="100"
-          style={{
-            strokeDasharray: "100",
-            strokeDashoffset: "100",
-            animation: "lex-mark-draw 1100ms cubic-bezier(0.65,0,0.35,1) 200ms forwards",
-            filter: `drop-shadow(0 0 18px ${YELLOW}66)`,
-          }}
-        />
-        {/* Белая точка-кончик на конце змейки, появляется после отрисовки */}
-        <circle
-          cx="96"
-          cy="70"
-          r="9"
-          fill="#FFFFFF"
-          style={{
-            opacity: 0,
-            animation: "lex-dot-in 320ms cubic-bezier(0.16,1,0.3,1) 1320ms forwards",
-            transformOrigin: "96px 70px",
-            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.95))",
-          }}
-        />
-      </svg>
+      {/* MARK — новый PNG-логотип */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.jpg"
+        alt=""
+        style={{
+          height: 76,
+          width: 76,
+          borderRadius: 18,
+          objectFit: "cover",
+          display: "block",
+          filter: `drop-shadow(0 0 26px ${YELLOW}55)`,
+          opacity: 0,
+          animation: "lex-mark-in 700ms cubic-bezier(0.16,1,0.3,1) 200ms forwards",
+        }}
+      />
 
       {/* WORDMARK */}
       <div
@@ -99,11 +80,8 @@ export default function Splash() {
       </div>
 
       <style>{`
-        @keyframes lex-mark-draw {
-          to { stroke-dashoffset: 0; }
-        }
-        @keyframes lex-dot-in {
-          0% { opacity: 0; transform: scale(0); }
+        @keyframes lex-mark-in {
+          0% { opacity: 0; transform: scale(0.7); }
           100% { opacity: 1; transform: scale(1); }
         }
         @keyframes lex-text-in {
