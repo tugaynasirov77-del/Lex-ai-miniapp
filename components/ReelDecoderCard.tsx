@@ -49,12 +49,16 @@ export default function ReelDecoderCard({ projectId, onDecoded }: Props) {
   return (
     <div
       style={{
-        background: `linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(245,231,10,0.02) 60%, rgba(255,255,255,0.02) 100%)`,
-        border: `1px solid rgba(245,231,10,0.35)`,
+        position: "relative",
         borderRadius: 20,
         padding: 18,
         marginBottom: 14,
-        boxShadow: `0 18px 44px rgba(245,231,10,0.10)`,
+        overflow: "hidden",
+        background:
+          `linear-gradient(135deg, rgba(10,6,8,0.55) 0%, rgba(10,6,8,0.78) 60%, rgba(10,6,8,0.92) 100%), ` +
+          `url(/reel-decoder-bg.jpg) center / cover no-repeat`,
+        border: `1px solid rgba(255,255,255,0.14)`,
+        boxShadow: `0 18px 44px rgba(225,48,108,0.18)`,
       }}
     >
       {/* Hero */}

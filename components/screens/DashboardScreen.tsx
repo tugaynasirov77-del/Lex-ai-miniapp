@@ -514,7 +514,7 @@ function ProjectCard({
           )}
         </div>
         <div style={{ fontSize: 12, color: MUTED, display: "flex", gap: 8 }}>
-          {handle ? <span>{handle}</span> : <span>Не подключено</span>}
+          {handle ? <span>{handle}</span> : <span>{project.platform === "instagram" ? "Instagram" : "Telegram"}</span>}
           {typeof followers === "number" && followers > 0 && (
             <span>· {formatCount(followers)}</span>
           )}

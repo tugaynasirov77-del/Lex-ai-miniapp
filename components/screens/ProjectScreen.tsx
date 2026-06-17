@@ -648,7 +648,7 @@ function Header({
         </h1>
         <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
           {project.platform === "instagram" ? "Instagram" : "Telegram"}
-          {handle ? ` · ${handle}` : " · не подключено"}
+          {handle ? ` · ${handle}` : ""}
           {typeof followers === "number" && followers > 0
             ? ` · ${formatCount(followers)}`
             : ""}
