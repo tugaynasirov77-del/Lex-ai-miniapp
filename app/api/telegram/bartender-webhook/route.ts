@@ -1,0 +1,245 @@
+import { NextRequest, after } from "next/server";
+import { Anthropic } from "@anthropic-ai/sdk";
+import OpenAI from "openai";
+import { google } from "googleapis";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+const TOKEN = () => process.env.BARTENDER_BOT_TOKEN!;
+const FOLDER_ID = () => process.env.GOOGLE_DRIVE_FOLDER_ID!;
+
+const WELCOME = `Привет! Я бот-бармен 🍸
+
+Кидай голосовое или текст — назови напиток, ингредиенты и граммовку. Я соберу ТТК и пришлю Google-таблицу.
+
+Пример: «Негрони, джин 30 мл, кампари 30 мл, вермут россо 30 мл, метод стир»`;
+
+async function tg(method: string, body: any): Promise<any> {
+  const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  return r ? r.json().catch(() => null) : null;
+}
+
+async function tgGetFileUrl(fileId: string): Promise<string | null> {
+  const r = await tg("getFile", { file_id: fileId });
+  const path = r?.result?.file_path;
+  return path ? `https://api.telegram.org/file/bot${TOKEN()}/${path}` : null;
+}
+
+const PARSE_PROMPT = `Ты — помощник бармена. Из текста ниже извлеки технологическую карту коктейля.
+
+Верни СТРОГО JSON без markdown, без комментариев, без обёртки. Структура:
+{
+  "name": "Название напитка",
+  "yield_ml": число — общий выход в мл (если не сказано — оцени сумму ингредиентов),
+  "ingredients": [
+    {"name": "Название ингредиента", "ml": число_или_null, "g": число_или_null}
+  ],
+  "technology": "Технология приготовления одним абзацем"
+}
+
+Правила:
+- Если бармен назвал только мл — посчитай граммы (плотность алкоголя ≈0.95 г/мл, сиропов ≈1.25, соков ≈1.04, воды 1.0; лёд в выход не считай)
+- Если назвал только граммы — посчитай мл
+- Технология: даже если бармен не сказал — придумай стандартную (билд/шейк/стир) исходя из состава
+- Названия ингредиентов с заглавной буквы
+- Никаких лишних полей, никакого текста вне JSON
+
+Текст бармена:
+`;
+
+type TTK = {
+  name: string;
+  yield_ml: number | string;
+  ingredients: { name: string; ml: number | null; g: number | null }[];
+  technology: string;
+};
+
+async function transcribe(audioUrl: string): Promise<string> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+  const audioRes = await fetch(audioUrl);
+  const buf = Buffer.from(await audioRes.arrayBuffer());
+  const file = new File([new Uint8Array(buf)], "voice.ogg", { type: "audio/ogg" });
+  const r = await openai.audio.transcriptions.create({
+    model: "whisper-1",
+    file,
+    language: "ru",
+  });
+  return r.text;
+}
+
+async function parseDrink(text: string): Promise<TTK> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const msg = await anthropic.messages.create({
+    model: "claude-opus-4-7",
+    max_tokens: 2000,
+    messages: [{ role: "user", content: PARSE_PROMPT + text }],
+  });
+  const block = msg.content[0];
+  let raw = block.type === "text" ? block.text.trim() : "";
+  if (raw.startsWith("```")) {
+    raw = raw.split("```")[1] || raw;
+    if (raw.startsWith("json")) raw = raw.slice(4);
+    raw = raw.trim();
+  }
+  return JSON.parse(raw);
+}
+
+function getGoogle() {
+  const saJson = process.env.GOOGLE_SA_JSON!;
+  const creds = JSON.parse(saJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials: creds,
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive",
+    ],
+  });
+  return {
+    sheets: google.sheets({ version: "v4", auth }),
+    drive: google.drive({ version: "v3", auth }),
+  };
+}
+
+async function createSheet(ttk: TTK): Promise<string> {
+  const { sheets, drive } = getGoogle();
+  const file = await drive.files.create({
+    requestBody: {
+      name: `ТТК — ${ttk.name}`,
+      mimeType: "application/vnd.google-apps.spreadsheet",
+      parents: [FOLDER_ID()],
+    },
+    fields: "id, webViewLink",
+  });
+  const sid = file.data.id!;
+
+  const rows: any[][] = [
+    [`ТТК: ${ttk.name}`],
+    [],
+    ["Выход, мл:", ttk.yield_ml ?? ""],
+    [],
+    ["Ингредиент", "мл", "граммы"],
+  ];
+  for (const ing of ttk.ingredients || []) {
+    rows.push([ing.name || "", ing.ml ?? "", ing.g ?? ""]);
+  }
+  rows.push([], ["Технология приготовления:"], [ttk.technology || ""]);
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sid,
+    range: "A1",
+    valueInputOption: "RAW",
+    requestBody: { values: rows },
+  });
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: sid,
+    requestBody: {
+      requests: [
+        {
+          repeatCell: {
+            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
+            cell: { userEnteredFormat: { textFormat: { bold: true, fontSize: 14 } } },
+            fields: "userEnteredFormat.textFormat",
+          },
+        },
+        {
+          repeatCell: {
+            range: { sheetId: 0, startRowIndex: 4, endRowIndex: 5 },
+            cell: {
+              userEnteredFormat: {
+                textFormat: { bold: true },
+                backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
+              },
+            },
+            fields: "userEnteredFormat(textFormat,backgroundColor)",
+          },
+        },
+        {
+          updateDimensionProperties: {
+            range: { sheetId: 0, dimension: "COLUMNS", startIndex: 0, endIndex: 1 },
+            properties: { pixelSize: 250 },
+            fields: "pixelSize",
+          },
+        },
+      ],
+    },
+  });
+
+  return file.data.webViewLink!;
+}
+
+async function processMessage(msg: any) {
+  const chatId = msg.chat.id;
+  let text = "";
+
+  try {
+    if (msg.voice || msg.audio) {
+      await tg("sendChatAction", { chat_id: chatId, action: "typing" });
+      await tg("sendMessage", { chat_id: chatId, text: "🎙 Распознаю голосовое..." });
+      const fileId = (msg.voice || msg.audio).file_id;
+      const url = await tgGetFileUrl(fileId);
+      if (!url) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог скачать аудио." });
+        return;
+      }
+      text = await transcribe(url);
+      await tg("sendMessage", { chat_id: chatId, text: `📝 Услышал: «${text}»` });
+    } else if (msg.text) {
+      text = msg.text;
+    } else {
+      return;
+    }
+
+    await tg("sendChatAction", { chat_id: chatId, action: "typing" });
+    await tg("sendMessage", { chat_id: chatId, text: "🧠 Составляю ТТК..." });
+    const ttk = await parseDrink(text);
+
+    await tg("sendMessage", { chat_id: chatId, text: "📊 Создаю Google-таблицу..." });
+    const url = await createSheet(ttk);
+
+    const ingList = (ttk.ingredients || [])
+      .map((i) => `• ${i.name} — ${i.ml ?? "?"} мл / ${i.g ?? "?"} г`)
+      .join("\n");
+
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: `✅ Готово!\n\n*${ttk.name}* (выход ${ttk.yield_ml ?? "?"} мл)\n\n${ingList}\n\n📄 ${url}`,
+      parse_mode: "Markdown",
+    });
+  } catch (e: any) {
+    console.error("[bartender] processing failed:", e);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: `❌ Ошибка: ${e?.message || e}`,
+    });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  let update: any;
+  try {
+    update = await req.json();
+  } catch {
+    return Response.json({ ok: true });
+  }
+
+  const msg = update?.message;
+  if (!msg || msg.chat?.type !== "private") return Response.json({ ok: true });
+
+  const text = String(msg.text || "").trim();
+  if (text === "/start") {
+    after(async () => {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: WELCOME });
+    });
+    return Response.json({ ok: true });
+  }
+
+  after(() => processMessage(msg));
+  return Response.json({ ok: true });
+}

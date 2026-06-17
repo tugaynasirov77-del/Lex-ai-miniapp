@@ -13,7 +13,10 @@
     "@fontsource/dm-sans": "^5.2.8",
     "@supabase/supabase-js": "^2.105.4",
     "framer-motion": "^12.40.0",
+    "google-auth-library": "^10.7.0",
+    "googleapis": "^173.0.0",
     "next": "^16.2.6",
+    "openai": "^6.44.0",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
