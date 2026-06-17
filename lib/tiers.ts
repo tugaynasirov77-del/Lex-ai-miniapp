@@ -2,8 +2,8 @@
  * Тарифные планы и лимиты.
  * Подписка per-user (tg_id) — один план покрывает все проекты юзера.
  *
- * После перехода на LEX AI лимиты считаются по форматам контента
- * (post / carousel / reel). Free — недельные лимиты, Pro/Business — месячные.
+ * Главный лимит = reel_decode (разборы Reels по ссылке) — флагман продукта.
+ * post/carousel/reel-сценарии на Pro+ безлимитны (count=9999).
  */
 
 export type Tier = "free" | "pro" | "business";
@@ -24,12 +24,16 @@ export type TierConfig = {
     post: LimitSpec;
     carousel: LimitSpec;
     reel: LimitSpec;
+    reel_decode: LimitSpec;    // главный лимит — разборы Reels
   };
   maxProjects: number;
   monthlyCapUsd: number;       // потолок Anthropic-расходов на проект
-  available: boolean;          // показывать ли в магазине (ЮKassa ещё не верифицирована)
+  available: boolean;
   features: string[];
 };
+
+// Условный безлимит — UI рендерит как «Безлимит»
+export const UNLIMITED = 9999;
 
 export const TIERS: Record<Tier, TierConfig> = {
   free: {
@@ -38,61 +42,61 @@ export const TIERS: Record<Tier, TierConfig> = {
     priceStars: 0,
     priceRub: 0,
     limits: {
-      post:     { count: 2, period: "week" },
-      carousel: { count: 2, period: "week" },
-      reel:     { count: 2, period: "week" },
+      post:        { count: 2,  period: "week" },
+      carousel:    { count: 2,  period: "week" },
+      reel:        { count: 2,  period: "week" },
+      reel_decode: { count: 3,  period: "month" }, // только для теста
     },
     maxProjects: 1,
-    monthlyCapUsd: 0.8,
+    monthlyCapUsd: 0.4,
     available: true,
     features: [
       "1 проект",
-      "2 поста в неделю",
-      "2 карусели в неделю",
-      "2 сценария Reels в неделю",
-      "Анализ конкурентов",
+      "3 разбора Reels в месяц",
+      "Базовая генерация контента",
     ],
   },
   pro: {
     tier: "pro",
     label: "Pro",
-    priceStars: 350,
-    priceRub: 690,
+    priceStars: 290,
+    priceRub: 490,
     limits: {
-      post:     { count: 60,  period: "month" },
-      carousel: { count: 30,  period: "month" },
-      reel:     { count: 30,  period: "month" },
+      post:        { count: UNLIMITED, period: "month" },
+      carousel:    { count: UNLIMITED, period: "month" },
+      reel:        { count: UNLIMITED, period: "month" },
+      reel_decode: { count: 30, period: "month" },
     },
-    maxProjects: 3,
-    monthlyCapUsd: 10,
-    available: false,   // ЮKassa на верификации
+    maxProjects: 2,
+    monthlyCapUsd: 12,
+    available: false,
     features: [
-      "До 3 проектов",
-      "60 постов в месяц",
-      "30 каруселей в месяц",
-      "30 сценариев Reels в месяц",
-      "Анализ конкурентов",
+      "30 разборов Reels в месяц",
+      "Безлимит постов и сценариев Reels",
+      "До 2 проектов",
+      "Клонирование стиля по референсным постам",
+      "Приоритет в очереди генерации",
     ],
   },
   business: {
     tier: "business",
-    label: "Business",
-    priceStars: 1000,
-    priceRub: 1980,
+    label: "Pro+",
+    priceStars: 850,
+    priceRub: 1490,
     limits: {
-      post:     { count: 200, period: "month" },
-      carousel: { count: 100, period: "month" },
-      reel:     { count: 100, period: "month" },
+      post:        { count: UNLIMITED, period: "month" },
+      carousel:    { count: UNLIMITED, period: "month" },
+      reel:        { count: UNLIMITED, period: "month" },
+      reel_decode: { count: 100, period: "month" },
     },
     maxProjects: 10,
-    monthlyCapUsd: 50,
-    available: false,   // ЮKassa на верификации
+    monthlyCapUsd: 40,
+    available: false,
     features: [
+      "100 разборов Reels в месяц",
+      "Безлимит постов и сценариев Reels",
       "До 10 проектов",
-      "200 постов в месяц",
-      "100 каруселей в месяц",
-      "100 сценариев Reels в месяц",
-      "Анализ конкурентов",
+      "Клонирование стиля по референсным постам",
       "Приоритетная поддержка в Telegram",
     ],
   },
@@ -100,4 +104,8 @@ export const TIERS: Record<Tier, TierConfig> = {
 
 export function tierFromString(v: any): Tier {
   return v === "pro" || v === "business" ? v : "free";
+}
+
+export function isUnlimited(count: number): boolean {
+  return count >= UNLIMITED;
 }

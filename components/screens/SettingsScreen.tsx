@@ -236,7 +236,7 @@ function PremiumCard({
       </div>
       <div style={{ marginTop: 6, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
         {isFree
-          ? "До 200 постов, 100 каруселей и 100 Reels в месяц — для серьёзной работы с контентом."
+          ? "30 разборов Reels в месяц + безлимит постов и сценариев. За 490 ₽."
           : expiresAt
             ? `Активна до ${new Date(expiresAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}`
             : "Изменить тариф или посмотреть лимиты"}

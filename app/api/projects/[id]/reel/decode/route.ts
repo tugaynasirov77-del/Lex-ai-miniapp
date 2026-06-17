@@ -10,20 +10,11 @@ import {
   getInsightsFromCache,
   getBrandKitFromProject,
 } from "../../../../../../lib/lexAI";
+import { checkQuota, getActiveTier } from "../../../../../../lib/gating";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
-
-// Квоты: free 1/неделя, pro 20/мес, business 100/мес
-const QUOTA: Record<string, { count: number; period_days: number }> = {
-  free: { count: 1, period_days: 7 },
-  pro: { count: 20, period_days: 30 },
-  business: { count: 100, period_days: 30 },
-};
-
-// Безлимит для админов (founder + тестировщики)
-const ADMIN_TG_IDS = new Set<number>([5825762433, 999482511]);
 
 async function authProject(req: NextRequest, projectId: string) {
   const v = verifyInitData(req.headers.get("x-telegram-init-data"));
@@ -39,33 +30,6 @@ async function authProject(req: NextRequest, projectId: string) {
   return { tgId: v.user.id };
 }
 
-async function getActiveTier(tgId: number): Promise<"free" | "pro" | "business"> {
-  const sb = getSupabase();
-  const { data } = await sb
-    .from("subscriptions")
-    .select("plan,status,expires_at")
-    .eq("tg_id", tgId)
-    .eq("status", "active")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!data) return "free";
-  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return "free";
-  return (data.plan as any) || "free";
-}
-
-async function checkQuota(tgId: number, tier: "free" | "pro" | "business") {
-  const q = QUOTA[tier];
-  const sb = getSupabase();
-  const since = new Date(Date.now() - q.period_days * 86400000).toISOString();
-  const { count } = await sb
-    .from("reel_decodes")
-    .select("id", { count: "exact", head: true })
-    .eq("tg_id", tgId)
-    .gte("created_at", since);
-  const used = count || 0;
-  return { used, limit: q.count, period_days: q.period_days, ok: used < q.count };
-}
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -121,25 +85,21 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
-  // ─── Квота (админы — безлимит) ───
-  const isAdmin = ADMIN_TG_IDS.has(a.tgId);
-  const tier = isAdmin ? "business" : await getActiveTier(a.tgId);
-  const quota = isAdmin
-    ? { used: 0, limit: 9999, period_days: 30, ok: true }
-    : await checkQuota(a.tgId, tier);
-  if (!quota.ok) {
+  // ─── Квота (админы — безлимит, внутри checkQuota) ───
+  const gate = await checkQuota({ tgId: a.tgId, action: "reel_decode" });
+  if (!gate.ok) {
     const msg =
-      tier === "free"
-        ? "Бесплатно 1 разбор в неделю. Перейди на Pro — 20 разборов в месяц."
-        : "Лимит на этот месяц исчерпан.";
+      gate.tier === "free"
+        ? "Бесплатно 3 разбора в месяц. Перейди на Pro — 30 разборов в месяц."
+        : "Лимит на этот месяц исчерпан. Перейди на Pro+ — 100 разборов в месяц.";
     return Response.json(
       {
         error: msg,
         code: "quota_exceeded",
-        tier,
-        limit: quota.limit,
-        used: quota.used,
-        period_days: quota.period_days,
+        tier: gate.tier,
+        limit: gate.limit.count,
+        used: gate.used,
+        period: gate.limit.period,
       },
       { status: 402 },
     );
@@ -194,10 +154,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       analysis: result.analysis,
     },
     quota: {
-      tier,
-      used: quota.used + 1,
-      limit: quota.limit,
-      period_days: quota.period_days,
+      tier: gate.tier,
+      used: gate.used + 1,
+      limit: gate.limit.count,
+      period: gate.limit.period,
     },
   });
 }
@@ -219,10 +179,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     .limit(50);
 
   const tier = await getActiveTier(a.tgId);
-  const quota = await checkQuota(a.tgId, tier);
+  const gate = await checkQuota({ tgId: a.tgId, action: "reel_decode" });
 
   return Response.json({
     items: data || [],
-    quota: { tier, ...quota },
+    quota: {
+      tier,
+      used: gate.used,
+      limit: gate.limit.count,
+      period: gate.limit.period,
+      ok: gate.ok,
+    },
   });
 }

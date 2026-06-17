@@ -1,7 +1,7 @@
 import { getSupabase } from "./supabase";
 import { TIERS, tierFromString, type Tier, type TierConfig, type LimitSpec } from "./tiers";
 
-export type GateAction = "post" | "carousel" | "reel";
+export type GateAction = "post" | "carousel" | "reel" | "reel_decode";
 
 /**
  * Whitelist tg_id'ов с безлимитом — обходят quota-чек.
@@ -68,7 +68,17 @@ export async function countUsage(
   const sb = getSupabase();
   const since = period === "week" ? startOfWeekIso() : startOfMonthIso();
 
-  // Считаем по всем проектам юзера — подписка per-user.
+  if (action === "reel_decode") {
+    // Считаем разборы из reel_decodes (отдельная таблица).
+    const { count } = await sb
+      .from("reel_decodes")
+      .select("id", { count: "exact", head: true })
+      .eq("tg_id", tgId)
+      .gte("created_at", since);
+    return count ?? 0;
+  }
+
+  // post/carousel/reel — генерация контента в content_drafts.
   const { count } = await sb
     .from("content_drafts")
     .select("id, projects!inner(tg_id)", { count: "exact", head: true })
@@ -123,7 +133,13 @@ export async function checkQuota(args: {
 }
 
 function actionLabel(a: GateAction): string {
-  return a === "post" ? "постов" : a === "carousel" ? "каруселей" : "сценариев Reels";
+  return a === "post"
+    ? "постов"
+    : a === "carousel"
+    ? "каруселей"
+    : a === "reel_decode"
+    ? "разборов Reels"
+    : "сценариев Reels";
 }
 
 /** Хелпер для API: блокирует с 402, если квота превышена. */

@@ -177,7 +177,7 @@ export type ReelQuotaDTO = {
   tier: "free" | "pro" | "business";
   used: number;
   limit: number;
-  period_days: number;
+  period: "week" | "month";
 };
 
 export function decodeReel(

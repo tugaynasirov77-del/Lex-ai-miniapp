@@ -13,6 +13,7 @@ type TierConfig = {
     post: LimitSpec;
     carousel: LimitSpec;
     reel: LimitSpec;
+    reel_decode?: LimitSpec;
   };
   maxProjects: number;
   monthlyCapUsd: number;
@@ -176,8 +177,8 @@ function Hero() {
         Прокачай <span style={{ color: YELLOW }}>контент-фабрику</span>
       </h1>
       <p style={{ margin: 0, fontSize: 14, color: MUTED, lineHeight: 1.45 }}>
-        До 200 постов, 100 каруселей и 100 Reels в месяц.
-        Тарифы без автопродления, отмена в любой момент.
+        Разбирай чужие виральные Reels и получай готовые сценарии под свою нишу.
+        Без автопродления, отмена в любой момент.
       </p>
     </div>
   );
@@ -232,13 +233,7 @@ function CurrentPlanCard({ state }: { state: BillingState }) {
         period={state.usage.post.period}
       />
       <UsageRow
-        label="Карусели"
-        used={state.usage.carousel.used}
-        limit={state.usage.carousel.limit}
-        period={state.usage.carousel.period}
-      />
-      <UsageRow
-        label="Reels"
+        label="Сценарии Reels"
         used={state.usage.reel.used}
         limit={state.usage.reel.limit}
         period={state.usage.reel.period}
@@ -261,8 +256,9 @@ function UsageRow({
   period: "week" | "month";
   last?: boolean;
 }) {
-  const pct = Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
-  const close = used >= limit;
+  const isUnlimited = limit >= 9999;
+  const pct = isUnlimited ? 0 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
+  const close = !isUnlimited && used >= limit;
   const periodLabel = period === "week" ? "в неделю" : "в месяц";
   return (
     <div style={{ marginBottom: last ? 0 : 14 }}>
@@ -277,8 +273,14 @@ function UsageRow({
       >
         <span>{label}</span>
         <span style={{ color: close ? WARN : MUTED }}>
-          <b style={{ color: close ? WARN : INK, fontWeight: 700 }}>{used}</b>
-          <span style={{ opacity: 0.5 }}> / {limit} {periodLabel}</span>
+          {isUnlimited ? (
+            <span style={{ color: INK, fontWeight: 700 }}>Безлимит</span>
+          ) : (
+            <>
+              <b style={{ color: close ? WARN : INK, fontWeight: 700 }}>{used}</b>
+              <span style={{ opacity: 0.5 }}> / {limit} {periodLabel}</span>
+            </>
+          )}
         </span>
       </div>
       <div
