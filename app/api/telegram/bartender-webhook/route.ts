@@ -108,6 +108,15 @@ function getGoogle() {
 
 async function createSheet(ttk: TTK): Promise<string> {
   const { sheets, drive } = getGoogle();
+
+  // Owner of the folder = real user. Files we create as SA hit SA's 0-quota,
+  // so we transfer ownership immediately to the folder owner.
+  const folderMeta = await drive.files.get({
+    fileId: FOLDER_ID(),
+    fields: "owners(emailAddress)",
+  });
+  const ownerEmail = folderMeta.data.owners?.[0]?.emailAddress;
+
   const file = await drive.files.create({
     requestBody: {
       name: `ТТК — ${ttk.name}`,
@@ -117,6 +126,21 @@ async function createSheet(ttk: TTK): Promise<string> {
     fields: "id, webViewLink",
   });
   const sid = file.data.id!;
+
+  if (ownerEmail) {
+    try {
+      await drive.permissions.create({
+        fileId: sid,
+        transferOwnership: true,
+        sendNotificationEmail: false,
+        requestBody: { role: "owner", type: "user", emailAddress: ownerEmail },
+      });
+    } catch (e: any) {
+      // Consumer Gmail accounts may require pending-transfer confirmation —
+      // fall back: just give writer access, user keeps folder access.
+      console.warn("[bartender] transferOwnership failed:", e?.message);
+    }
+  }
 
   const rows: any[][] = [
     [`ТТК: ${ttk.name}`],
