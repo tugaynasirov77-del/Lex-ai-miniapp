@@ -84,38 +84,39 @@ async function fetchMetadata(shortcode: string): Promise<ReelMetadata> {
   }
 
   const data: any = await r.json();
-  // Структура ответа варьируется; пытаемся достать поля разными путями.
-  const item = data?.data?.items?.[0] ?? data?.items?.[0] ?? data?.data ?? data;
 
-  const videoUrl =
-    item?.video_versions?.[0]?.url ??
-    item?.video_url ??
-    item?.video?.url ??
-    "";
-  const caption =
-    item?.caption?.text ??
-    item?.caption ??
-    "";
-  const username =
-    item?.user?.username ??
-    item?.owner?.username ??
-    item?.author?.username ??
-    "";
-  const views =
-    Number(item?.play_count) ||
-    Number(item?.view_count) ||
-    Number(item?.video_view_count) ||
-    0;
-  const likes = Number(item?.like_count) || Number(item?.likes) || 0;
-  const comments = Number(item?.comment_count) || Number(item?.comments) || 0;
-  const duration =
-    Number(item?.video_duration) ||
-    Number(item?.duration) ||
-    Number(item?.video_versions?.[0]?.duration) ||
-    0;
+  // Структура ответа instagram120 mediaByShortcode:
+  // [ { urls: [{url, name, extension, quality}], meta: {...}, pictureUrl: "..." } ]
+  // Для Reels в urls есть объект с extension="mp4". Для фото — только jpg.
+  const items: any[] = Array.isArray(data) ? data : data?.items || [data];
+  const item = items[0] || {};
+  const meta = item.meta || {};
+  const urls: any[] = Array.isArray(item.urls) ? item.urls : [];
+
+  // Ищем mp4-видео в порядке убывания качества
+  const videoEntry = urls
+    .filter((u) => {
+      const ext = String(u?.extension || "").toLowerCase();
+      const name = String(u?.name || "").toLowerCase();
+      return ext === "mp4" || name.includes("mp4") || name.includes("video");
+    })
+    .sort((a, b) => (Number(b?.quality) || 0) - (Number(a?.quality) || 0))[0];
+
+  const videoUrl: string = videoEntry?.url || "";
+
+  const caption: string = String(meta?.title || meta?.caption || "").trim();
+  const username: string = String(meta?.username || "").trim();
+  const likes = Number(meta?.likeCount) || 0;
+  const comments = Number(meta?.commentCount) || 0;
+  const views = Number(meta?.viewCount) || Number(meta?.playCount) || 0;
+  const duration = Number(meta?.duration) || Number(videoEntry?.duration) || 0;
 
   if (!videoUrl) {
-    throw new Error("Не удалось получить видео по ссылке. Проверь что Reels публичный.");
+    // Если есть pictureUrl — это статика, не Reels
+    if (item?.pictureUrl) {
+      throw new Error("Это статичный пост, а не Reels. Кидай ссылку на видео.");
+    }
+    throw new Error("Не удалось получить видео. Проверь что Reels публичный и доступен без логина.");
   }
 
   return {
