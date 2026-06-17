@@ -364,7 +364,11 @@ function AttachStep({
 }) {
   return (
     <ScreenWrap>
-      <StepBadge current={2} total={2} label="Подключение" />
+      <StepBadge
+        current={2}
+        total={2}
+        label={platform === "instagram" ? "Ниша" : "Подключение"}
+      />
       <h1
         style={{
           margin: "10px 0 0",
@@ -382,20 +386,17 @@ function AttachStep({
             канал
           </>
         ) : (
-          <>
-            Подключите
-            <br />
-            аккаунт
-          </>
+          <>Выбери нишу</>
         )}
       </h1>
-      <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-        {platform === "telegram"
-          ? "Чтобы агенты публиковали посты — добавьте бота в канал админом и привяжите его здесь."
-          : "Пока подключение Instagram — ручное: введите @username аккаунта. Авто-публикация появится позже."}
-      </p>
+      {platform === "telegram" && (
+        <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+          Чтобы агенты публиковали посты — добавьте бота в канал админом и привяжите
+          его здесь.
+        </p>
+      )}
 
-      <div style={{ marginTop: 20 }}>
+      <div style={{ marginTop: 18 }}>
         {platform === "telegram" ? (
           <TgAttachInline projectId={projectId} onAttached={onAttached} />
         ) : (
@@ -420,38 +421,25 @@ function AttachStep({
       >
         ← Изменить платформу
       </button>
-      <button
-        onClick={onSkip}
-        style={{
-          background: "transparent",
-          border: `1px solid ${CARD_BORDER}`,
-          color: INK,
-          fontSize: 13,
-          fontFamily: "inherit",
-          padding: "12px 0",
-          borderRadius: 999,
-          cursor: "pointer",
-          marginTop: 6,
-          marginBottom: 6,
-        }}
-      >
-        {platform === "instagram"
-          ? "ПРОПУСТИТЬ — ПОДКЛЮЧУ ПОЗЖЕ"
-          : "ПРОПУСТИТЬ ПОКА"}
-      </button>
-      {platform === "instagram" && (
-        <p
+      {/* Skip-кнопка только для TG (для IG в один тап выбираешь нишу) */}
+      {platform === "telegram" && (
+        <button
+          onClick={onSkip}
           style={{
-            margin: "0 4px 4px",
-            fontSize: 11,
-            color: MUTED,
-            textAlign: "center",
-            lineHeight: 1.4,
+            background: "transparent",
+            border: `1px solid ${CARD_BORDER}`,
+            color: INK,
+            fontSize: 13,
+            fontFamily: "inherit",
+            padding: "12px 0",
+            borderRadius: 999,
+            cursor: "pointer",
+            marginTop: 6,
+            marginBottom: 6,
           }}
         >
-          Можно начать без аккаунта. Агенты соберут план и контент — добавите
-          Instagram позже в настройках проекта.
-        </p>
+          ПРОПУСТИТЬ ПОКА
+        </button>
       )}
     </ScreenWrap>
   );
@@ -714,23 +702,10 @@ function IgAttachInline({
 
   return (
     <div>
-      <div
-        style={{
-          background: "rgba(225,48,108,0.06)",
-          border: `1px solid rgba(225,48,108,0.25)`,
-          borderRadius: 14,
-          padding: 14,
-          marginBottom: 14,
-          fontSize: 12,
-          color: MUTED,
-          lineHeight: 1.5,
-        }}
-      >
-        Выбери нишу — LEX будет переписывать сценарии разобранных Reels
-        специально под тебя.
-      </div>
+      <p style={{ margin: "0 0 14px", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+        LEX будет адаптировать сценарии разобранных Reels под твою тематику.
+      </p>
 
-      <Label>Твоя ниша</Label>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {IG_NICHES.map((n) => {
           const active = niche === n;
