@@ -31,6 +31,7 @@ type BillingState = {
     post: UsageEntry;
     carousel: UsageEntry;
     reel: UsageEntry;
+    reel_decode?: UsageEntry;
   };
   available_tiers: TierConfig[];
   payments_enabled: boolean;
@@ -226,6 +227,14 @@ function CurrentPlanCard({ state }: { state: BillingState }) {
         </span>
       </div>
 
+      {state.usage.reel_decode && (
+        <UsageRow
+          label="Разборы Reels"
+          used={state.usage.reel_decode.used}
+          limit={state.usage.reel_decode.limit}
+          period={state.usage.reel_decode.period}
+        />
+      )}
       <UsageRow
         label="Посты"
         used={state.usage.post.used}

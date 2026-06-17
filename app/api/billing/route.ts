@@ -17,11 +17,12 @@ export async function GET(req: NextRequest) {
   const tier = await getActiveTier(v.user.id);
   const cfg = TIERS[tier];
 
-  // Usage по 3 action'ам, период из cfg.limits[action].period
-  const [postsUsed, carouselsUsed, reelsUsed] = await Promise.all([
+  // Usage по 4 action'ам, период из cfg.limits[action].period
+  const [postsUsed, carouselsUsed, reelsUsed, reelDecodesUsed] = await Promise.all([
     countUsage(v.user.id, "post", cfg.limits.post.period),
     countUsage(v.user.id, "carousel", cfg.limits.carousel.period),
     countUsage(v.user.id, "reel", cfg.limits.reel.period),
+    countUsage(v.user.id, "reel_decode", cfg.limits.reel_decode.period),
   ]);
 
   const sb = getSupabase();
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
       post: { used: postsUsed, limit: cfg.limits.post.count, period: cfg.limits.post.period },
       carousel: { used: carouselsUsed, limit: cfg.limits.carousel.count, period: cfg.limits.carousel.period },
       reel: { used: reelsUsed, limit: cfg.limits.reel.count, period: cfg.limits.reel.period },
+      reel_decode: { used: reelDecodesUsed, limit: cfg.limits.reel_decode.count, period: cfg.limits.reel_decode.period },
     },
     // Авто-включение Pro/Business когда ENV ЮKassa прописаны.
     // Без второго деплоя — достаточно прокинуть YOOKASSA_SHOP_ID + YOOKASSA_SECRET_KEY.

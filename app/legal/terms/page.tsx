@@ -52,7 +52,7 @@ export default function TermsPage() {
       <p>Сервис предоставляется по тарифной сетке:</p>
       <ul style={ul}>
         <li>
-          <b>Free</b> — 0 ₽, 1 разбор Reels в месяц, 1 проект,
+          <b>Free</b> — 0 ₽, 4 разбора Reels в месяц, 1 проект,
           базовая генерация постов.
         </li>
         <li>
