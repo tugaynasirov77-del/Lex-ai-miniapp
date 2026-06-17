@@ -128,11 +128,6 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
           });
           hapticNotify("success");
           actions.setIds({ projectId });
-          // IG: пропускаем шаг с @username — сразу в рабочий экран
-          if (platform === "instagram") {
-            actions.navigate("project");
-            return;
-          }
           setStep("attach");
         }}
       />
@@ -682,34 +677,28 @@ function IgAttachInline({
   projectId: string;
   onAttached: (p: ProjectDTO) => void;
 }) {
-  const [username, setUsername] = useState("");
   const [niche, setNiche] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const canSubmit = username.trim().length > 0 && niche.length > 0;
+  const canSubmit = niche.length > 0;
 
   const submit = async () => {
-    const u = username.trim().replace(/^@/, "");
-    if (!u || !niche) return;
+    if (!niche) return;
     setBusy(true);
     setErr(null);
     hapticImpact("light");
     try {
-      const r = await attachInstagram(projectId, { username: u });
-      // Сохраняем выбранную нишу в brand_kit
-      try {
-        const { saveBrandSetup } = await import("../../lib/api");
-        await saveBrandSetup(projectId, {
-          niche,
-          description: `Instagram-аккаунт @${u}`,
-          audience: "",
-          tone: "",
-        });
-      } catch {
-        /* не критично, юзер может позже дозаполнить */
-      }
-      onAttached(r.project);
+      // Сохраняем нишу в brand_kit — LEX будет переписывать сценарии под неё
+      const { saveBrandSetup, getProject } = await import("../../lib/api");
+      await saveBrandSetup(projectId, {
+        niche,
+        description: niche,
+        audience: "",
+        tone: "",
+      });
+      const proj = await getProject(projectId);
+      onAttached(proj.project);
     } catch (e) {
       hapticNotify("error");
       setErr(
@@ -737,53 +726,39 @@ function IgAttachInline({
           lineHeight: 1.5,
         }}
       >
-        Укажи свой @username и нишу — и сразу начинай разбирать чужие Reels
-        и получать готовые сценарии под себя.
+        Выбери нишу — LEX будет переписывать сценарии разобранных Reels
+        специально под тебя.
       </div>
 
-      <Label>@username аккаунта</Label>
-      <input
-        value={username}
-        onChange={(e) => {
-          setUsername(e.target.value);
-          if (err) setErr(null);
-        }}
-        placeholder="@my_account"
-        maxLength={80}
-        style={inputStyle}
-      />
-
-      <div style={{ marginTop: 14 }}>
-        <Label>Твоя ниша</Label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {IG_NICHES.map((n) => {
-            const active = niche === n;
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  hapticImpact("light");
-                  setNiche(n);
-                }}
-                style={{
-                  appearance: "none",
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
-                  background: active ? "rgba(245,231,10,0.10)" : "transparent",
-                  color: active ? YELLOW : INK,
-                  fontFamily: "inherit",
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  cursor: "pointer",
-                }}
-              >
-                {n}
-              </button>
-            );
-          })}
-        </div>
+      <Label>Твоя ниша</Label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {IG_NICHES.map((n) => {
+          const active = niche === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => {
+                hapticImpact("light");
+                setNiche(n);
+              }}
+              style={{
+                appearance: "none",
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
+                background: active ? "rgba(245,231,10,0.10)" : "transparent",
+                color: active ? YELLOW : INK,
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: active ? 700 : 500,
+                cursor: "pointer",
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
       </div>
       {err && (
         <div
