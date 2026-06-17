@@ -623,11 +623,28 @@ async function fetchSourceNames(fileId: string): Promise<string[] | null> {
     console.warn("[bartender] csv export failed:", (e as any)?.message);
   }
   // 2. Пробуем как xlsx в Drive (прямое скачивание)
-  try {
-    const r = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`, { redirect: "follow" });
-    if (r.ok) {
+  // Несколько попыток с разными URL — Drive иногда отдаёт virus-scan warning
+  const driveUrls = [
+    `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`,
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`,
+    `https://docs.google.com/spreadsheets/d/${fileId}/export?format=xlsx`,
+  ];
+  for (const url of driveUrls) {
+    try {
+      const r = await fetch(url, { redirect: "follow" });
+      console.log(`[bartender] drive try ${url.slice(0, 80)} → ${r.status} ${r.headers.get("content-type")}`);
+      if (!r.ok) continue;
+      const ct = r.headers.get("content-type") || "";
       const buf = Buffer.from(await r.arrayBuffer());
-      // если xlsx — парсим
+      console.log(`[bartender] got ${buf.length} bytes`);
+
+      // если это HTML страница (virus warning) — пропускаем
+      if (ct.includes("text/html")) {
+        const preview = buf.toString("utf-8").slice(0, 200);
+        console.warn(`[bartender] got HTML instead of file:`, preview);
+        continue;
+      }
+
       try {
         const wb = XLSX.read(buf, { type: "buffer" });
         const rows: string[][] = [];
@@ -636,7 +653,9 @@ async function fetchSourceNames(fileId: string): Promise<string[] | null> {
           const sheetRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
           for (const r of sheetRows) rows.push(r.map((c) => String(c || "").trim()));
         }
+        console.log(`[bartender] xlsx parsed: ${wb.SheetNames.length} sheets, ${rows.length} total rows`);
         const col = pickBestColumn(rows);
+        console.log(`[bartender] best column: ${col}`);
         const seen = new Set<string>();
         const names: string[] = [];
         for (const r of rows) {
@@ -647,16 +666,17 @@ async function fetchSourceNames(fileId: string): Promise<string[] | null> {
           seen.add(key);
           names.push(val);
         }
+        console.log(`[bartender] extracted ${names.length} names`);
         if (names.length > 0) return names;
-      } catch {
-        // не xlsx — может быть csv
+      } catch (parseErr) {
+        console.warn(`[bartender] not xlsx, trying csv:`, (parseErr as any)?.message);
         const text = buf.toString("utf-8");
         const names = parseNamesFromCsv(text);
         if (names.length > 0) return names;
       }
+    } catch (e) {
+      console.warn("[bartender] drive try failed:", (e as any)?.message);
     }
-  } catch (e) {
-    console.warn("[bartender] drive download failed:", (e as any)?.message);
   }
   return null;
 }
