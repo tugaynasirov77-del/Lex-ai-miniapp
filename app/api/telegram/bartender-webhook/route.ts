@@ -153,11 +153,11 @@ function stripFences(raw: string): string {
   return s;
 }
 
-async function claudeJson<T>(prompt: string, text: string): Promise<T> {
+async function claudeJson<T>(prompt: string, text: string, maxTokens = 16000): Promise<T> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const msg = await anthropic.messages.create({
     model: "claude-opus-4-7",
-    max_tokens: 2000,
+    max_tokens: maxTokens,
     messages: [{ role: "user", content: prompt + text }],
   });
   const block = msg.content[0];
