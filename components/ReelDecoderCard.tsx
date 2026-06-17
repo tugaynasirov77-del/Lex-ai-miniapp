@@ -13,9 +13,10 @@ const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type Props = {
   projectId: string;
+  onDecoded?: () => void;
 };
 
-export default function ReelDecoderCard({ projectId }: Props) {
+export default function ReelDecoderCard({ projectId, onDecoded }: Props) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function ReelDecoderCard({ projectId }: Props) {
       setCached(r.cached);
       if (r.quota) setQuota(r.quota);
       hapticNotify("success");
+      onDecoded?.();
     } catch (e: any) {
       hapticNotify("error");
       const msg = e?.message || "не удалось разобрать";

@@ -26,6 +26,7 @@ import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram"
 import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgents";
 import BrandSetupCard from "../BrandSetupCard";
 import ReelDecoderCard from "../ReelDecoderCard";
+import ReelArchive from "../ReelArchive";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -93,6 +94,7 @@ export default function ProjectScreen({ onBack }: Props) {
   // (используется когда заходим из глобальных Настроек в "настройки проекта")
   const initialTab = (state.screenMeta?.projectInitialTab as Tab) || "content";
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [reelArchiveKey, setReelArchiveKey] = useState(0);
   // Если зашли именно за настройками — прячем кнопку "Создать контент" и табы
   const settingsOnly = initialTab === "settings";
 
@@ -428,8 +430,8 @@ export default function ProjectScreen({ onBack }: Props) {
 
       {/* AutoStartBanner удалён — больше не показываем "Агенты работают" */}
 
-      {/* Главная кнопка + табы скрыты в режиме settingsOnly */}
-      {!settingsOnly && (
+      {/* TG: кнопка создать контент. IG: Reel Decoder. */}
+      {!settingsOnly && !isIg && (
         <button
           onClick={() => {
             hapticImpact("medium");
@@ -456,14 +458,19 @@ export default function ProjectScreen({ onBack }: Props) {
         </button>
       )}
 
-      {/* Reel Decoder — флагман для IG-проектов */}
       {!settingsOnly && isIg && (
         <div style={{ marginTop: 14 }}>
-          <ReelDecoderCard projectId={projectId} />
+          <ReelDecoderCard
+            projectId={projectId}
+            onDecoded={() => setReelArchiveKey((k) => k + 1)}
+          />
+          <div style={{ marginTop: 18 }}>
+            <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
+          </div>
         </div>
       )}
 
-      {!settingsOnly && (
+      {!settingsOnly && !isIg && (
       <div
         style={{
           display: "flex",
@@ -518,22 +525,18 @@ export default function ProjectScreen({ onBack }: Props) {
       </div>
       )}
 
-      {!settingsOnly && <TabHint tab={tab} isIg={isIg} />}
+      {!settingsOnly && !isIg && <TabHint tab={tab} isIg={isIg} />}
 
       <div
         style={{
           flex: 1,
           minHeight: 0,
-          overflowY: "auto",
-          WebkitOverflowScrolling: "touch",
           marginTop: 6,
-          // Запас под safe-area-bottom и iOS-клавиатуру, чтобы последняя
-          // карточка (DeleteCard в Settings) реально доскролливалась.
           paddingBottom:
             "max(calc(env(safe-area-inset-bottom) + 110px), 130px)",
         }}
       >
-        {tab === "content" && (
+        {!isIg && tab === "content" && (
           <ContentTab
             feed={feed}
             error={error}
@@ -560,27 +563,6 @@ export default function ProjectScreen({ onBack }: Props) {
                 hapticNotify("error");
               }
             }}
-          />
-        )}
-        {tab === "scout" && isIg && (
-          <IgIdeasTab
-            insights={(project as any)?.lex_insights ?? null}
-            onPickHook={(hook) =>
-              assembleIdea({ topic: hook, format: "post", hook })
-            }
-            onPickCarousel={(title, structure) =>
-              assembleIdea({
-                topic: `${title}\n\nСтруктура: ${structure}`,
-                format: "carousel",
-              })
-            }
-            onPickReel={(format, example) =>
-              assembleIdea({
-                topic: `${format}\n\n${example}`,
-                format: "reel",
-              })
-            }
-            onGoSettings={() => setTab("settings")}
           />
         )}
         {tab === "scout" && !isIg && (
