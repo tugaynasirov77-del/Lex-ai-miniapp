@@ -92,20 +92,35 @@ async function parseDrink(text: string): Promise<TTK> {
 }
 
 async function createSheet(ttk: TTK): Promise<string> {
-  const r = await fetch(process.env.APPS_SCRIPT_URL!, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      secret: process.env.APPS_SCRIPT_SECRET,
-      folderId: FOLDER_ID(),
-      ttk,
-    }),
-    redirect: "follow",
-  });
-  const data = await r.json();
-  if (data.error) throw new Error(`Apps Script: ${data.error}`);
-  if (!data.url) throw new Error(`Apps Script: no URL in response`);
-  return data.url;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 45000);
+  try {
+    const t0 = Date.now();
+    const r = await fetch(process.env.APPS_SCRIPT_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: process.env.APPS_SCRIPT_SECRET,
+        folderId: FOLDER_ID(),
+        ttk,
+      }),
+      redirect: "follow",
+      signal: ctrl.signal,
+    });
+    const text = await r.text();
+    console.log(`[bartender] AppsScript ${Date.now() - t0}ms status=${r.status} body=${text.slice(0, 200)}`);
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Apps Script non-JSON (status ${r.status}): ${text.slice(0, 150)}`);
+    }
+    if (data.error) throw new Error(`Apps Script: ${data.error}`);
+    if (!data.url) throw new Error(`Apps Script: no URL`);
+    return data.url;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function processMessage(msg: any) {
