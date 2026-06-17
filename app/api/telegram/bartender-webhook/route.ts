@@ -132,6 +132,26 @@ async function endSession(chatId: number) {
   await sb.from("bartender_sessions").delete().eq("chat_id", String(chatId));
 }
 
+// ───────────────────────── Source list (persistent) ─────────────────────────
+
+type SourceList = { chat_id: string; source_url: string | null; positions: RevisionItem[]; updated_at: string };
+
+async function getSourceList(chatId: number): Promise<SourceList | null> {
+  const sb = getSupabase();
+  const { data } = await sb.from("bartender_lists").select("*").eq("chat_id", String(chatId)).maybeSingle();
+  return data as SourceList | null;
+}
+
+async function saveSourceList(chatId: number, url: string, positions: RevisionItem[]) {
+  const sb = getSupabase();
+  await sb.from("bartender_lists").upsert({
+    chat_id: String(chatId),
+    source_url: url,
+    positions,
+    updated_at: new Date().toISOString(),
+  });
+}
+
 // ───────────────────────── AI helpers ─────────────────────────
 
 async function transcribe(audioUrl: string): Promise<string> {
@@ -289,13 +309,50 @@ async function processMessage(msg: any) {
 
   // Команды/кнопки ревизии
   if (textIn === "/revision_start" || textIn === BTN_REV) {
-    await startSession(chatId);
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: "🧾 Ревизия открыта.\n\n*Шаг 1:* пришли список позиций. Варианты:\n• Файл .xlsx или .csv (как документ)\n• Ссылка на Google Таблицу (открытую по ссылке)\n• Просто перечисли голосом/текстом\n\nПотом по этому списку будешь голосом говорить остатки.",
-      parse_mode: "Markdown",
-      reply_markup: KB_REVISION,
-    });
+    const saved = await getSourceList(chatId);
+    if (!saved || !saved.source_url) {
+      await startSession(chatId);
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: "🧾 Ревизия открыта.\n\nУ тебя пока не привязан список товаров. Пришли *ссылку на свою Google Таблицу* со списком позиций (доступ «всем по ссылке»). Один раз — потом буду брать её сама и отслеживать изменения.",
+        parse_mode: "Markdown",
+        reply_markup: KB_REVISION,
+      });
+      return;
+    }
+    try {
+      await tg("sendMessage", { chat_id: chatId, text: "📥 Подтягиваю актуальный список из твоей таблицы..." });
+      const id = extractGoogleSheetsId(saved.source_url);
+      if (!id) throw new Error("сохранённая ссылка повреждена");
+      const csv = await fetchGoogleSheetCsv(id);
+      if (!csv) throw new Error("не смог прочитать таблицу — проверь, что доступ открыт «всем по ссылке»");
+      const freshNames = parseNamesFromCsv(csv);
+      const freshItems: RevisionItem[] = freshNames.map((n) => ({ name: n, unit: guessUnit(n), amount: null }));
+
+      const diffMsg = diffPositions(saved.positions || [], freshItems);
+      await saveSourceList(chatId, saved.source_url, freshItems);
+      await startSession(chatId);
+      await saveItems(chatId, freshItems.map((i) => ({ ...i, amount: null })));
+
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `🧾 *Ревизия открыта* (${freshItems.length} позиций в списке)\n${diffMsg}\n\nГовори остатки голосом/текстом: «водка 700», «джек 350», «лимоны 5».\n\n💾 Сохранить ревизию — когда закончишь.\n🔄 «сменить список» — если хочешь привязать другую таблицу.`,
+        parse_mode: "Markdown",
+        reply_markup: KB_REVISION,
+      });
+    } catch (e: any) {
+      console.error("[bartender] revision start failed:", e);
+      await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка: ${e?.message || e}\n\nПришли новую ссылку на таблицу.`, reply_markup: KB_REVISION });
+      await startSession(chatId); // открыта пустая сессия чтобы получить новую ссылку
+    }
+    return;
+  }
+
+  if (textIn.toLowerCase() === "сменить список") {
+    const sb = getSupabase();
+    await sb.from("bartender_lists").delete().eq("chat_id", String(chatId));
+    await endSession(chatId);
+    await tg("sendMessage", { chat_id: chatId, text: "✅ Привязка списка сброшена. Нажми 🧾 Ревизия и пришли новую ссылку.", reply_markup: KB_MAIN });
     return;
   }
 
@@ -381,22 +438,32 @@ async function processMessage(msg: any) {
 
     const session = await getSession(chatId);
 
-    // Google Sheets ссылка — в режиме ревизии
+    // В режиме ревизии: если прислана Google-таблица — это привязка источника
     if (session) {
       const gsId = extractGoogleSheetsId(text);
       if (gsId) {
-        await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю Google-таблицу..." });
+        await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю Google-таблицу и привязываю как источник списка..." });
         const csvText = await fetchGoogleSheetCsv(gsId);
         if (!csvText) {
-          await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог скачать таблицу. Открой к ней доступ «всем по ссылке»." });
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог скачать таблицу. Открой доступ «всем по ссылке» → Читатель." });
           return;
         }
-        await handleRevisionAdd(msg, csvText, session);
+        const names = parseNamesFromCsv(csvText);
+        if (!names.length) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ В таблице не нашёл позиций (колонка с названиями)." });
+          return;
+        }
+        const items: RevisionItem[] = names.map((n) => ({ name: n, unit: guessUnit(n), amount: null }));
+        await saveSourceList(chatId, text, items);
+        await saveItems(chatId, items);
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: `✅ Список привязан (${items.length} позиций). В следующий раз подтяну автоматически.\n\nТеперь говори остатки: «водка 700», «джек 350».`,
+          parse_mode: "Markdown",
+        });
         return;
       }
-    }
-
-    if (session) {
+      // обычный голос/текст с остатками
       await handleRevisionAdd(msg, text, session);
     } else {
       await handleTTK(msg, text);
@@ -506,6 +573,36 @@ async function mergeNamesIntoSession(chatId: number, names: string[], session: S
     text: `📋 Загрузил *${added}* позиций (всего в списке: *${items.length}*).\n\n*Шаг 2:* теперь голосом или текстом говори остатки: «водка 700», «джек 350», «лимон 5 шт»\n\nЕсли единица угадана неверно — просто скажи правильную: «соль 2 кг».`,
     parse_mode: "Markdown",
   });
+}
+
+function parseNamesFromCsv(csvText: string): string[] {
+  const rows = csvText.split(/\r?\n/).map((l) => l.split(/[,;\t]/).map((c) => c.trim().replace(/^"(.*)"$/, "$1")));
+  const col = pickBestColumn(rows);
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const r of rows) {
+    const val = (r[col] || "").trim();
+    if (!looksLikeName(val)) continue;
+    const key = val.toLowerCase().replace(/\s+/g, " ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(val);
+  }
+  return names;
+}
+
+function diffPositions(prev: RevisionItem[], next: RevisionItem[]): string {
+  const prevSet = new Set(prev.map((i) => normKey(i.name, i.unit)));
+  const nextSet = new Set(next.map((i) => normKey(i.name, i.unit)));
+  const added = next.filter((i) => !prevSet.has(normKey(i.name, i.unit)));
+  const removed = prev.filter((i) => !nextSet.has(normKey(i.name, i.unit)));
+  if (added.length === 0 && removed.length === 0) {
+    return prev.length === 0 ? "" : "\n_Изменений в списке нет._";
+  }
+  const parts: string[] = [];
+  if (added.length > 0) parts.push(`\n➕ *Добавилось (${added.length}):*\n${added.map((i) => `• ${i.name}`).join("\n")}`);
+  if (removed.length > 0) parts.push(`\n➖ *Удалилось (${removed.length}):*\n${removed.map((i) => `• ${i.name}`).join("\n")}`);
+  return parts.join("\n");
 }
 
 function extractGoogleSheetsId(text: string): string | null {
