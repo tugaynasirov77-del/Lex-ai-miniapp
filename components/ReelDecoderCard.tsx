@@ -200,6 +200,19 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
       ? `${(n / 1_000).toFixed(1)}K`
       : String(n);
 
+  const engagementRate =
+    m.view_count > 0
+      ? ((m.like_count + m.comment_count) / m.view_count) * 100
+      : 0;
+  const erLabel =
+    engagementRate >= 6
+      ? "🔥 топ"
+      : engagementRate >= 3
+      ? "сильно"
+      : engagementRate >= 1
+      ? "средне"
+      : "слабо";
+
   return (
     <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
       {cached && (
@@ -208,7 +221,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
         </div>
       )}
 
-      {/* Metrics */}
+      {/* Metrics с Engagement Rate */}
       <div
         style={{
           background: CARD_BG,
@@ -217,7 +230,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
           padding: 14,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 14, fontWeight: 700 }}>
             @{m.author_username || "автор"}
           </span>
@@ -225,60 +238,124 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
             {Math.round(m.duration_sec)} сек
           </span>
         </div>
-        <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
           <Stat label="Просмотры" value={fmtCount(m.view_count)} />
           <Stat label="Лайки" value={fmtCount(m.like_count)} />
           <Stat label="Коммент." value={fmtCount(m.comment_count)} />
         </div>
-      </div>
-
-      {/* Hook */}
-      <Section title={`🎯 Hook · ${a.hook.type}`}>
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{a.hook.text}</p>
-        <div style={{ marginTop: 6, fontSize: 11, color: SUB_MUTED }}>
-          Первые {a.hook.seconds} сек
-        </div>
-      </Section>
-
-      {/* Structure */}
-      <Section title="📐 Структура">
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {a.structure.map((s, i) => (
-            <div key={i} style={{ display: "flex", gap: 10 }}>
-              <div
-                style={{
-                  flexShrink: 0,
-                  fontSize: 10,
-                  color: YELLOW,
-                  fontWeight: 700,
-                  width: 50,
-                  paddingTop: 2,
-                }}
-              >
-                {fmtTime(s.start)}–{fmtTime(s.end)}
+        {m.view_count > 0 && (
+          <div
+            style={{
+              borderTop: `1px solid ${CARD_BORDER}`,
+              paddingTop: 12,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 8,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, color: SUB_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Engagement Rate
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.label}</div>
-                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{s.text}</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: YELLOW, letterSpacing: "-0.02em" }}>
+                  {engagementRate.toFixed(2)}%
+                </span>
+                <span style={{ fontSize: 11, color: MUTED }}>· {erLabel}</span>
               </div>
             </div>
-          ))}
-        </div>
-      </Section>
+          </div>
+        )}
+      </div>
+
+      {/* Hook как большая цитата */}
+      <HookQuote hook={a.hook} />
+
+      {/* Storyboard (новый) — раскадровка по сценам */}
+      {a.storyboard && a.storyboard.length > 0 ? (
+        <Storyboard scenes={a.storyboard} />
+      ) : (
+        <Section title="📐 Структура" accent="cyan">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {a.structure.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 10 }}>
+                <div style={{ flexShrink: 0, fontSize: 10, color: "#7AC8FF", fontWeight: 700, width: 50, paddingTop: 2 }}>
+                  {fmtTime(s.start)}–{fmtTime(s.end)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{s.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Engagement triggers */}
+      {a.engagement_triggers && a.engagement_triggers.length > 0 && (
+        <Section title="🧲 Что цепляет психологически" accent="orange">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {a.engagement_triggers.map((t, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 999,
+                  background: "rgba(240,160,48,0.10)",
+                  border: "1px solid rgba(240,160,48,0.35)",
+                  fontSize: 12,
+                  color: "#FFC480",
+                  fontWeight: 600,
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Why works */}
-      <Section title="🔥 Почему это сработало">
+      <Section title="🔥 Почему сработало" accent="orange">
         <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
           {a.why_works.map((w, i) => (
             <li key={i} style={{ fontSize: 13, lineHeight: 1.45, paddingLeft: 14, position: "relative" }}>
-              <span style={{ position: "absolute", left: 0, color: YELLOW }}>·</span>
+              <span style={{ position: "absolute", left: 0, color: "#FFC480" }}>·</span>
               {w}
             </li>
           ))}
         </ul>
       </Section>
 
-      {/* Adapt to brand */}
+      {/* Takeaways — что забрать */}
+      {a.takeaways && a.takeaways.length > 0 && (
+        <Section title="🎯 Что забрать в свой контент" accent="green">
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+            {a.takeaways.map((t, i) => (
+              <li key={i} style={{ fontSize: 13, lineHeight: 1.45, paddingLeft: 22, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: "#5BD66B", fontWeight: 800 }}>{i + 1}.</span>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {/* Shoot yourself — пошаговая инструкция */}
+      {a.shoot_yourself && a.shoot_yourself.length > 0 && (
+        <Section title="🎬 Как снять такой же" accent="cyan">
+          <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+            {a.shoot_yourself.map((s, i) => (
+              <li key={i} style={{ fontSize: 13, lineHeight: 1.45, color: INK }}>
+                {s.replace(/^\d+\.\s*/, "")}
+              </li>
+            ))}
+          </ol>
+        </Section>
+      )}
+
+      {/* Adapt to brand — главное */}
       <Section title="✨ Сценарий под твою нишу" highlight>
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
           {a.adapt_to_brand}
@@ -293,9 +370,119 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
         </Section>
       )}
 
-      {/* Transcript collapsed */}
       <TranscriptToggle transcript={decode.transcript} />
     </div>
+  );
+}
+
+function HookQuote({ hook }: { hook: ReelDecodeDTO["analysis"]["hook"] }) {
+  const quote = hook.verbatim_quote || hook.text;
+  return (
+    <div
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(221,42,123,0.10) 0%, rgba(221,42,123,0.03) 100%)",
+        border: "1px solid rgba(221,42,123,0.30)",
+        borderRadius: 16,
+        padding: 16,
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: "#F58AC0",
+          marginBottom: 10,
+        }}
+      >
+        🎯 Hook · {hook.type}
+      </div>
+      <div style={{ display: "flex", gap: 12 }}>
+        <div
+          style={{
+            flexShrink: 0,
+            width: 4,
+            background: `linear-gradient(180deg, #F58529 0%, #DD2A7B 100%)`,
+            borderRadius: 4,
+          }}
+        />
+        <div style={{ flex: 1 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 700,
+              lineHeight: 1.3,
+              letterSpacing: "-0.01em",
+              color: INK,
+            }}
+          >
+            «{quote}»
+          </p>
+          {hook.verbatim_quote && hook.text !== hook.verbatim_quote && (
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
+              {hook.text}
+            </p>
+          )}
+          <div style={{ marginTop: 8, fontSize: 11, color: SUB_MUTED }}>
+            Первые {hook.seconds} сек
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Storyboard({ scenes }: { scenes: NonNullable<ReelDecodeDTO["analysis"]["storyboard"]> }) {
+  return (
+    <Section title="🎬 Раскадровка" accent="cyan">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {scenes.map((s) => (
+          <div key={s.scene} style={{ display: "flex", gap: 12 }}>
+            <div
+              style={{
+                flexShrink: 0,
+                width: 56,
+                paddingTop: 2,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#7AC8FF" }}>
+                Сцена {s.scene}
+              </div>
+              <div style={{ fontSize: 10, color: SUB_MUTED }}>
+                {fmtTime(s.start)}–{fmtTime(s.end)}
+              </div>
+            </div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+              {s.what_in_frame && (
+                <div style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>📷 В кадре: </span>
+                  <span>{s.what_in_frame}</span>
+                </div>
+              )}
+              {s.what_said && (
+                <div style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>🗣 Цитата: </span>
+                  <span style={{ fontStyle: "italic", color: INK }}>«{s.what_said}»</span>
+                </div>
+              )}
+              {s.effect && (
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
+                  <span style={{ fontWeight: 700, color: SUB_MUTED }}>Эффект: </span>
+                  {s.effect}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
   );
 }
 
@@ -310,23 +497,41 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+type Accent = "yellow" | "cyan" | "orange" | "green" | "pink";
+
+const ACCENT_COLORS: Record<Accent, { bg: string; border: string; title: string }> = {
+  yellow: { bg: "rgba(245,231,10,0.08)", border: "rgba(245,231,10,0.30)", title: "#F5E70A" },
+  cyan: { bg: "rgba(122,200,255,0.06)", border: "rgba(122,200,255,0.28)", title: "#7AC8FF" },
+  orange: { bg: "rgba(240,160,48,0.06)", border: "rgba(240,160,48,0.28)", title: "#FFC480" },
+  green: { bg: "rgba(91,214,107,0.06)", border: "rgba(91,214,107,0.28)", title: "#5BD66B" },
+  pink: { bg: "rgba(221,42,123,0.08)", border: "rgba(221,42,123,0.28)", title: "#F58AC0" },
+};
+
 function Section({
   title,
   children,
   highlight,
+  accent,
 }: {
   title: string;
   children: React.ReactNode;
   highlight?: boolean;
+  accent?: Accent;
 }) {
+  const palette = accent ? ACCENT_COLORS[accent] : null;
+  const isHighlight = highlight || accent === "yellow";
   return (
     <div
       style={{
-        background: highlight
+        background: isHighlight
           ? `linear-gradient(135deg, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0.02) 100%)`
+          : palette
+          ? palette.bg
           : CARD_BG,
-        border: highlight
+        border: isHighlight
           ? `1px solid rgba(245,231,10,0.30)`
+          : palette
+          ? `1px solid ${palette.border}`
           : `1px solid ${CARD_BORDER}`,
         borderRadius: 14,
         padding: 14,
@@ -338,7 +543,7 @@ function Section({
           fontWeight: 800,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: highlight ? YELLOW : MUTED,
+          color: isHighlight ? YELLOW : palette ? palette.title : MUTED,
           marginBottom: 8,
         }}
       >

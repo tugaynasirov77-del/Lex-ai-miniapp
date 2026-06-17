@@ -142,9 +142,25 @@ export type ReelMetadataDTO = {
 };
 
 export type ReelAnalysisDTO = {
-  hook: { text: string; type: string; seconds: number };
+  hook: {
+    text: string;
+    verbatim_quote?: string;
+    type: string;
+    seconds: number;
+  };
+  storyboard?: {
+    scene: number;
+    start: number;
+    end: number;
+    what_in_frame: string;
+    what_said: string;
+    effect: string;
+  }[];
   structure: { start: number; end: number; label: string; text: string }[];
   format: string;
+  engagement_triggers?: string[];
+  takeaways?: string[];
+  shoot_yourself?: string[];
   why_works: string[];
   adapt_to_brand: string;
   cta: string;
