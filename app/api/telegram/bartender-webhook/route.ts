@@ -13,14 +13,18 @@ const REV_FOLDER = () => process.env.REVISION_FOLDER_ID!;
 
 const WELCOME = `Привет! Я бот-бармен 🍸
 
-*ТТК-карты:* кидай голосовое/текст с напитком и ингредиентами — соберу ТТК и пришлю Google-таблицу.
-Пример: «Негрони, джин 30, кампари 30, вермут 30, метод стир»
+Выбери режим кнопкой внизу:
 
-*Ревизия:*
-• /revision\\_start — начать ревизию
-• в режиме ревизии кидай позиции голосом/текстом, я суммирую дубли
-• /revision\\_save — сохранить и получить таблицу
-• /revision\\_cancel — отменить`;
+🍸 *ТТК* — кидай голосовое с напитком и ингредиентами, соберу карту.
+🧾 *Ревизия* — открою сессию, кидай позиции, я суммирую дубли, потом сохраняю в таблицу.`;
+
+const BTN_TTK = "🍸 ТТК";
+const BTN_REV = "🧾 Ревизия";
+const BTN_SAVE = "💾 Сохранить ревизию";
+const BTN_CANCEL = "❌ Отменить ревизию";
+
+const KB_MAIN = { keyboard: [[{ text: BTN_TTK }, { text: BTN_REV }]], resize_keyboard: true, is_persistent: true };
+const KB_REVISION = { keyboard: [[{ text: BTN_SAVE }, { text: BTN_CANCEL }]], resize_keyboard: true, is_persistent: true };
 
 async function tg(method: string, body: any): Promise<any> {
   const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/${method}`, {
@@ -236,26 +240,37 @@ async function processMessage(msg: any) {
   const chatId = msg.chat.id;
   const textIn = String(msg.text || "").trim();
 
-  // Команды ревизии
-  if (textIn === "/revision_start") {
+  // Команды/кнопки ревизии
+  if (textIn === "/revision_start" || textIn === BTN_REV) {
     await startSession(chatId);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "🧾 Ревизия открыта.\n\nКидай позиции голосом или текстом — я буду суммировать дубли.\n\n/revision_save — сохранить\n/revision_cancel — отменить",
+      text: "🧾 Ревизия открыта.\n\nКидай позиции голосом или текстом — я буду суммировать дубли.",
+      reply_markup: KB_REVISION,
     });
     return;
   }
 
-  if (textIn === "/revision_cancel") {
+  if (textIn === BTN_TTK) {
     await endSession(chatId);
-    await tg("sendMessage", { chat_id: chatId, text: "❌ Ревизия отменена." });
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "🍸 Режим ТТК.\n\nКидай голосовое или текст с напитком и ингредиентами.\nПример: «Негрони, джин 30, кампари 30, вермут 30, стир»",
+      reply_markup: KB_MAIN,
+    });
     return;
   }
 
-  if (textIn === "/revision_save") {
+  if (textIn === "/revision_cancel" || textIn === BTN_CANCEL) {
+    await endSession(chatId);
+    await tg("sendMessage", { chat_id: chatId, text: "❌ Ревизия отменена.", reply_markup: KB_MAIN });
+    return;
+  }
+
+  if (textIn === "/revision_save" || textIn === BTN_SAVE) {
     const session = await getSession(chatId);
     if (!session || !session.items || session.items.length === 0) {
-      await tg("sendMessage", { chat_id: chatId, text: "Нет активной ревизии или позиций нет. /revision_start" });
+      await tg("sendMessage", { chat_id: chatId, text: "Нет активной ревизии или позиций нет.", reply_markup: KB_MAIN });
       return;
     }
     try {
@@ -265,6 +280,7 @@ async function processMessage(msg: any) {
       await tg("sendMessage", {
         chat_id: chatId,
         text: `✅ Ревизия сохранена (${session.items.length} позиций)\n\n📄 ${url}`,
+        reply_markup: KB_MAIN,
       });
     } catch (e: any) {
       console.error("[bartender] revision save failed:", e);
@@ -319,7 +335,7 @@ export async function POST(req: NextRequest) {
   const text = String(msg.text || "").trim();
   if (text === "/start" || text === "/help") {
     after(async () => {
-      await tg("sendMessage", { chat_id: msg.chat.id, text: WELCOME, parse_mode: "Markdown" });
+      await tg("sendMessage", { chat_id: msg.chat.id, text: WELCOME, parse_mode: "Markdown", reply_markup: KB_MAIN });
     });
     return Response.json({ ok: true });
   }
