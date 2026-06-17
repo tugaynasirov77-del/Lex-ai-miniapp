@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFlow, useFlowActions } from "../flow";
 import { hapticSelection } from "../lib/telegram";
 import type { ScreenKey } from "../flow/types";
@@ -23,6 +24,20 @@ const TABS: Tab[] = [
 export default function BottomTabBar() {
   const actions = useFlowActions();
   const { state } = useFlow();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  // Скрываем таб-бар когда iOS-клавиатура открыта (visualViewport схлопывается)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      const delta = window.innerHeight - vv.height;
+      setKeyboardOpen(delta > 120);
+    };
+    vv.addEventListener("resize", onResize);
+    onResize();
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   // Маппинг текущего экрана → активная вкладка
   const cs = state.currentScreen;
@@ -53,6 +68,9 @@ export default function BottomTabBar() {
         boxShadow: "0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset",
         display: "flex",
         gap: 4,
+        transform: keyboardOpen ? "translateY(150%)" : "translateY(0)",
+        transition: "transform 180ms ease-out",
+        pointerEvents: keyboardOpen ? "none" : "auto",
       }}
     >
       {TABS.map((t) => {
