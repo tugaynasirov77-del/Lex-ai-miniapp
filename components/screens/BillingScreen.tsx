@@ -231,12 +231,6 @@ function CurrentPlanCard({ state }: { state: BillingState }) {
         used={state.usage.post.used}
         limit={state.usage.post.limit}
         period={state.usage.post.period}
-      />
-      <UsageRow
-        label="Сценарии Reels"
-        used={state.usage.reel.used}
-        limit={state.usage.reel.limit}
-        period={state.usage.reel.period}
         last
       />
     </div>

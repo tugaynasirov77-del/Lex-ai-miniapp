@@ -53,7 +53,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     features: [
       "1 проект",
       "3 разбора Reels в месяц",
-      "Базовая генерация контента",
+      "Базовая генерация постов",
     ],
   },
   pro: {
@@ -72,7 +72,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     available: false,
     features: [
       "30 разборов Reels в месяц",
-      "Безлимит постов и сценариев Reels",
+      "Безлимит постов в Telegram",
       "До 2 проектов",
       "Клонирование стиля по референсным постам",
       "Приоритет в очереди генерации",
@@ -94,7 +94,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     available: false,
     features: [
       "100 разборов Reels в месяц",
-      "Безлимит постов и сценариев Reels",
+      "Безлимит постов в Telegram",
       "До 10 проектов",
       "Клонирование стиля по референсным постам",
       "Приоритетная поддержка в Telegram",

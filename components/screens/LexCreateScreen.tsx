@@ -61,10 +61,12 @@ export default function LexCreateScreen({ onBack }: Props) {
 
   // Pre-fill из screenMeta (когда юзер пришёл с PlanIdeaCard «Собрать»)
   const prefillTopic = (state.screenMeta as any)?.lexTopic as string | undefined;
-  const prefillFormat = (state.screenMeta as any)?.lexFormat as Format | undefined;
+  const rawPrefill = (state.screenMeta as any)?.lexFormat as Format | undefined;
+  // Если из старого state пришёл format=reel — фильтруем (фича удалена).
+  const prefillFormat = rawPrefill === "reel" ? "post" : rawPrefill;
 
   const [format, setFormat] = useState<Format>(
-    prefillFormat === "post" || prefillFormat === "carousel" || prefillFormat === "reel"
+    prefillFormat === "post" || prefillFormat === "carousel"
       ? prefillFormat
       : "post"
   );
@@ -400,7 +402,7 @@ function FormatPicker({
   value: Format;
   onChange: (f: Format) => void;
 }) {
-  const options: Format[] = ["post", "carousel", "reel"];
+  const options: Format[] = ["post", "carousel"];
   return (
     <div style={{ display: "flex", gap: 8 }}>
       {options.map((f) => {
