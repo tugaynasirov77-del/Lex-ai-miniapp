@@ -480,18 +480,20 @@ function looksLikeName(s: string): boolean {
 }
 
 function pickBestColumn(rows: string[][]): number {
-  // выбираем колонку с наибольшим числом «похожих на названия» значений
+  // выбираем колонку с наибольшим числом УНИКАЛЬНЫХ «похожих на названия» значений
+  // (колонка с ед.изм. имеет много значений, но всего 3-4 уникальных — отсеется)
   if (!rows.length) return 0;
   const cols = Math.max(...rows.map((r) => r.length));
   let best = 0;
   let bestScore = -1;
   for (let c = 0; c < cols; c++) {
-    let score = 0;
+    const uniq = new Set<string>();
     for (const r of rows) {
-      if (r[c] && looksLikeName(String(r[c]))) score++;
+      const v = String(r[c] || "").trim();
+      if (looksLikeName(v)) uniq.add(v.toLowerCase());
     }
-    if (score > bestScore) {
-      bestScore = score;
+    if (uniq.size > bestScore) {
+      bestScore = uniq.size;
       best = c;
     }
   }
