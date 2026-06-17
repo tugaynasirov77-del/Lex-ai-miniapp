@@ -55,10 +55,12 @@ export default function ReelDecoderCard({ projectId, onDecoded }: Props) {
         marginBottom: 14,
         overflow: "hidden",
         background:
-          `linear-gradient(135deg, rgba(10,6,8,0.55) 0%, rgba(10,6,8,0.78) 60%, rgba(10,6,8,0.92) 100%), ` +
-          `url(/reel-decoder-bg.jpg) center / cover no-repeat`,
-        border: `1px solid rgba(255,255,255,0.14)`,
-        boxShadow: `0 18px 44px rgba(225,48,108,0.18)`,
+          "radial-gradient(circle 220px at 100% 0%, rgba(245,133,41,0.30), transparent 60%)," +
+          "radial-gradient(circle 240px at 0% 100%, rgba(129,52,175,0.28), transparent 60%)," +
+          "radial-gradient(circle 200px at 80% 100%, rgba(221,42,123,0.30), transparent 60%)," +
+          "linear-gradient(135deg, #1B0822 0%, #0A050C 100%)",
+        border: `1px solid rgba(255,255,255,0.10)`,
+        boxShadow: `0 18px 44px rgba(221,42,123,0.18)`,
       }}
     >
       {/* Hero */}
@@ -309,7 +311,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
                   fontWeight: 600,
                 }}
               >
-                {t}
+                {clean(t)}
               </span>
             ))}
           </div>
@@ -322,7 +324,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
           {a.why_works.map((w, i) => (
             <li key={i} style={{ fontSize: 13, lineHeight: 1.45, paddingLeft: 14, position: "relative" }}>
               <span style={{ position: "absolute", left: 0, color: "#FFC480" }}>·</span>
-              {w}
+              {clean(w)}
             </li>
           ))}
         </ul>
@@ -335,7 +337,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
             {a.takeaways.map((t, i) => (
               <li key={i} style={{ fontSize: 13, lineHeight: 1.45, paddingLeft: 22, position: "relative" }}>
                 <span style={{ position: "absolute", left: 0, color: "#5BD66B", fontWeight: 800 }}>{i + 1}.</span>
-                {t}
+                {clean(t)}
               </li>
             ))}
           </ul>
@@ -348,7 +350,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
           <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
             {a.shoot_yourself.map((s, i) => (
               <li key={i} style={{ fontSize: 13, lineHeight: 1.45, color: INK }}>
-                {s.replace(/^\d+\.\s*/, "")}
+                {clean(s.replace(/^\d+\.\s*/, ""))}
               </li>
             ))}
           </ol>
@@ -376,7 +378,8 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
 }
 
 function HookQuote({ hook }: { hook: ReelDecodeDTO["analysis"]["hook"] }) {
-  const quote = hook.verbatim_quote || hook.text;
+  const quote = clean(hook.verbatim_quote || hook.text);
+  const desc = clean(hook.text);
   return (
     <div
       style={{
@@ -422,9 +425,9 @@ function HookQuote({ hook }: { hook: ReelDecodeDTO["analysis"]["hook"] }) {
           >
             «{quote}»
           </p>
-          {hook.verbatim_quote && hook.text !== hook.verbatim_quote && (
+          {hook.verbatim_quote && desc && desc !== quote && (
             <p style={{ margin: "8px 0 0", fontSize: 12, color: MUTED, lineHeight: 1.4 }}>
-              {hook.text}
+              {desc}
             </p>
           )}
           <div style={{ marginTop: 8, fontSize: 11, color: SUB_MUTED }}>
@@ -462,20 +465,20 @@ function Storyboard({ scenes }: { scenes: NonNullable<ReelDecodeDTO["analysis"][
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
               {s.what_in_frame && (
                 <div style={{ fontSize: 12, lineHeight: 1.45 }}>
-                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>📷 В кадре: </span>
-                  <span>{s.what_in_frame}</span>
+                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>В кадре: </span>
+                  <span>{clean(s.what_in_frame)}</span>
                 </div>
               )}
               {s.what_said && (
                 <div style={{ fontSize: 12, lineHeight: 1.45 }}>
-                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>🗣 Цитата: </span>
-                  <span style={{ fontStyle: "italic", color: INK }}>«{s.what_said}»</span>
+                  <span style={{ color: "#7AC8FF", fontWeight: 700 }}>Говорит: </span>
+                  <span style={{ color: INK }}>{clean(s.what_said)}</span>
                 </div>
               )}
               {s.effect && (
                 <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
                   <span style={{ fontWeight: 700, color: SUB_MUTED }}>Эффект: </span>
-                  {s.effect}
+                  {clean(s.effect)}
                 </div>
               )}
             </div>
@@ -629,6 +632,30 @@ function CopyButton({ text }: { text: string }) {
       {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
     </button>
   );
+}
+
+// Чистим строки от лишних кавычек/символов в начале и конце.
+// Claude часто возвращает 'строка' или "строка" — снимаем эти обёртки.
+function clean(s: string): string {
+  if (!s) return "";
+  let r = String(s).trim();
+  // Убираем парные кавычки в начале и конце (одинарные, двойные, ёлочки)
+  const pairs: [string, string][] = [
+    ["«", "»"],
+    ['"', '"'],
+    ["'", "'"],
+    ["“", "”"],
+    ["‘", "’"],
+    ["`", "`"],
+  ];
+  for (const [a, b] of pairs) {
+    if (r.startsWith(a) && r.endsWith(b) && r.length > 2) {
+      r = r.slice(a.length, -b.length).trim();
+    }
+  }
+  // Снимаем висящие точку или запятую в самом начале (если AI странно вернул)
+  r = r.replace(/^[.,;:]\s*/, "");
+  return r;
 }
 
 function fmtTime(sec: number): string {

@@ -198,7 +198,7 @@ function ArchiveCard({
                 }}
               />
               <p style={{ margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.35 }}>
-                «{item.analysis.hook.verbatim_quote || item.analysis.hook.text}»
+                «{clean(item.analysis.hook.verbatim_quote || item.analysis.hook.text)}»
               </p>
             </div>
           </div>
@@ -215,18 +215,18 @@ function ArchiveCard({
                   <div style={{ flex: 1, fontSize: 12, lineHeight: 1.4 }}>
                     {s.what_in_frame && (
                       <div>
-                        <span style={{ color: "#7AC8FF", fontWeight: 700 }}>📷 </span>
-                        {s.what_in_frame}
+                        <span style={{ color: "#7AC8FF", fontWeight: 700 }}>В кадре: </span>
+                        {clean(s.what_in_frame)}
                       </div>
                     )}
                     {s.what_said && (
                       <div style={{ marginTop: 2 }}>
-                        <span style={{ color: "#7AC8FF", fontWeight: 700 }}>🗣 </span>
-                        <span style={{ fontStyle: "italic" }}>«{s.what_said}»</span>
+                        <span style={{ color: "#7AC8FF", fontWeight: 700 }}>Говорит: </span>
+                        <span>{clean(s.what_said)}</span>
                       </div>
                     )}
                     {s.effect && (
-                      <div style={{ marginTop: 2, color: MUTED }}>{s.effect}</div>
+                      <div style={{ marginTop: 2, color: MUTED }}>{clean(s.effect)}</div>
                     )}
                   </div>
                 </div>
@@ -265,7 +265,7 @@ function ArchiveCard({
                       fontWeight: 600,
                     }}
                   >
-                    {t}
+                    {clean(t)}
                   </span>
                 ))}
               </div>
@@ -276,7 +276,7 @@ function ArchiveCard({
             {item.analysis.why_works.map((w, i) => (
               <div key={i} style={{ fontSize: 12, lineHeight: 1.45, paddingLeft: 14, position: "relative", marginBottom: 4 }}>
                 <span style={{ position: "absolute", left: 0, color: "#FFC480" }}>·</span>
-                {w}
+                {clean(w)}
               </div>
             ))}
           </Section>
@@ -286,7 +286,7 @@ function ArchiveCard({
               {item.analysis.takeaways.map((t, i) => (
                 <div key={i} style={{ fontSize: 12, lineHeight: 1.45, paddingLeft: 20, position: "relative", marginBottom: 6 }}>
                   <span style={{ position: "absolute", left: 0, color: "#5BD66B", fontWeight: 800 }}>{i + 1}.</span>
-                  {t}
+                  {clean(t)}
                 </div>
               ))}
             </Section>
@@ -297,7 +297,7 @@ function ArchiveCard({
               <ol style={{ margin: 0, paddingLeft: 18 }}>
                 {item.analysis.shoot_yourself.map((s, i) => (
                   <li key={i} style={{ fontSize: 12, lineHeight: 1.45, marginBottom: 4 }}>
-                    {s.replace(/^\d+\.\s*/, "")}
+                    {clean(s.replace(/^\d+\.\s*/, ""))}
                   </li>
                 ))}
               </ol>
@@ -412,6 +412,18 @@ function CopyButton({ text }: { text: string }) {
       {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
     </button>
   );
+}
+
+function clean(s: string): string {
+  if (!s) return "";
+  let r = String(s).trim();
+  const pairs: [string, string][] = [["«", "»"], ['"', '"'], ["'", "'"], ["“", "”"], ["‘", "’"], ["`", "`"]];
+  for (const [a, b] of pairs) {
+    if (r.startsWith(a) && r.endsWith(b) && r.length > 2) {
+      r = r.slice(a.length, -b.length).trim();
+    }
+  }
+  return r.replace(/^[.,;:]\s*/, "");
 }
 
 function fmtTime(sec: number): string {
