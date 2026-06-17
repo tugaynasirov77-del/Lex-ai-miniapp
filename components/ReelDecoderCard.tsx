@@ -279,6 +279,7 @@ function ResultBlock({ decode, cached }: { decode: ReelDecodeDTO; cached: boolea
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
           {a.adapt_to_brand}
         </p>
+        <CopyButton text={a.adapt_to_brand} />
       </Section>
 
       {/* CTA */}
@@ -383,6 +384,41 @@ function TranscriptToggle({ transcript }: { transcript: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(
+          () => {
+            hapticNotify("success");
+            setDone(true);
+            setTimeout(() => setDone(false), 1800);
+          },
+          () => hapticNotify("error"),
+        );
+      }}
+      style={{
+        marginTop: 10,
+        width: "100%",
+        padding: "10px 14px",
+        border: "none",
+        borderRadius: 12,
+        background: done ? "rgba(91,214,107,0.18)" : "rgba(245,231,10,0.16)",
+        color: done ? "#5BD66B" : YELLOW,
+        fontFamily: "inherit",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+      }}
+    >
+      {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
+    </button>
   );
 }
 

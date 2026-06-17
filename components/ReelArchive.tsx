@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { listReelDecodes, type ReelAnalysisDTO } from "../lib/api";
-import { hapticImpact } from "../lib/telegram";
+import { hapticImpact, hapticNotify } from "../lib/telegram";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -213,6 +213,7 @@ function ArchiveCard({
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
               {item.analysis.adapt_to_brand}
             </p>
+            <CopyButton text={item.analysis.adapt_to_brand} />
           </Section>
           {item.analysis.cta && (
             <Section title="📣 CTA в оригинале">
@@ -261,6 +262,41 @@ function Section({
       </div>
       {children}
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(
+          () => {
+            hapticNotify("success");
+            setDone(true);
+            setTimeout(() => setDone(false), 1800);
+          },
+          () => hapticNotify("error"),
+        );
+      }}
+      style={{
+        marginTop: 10,
+        width: "100%",
+        padding: "10px 14px",
+        border: "none",
+        borderRadius: 12,
+        background: done ? "rgba(91,214,107,0.18)" : "rgba(245,231,10,0.16)",
+        color: done ? "#5BD66B" : YELLOW,
+        fontFamily: "inherit",
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+      }}
+    >
+      {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
+    </button>
   );
 }
 

@@ -147,9 +147,12 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
       projectId={state.projectId}
       onAttached={() => {
         hapticNotify("success");
-        // Стэшим платформу для AddCompetitorsScreen, чтобы не делать лишний
-        // round-trip через listProjects. screenMeta не персистится — если
-        // юзер закрыл WebView, экран сам подтянет платформу при resume.
+        if (platform === "instagram") {
+          // IG: ниша уже сохранена → сразу в рабочий экран
+          actions.navigate("project");
+          return;
+        }
+        // TG: ещё нужно добавить конкурентов
         actions.setScreenMeta("onboardingPlatform", platform);
         actions.navigate("add-competitors");
       }}
@@ -652,6 +655,21 @@ function TgAttachInline({
   );
 }
 
+const IG_NICHES = [
+  "Бизнес",
+  "Личный бренд",
+  "Эксперт",
+  "Образование",
+  "Лайфстайл",
+  "Маркетинг",
+  "Финансы",
+  "Здоровье",
+  "Мода",
+  "Еда",
+  "Психология",
+  "Технологии",
+];
+
 function IgAttachInline({
   projectId,
   onAttached,
@@ -660,17 +678,32 @@ function IgAttachInline({
   onAttached: (p: ProjectDTO) => void;
 }) {
   const [username, setUsername] = useState("");
+  const [niche, setNiche] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const canSubmit = username.trim().length > 0 && niche.length > 0;
+
   const submit = async () => {
     const u = username.trim().replace(/^@/, "");
-    if (!u) return;
+    if (!u || !niche) return;
     setBusy(true);
     setErr(null);
     hapticImpact("light");
     try {
       const r = await attachInstagram(projectId, { username: u });
+      // Сохраняем выбранную нишу в brand_kit
+      try {
+        const { saveBrandSetup } = await import("../../lib/api");
+        await saveBrandSetup(projectId, {
+          niche,
+          description: `Instagram-аккаунт @${u}`,
+          audience: "",
+          tone: "",
+        });
+      } catch {
+        /* не критично, юзер может позже дозаполнить */
+      }
       onAttached(r.project);
     } catch (e) {
       hapticNotify("error");
@@ -693,15 +726,14 @@ function IgAttachInline({
           border: `1px solid rgba(225,48,108,0.25)`,
           borderRadius: 14,
           padding: 14,
-          marginBottom: 12,
+          marginBottom: 14,
           fontSize: 12,
           color: MUTED,
           lineHeight: 1.5,
         }}
       >
-        Введите @username вашего Instagram-аккаунта. Сейчас агенты будут писать
-        контент и собирать карусели/Reels — публикация пока вручную (через ваш
-        телефон). Авто-публикацию через Instagram Graph API подключим позже.
+        Укажи свой @username и нишу — и сразу начинай разбирать чужие Reels
+        и получать готовые сценарии под себя.
       </div>
 
       <Label>@username аккаунта</Label>
@@ -715,6 +747,39 @@ function IgAttachInline({
         maxLength={80}
         style={inputStyle}
       />
+
+      <div style={{ marginTop: 14 }}>
+        <Label>Твоя ниша</Label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {IG_NICHES.map((n) => {
+            const active = niche === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  hapticImpact("light");
+                  setNiche(n);
+                }}
+                style={{
+                  appearance: "none",
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
+                  background: active ? "rgba(245,231,10,0.10)" : "transparent",
+                  color: active ? YELLOW : INK,
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 500,
+                  cursor: "pointer",
+                }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       {err && (
         <div
           style={{
@@ -732,14 +797,14 @@ function IgAttachInline({
       )}
       <button
         onClick={submit}
-        disabled={busy || !username.trim()}
+        disabled={busy || !canSubmit}
         style={{
           ...primaryBtn,
-          marginTop: 14,
-          opacity: busy || !username.trim() ? 0.4 : 1,
+          marginTop: 18,
+          opacity: busy || !canSubmit ? 0.4 : 1,
         }}
       >
-        {busy ? "СОХРАНЯЕМ…" : "ПОДКЛЮЧИТЬ АККАУНТ"}
+        {busy ? "СОХРАНЯЕМ…" : "ГОТОВО — НАЧАТЬ РАЗБОР REELS"}
       </button>
     </div>
   );
