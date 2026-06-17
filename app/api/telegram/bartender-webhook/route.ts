@@ -346,12 +346,12 @@ async function processMessage(msg: any) {
     }
     try {
       await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю файл..." });
-      const text = await extractTextFromDocument(msg.document);
-      if (!text) {
-        await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог извлечь позиции из файла." });
+      const names = await extractNamesFromDocument(msg.document);
+      if (!names.length) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Не нашёл позиций в файле. Должна быть колонка с названиями." });
         return;
       }
-      await handleRevisionAdd(msg, text, session);
+      await mergeNamesIntoSession(chatId, names, session);
     } catch (e: any) {
       console.error("[bartender] document parse failed:", e);
       await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка чтения файла: ${e?.message || e}` });
@@ -407,30 +407,105 @@ async function processMessage(msg: any) {
   }
 }
 
-async function extractTextFromDocument(doc: any): Promise<string> {
+function looksLikeName(s: string): boolean {
+  const t = s.trim();
+  if (!t || t.length > 120) return false;
+  if (/^\d+([.,]\d+)?$/.test(t)) return false; // чистое число
+  if (/^\d+\s*(мл|л|гр|г|кг|шт)\.?$/i.test(t)) return false; // "500 мл"
+  if (!/[a-zA-Zа-яА-ЯёЁ]/.test(t)) return false; // нет букв
+  const skipWords = ["итого", "всего", "наименование", "наименование товара", "название", "категория", "ед.изм", "ед. изм.", "остаток", "приход", "расход", "цена"];
+  if (skipWords.includes(t.toLowerCase())) return false;
+  return true;
+}
+
+function pickBestColumn(rows: string[][]): number {
+  // выбираем колонку с наибольшим числом «похожих на названия» значений
+  if (!rows.length) return 0;
+  const cols = Math.max(...rows.map((r) => r.length));
+  let best = 0;
+  let bestScore = -1;
+  for (let c = 0; c < cols; c++) {
+    let score = 0;
+    for (const r of rows) {
+      if (r[c] && looksLikeName(String(r[c]))) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best;
+}
+
+async function extractNamesFromDocument(doc: any): Promise<string[]> {
   const fileName: string = doc.file_name || "";
   const url = await tgGetFileUrl(doc.file_id);
   if (!url) throw new Error("Не смог скачать файл");
   const res = await fetch(url);
   const buf = Buffer.from(await res.arrayBuffer());
 
+  let rows: string[][] = [];
   if (/\.csv$/i.test(fileName)) {
-    return buf.toString("utf-8");
-  }
-  if (/\.(xlsx|xls)$/i.test(fileName)) {
+    rows = buf
+      .toString("utf-8")
+      .split(/\r?\n/)
+      .map((l) => l.split(/[,;\t]/).map((c) => c.trim()));
+  } else if (/\.(xlsx|xls)$/i.test(fileName)) {
     const wb = XLSX.read(buf, { type: "buffer" });
-    const lines: string[] = [];
-    for (const name of wb.SheetNames) {
-      const sheet = wb.Sheets[name];
-      const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
-      for (const row of rows) {
-        const cells = row.map((c) => String(c || "").trim()).filter(Boolean);
-        if (cells.length > 0) lines.push(cells.join(" | "));
+    for (const sheetName of wb.SheetNames) {
+      const sheet = wb.Sheets[sheetName];
+      const sheetRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
+      for (const r of sheetRows) {
+        rows.push(r.map((c) => String(c || "").trim()));
       }
     }
-    return lines.join("\n");
+  } else {
+    throw new Error("Поддерживаю только .xlsx и .csv");
   }
-  throw new Error("Поддерживаю только .xlsx и .csv");
+
+  const col = pickBestColumn(rows);
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const r of rows) {
+    const val = (r[col] || "").trim();
+    if (!looksLikeName(val)) continue;
+    const key = val.toLowerCase().replace(/\s+/g, " ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(val);
+  }
+  return names;
+}
+
+function guessUnit(name: string): string {
+  const n = name.toLowerCase();
+  const piece = /(лимон|лайм|апельсин|яблок|груш|ананас|банан|маракуй|клубник|малин|вишн|банк|бутыл|упаковк|пакет|штук)/;
+  const kg = /(сахар|соль|кофе|чай в листьях|перец|корица|ваниль|какао|орех|изюм|курага|финик)/;
+  if (piece.test(n)) return "шт";
+  if (kg.test(n)) return "кг";
+  return "л";
+}
+
+async function mergeNamesIntoSession(chatId: number, names: string[], session: SessionRow) {
+  const map = new Map<string, RevisionItem>();
+  for (const i of session.items || []) map.set(normKey(i.name, i.unit), { ...i });
+
+  let added = 0;
+  for (const n of names) {
+    const unit = guessUnit(n);
+    const key = normKey(n, unit);
+    if (!map.has(key)) {
+      map.set(key, { name: n, unit, amount: null });
+      added++;
+    }
+  }
+  const items = Array.from(map.values());
+  await saveItems(chatId, items);
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `📋 Загрузил *${added}* позиций (всего в списке: *${items.length}*).\n\n*Шаг 2:* теперь голосом или текстом говори остатки: «водка 700», «джек 350», «лимон 5 шт»\n\nЕсли единица угадана неверно — просто скажи правильную: «соль 2 кг».`,
+    parse_mode: "Markdown",
+  });
 }
 
 function extractGoogleSheetsId(text: string): string | null {
