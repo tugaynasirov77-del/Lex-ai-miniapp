@@ -128,6 +128,55 @@ export function createYooKassaCheckout(tier: "pro" | "business"): Promise<Checko
   return postJSON("/api/billing/yookassa-checkout", { tier });
 }
 
+// ───────────── Reel Decoder ─────────────
+
+export type ReelMetadataDTO = {
+  shortcode: string;
+  video_url: string;
+  caption: string;
+  author_username: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  duration_sec: number;
+};
+
+export type ReelAnalysisDTO = {
+  hook: { text: string; type: string; seconds: number };
+  structure: { start: number; end: number; label: string; text: string }[];
+  format: string;
+  why_works: string[];
+  adapt_to_brand: string;
+  cta: string;
+};
+
+export type ReelDecodeDTO = {
+  id?: string;
+  metadata: ReelMetadataDTO;
+  transcript: string;
+  analysis: ReelAnalysisDTO;
+};
+
+export type ReelQuotaDTO = {
+  tier: "free" | "pro" | "business";
+  used: number;
+  limit: number;
+  period_days: number;
+};
+
+export function decodeReel(
+  projectId: string,
+  url: string,
+): Promise<{ cached: boolean; decode: ReelDecodeDTO; quota?: ReelQuotaDTO }> {
+  return postJSON(`/api/projects/${projectId}/reel/decode`, { url });
+}
+
+export function listReelDecodes(
+  projectId: string,
+): Promise<{ items: any[]; quota: ReelQuotaDTO }> {
+  return getJSON(`/api/projects/${projectId}/reel/decode`);
+}
+
 export type RefineDirection = "shorter" | "sharper" | "emotional" | "specific";
 export type RefinedPost = { hook: string; body: string; title: string };
 export function refinePost(

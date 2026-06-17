@@ -25,6 +25,7 @@ import {
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgents";
 import BrandSetupCard from "../BrandSetupCard";
+import ReelDecoderCard from "../ReelDecoderCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -453,6 +454,13 @@ export default function ProjectScreen({ onBack }: Props) {
         >
           + Создать контент
         </button>
+      )}
+
+      {/* Reel Decoder — флагман для IG-проектов */}
+      {!settingsOnly && isIg && (
+        <div style={{ marginTop: 14 }}>
+          <ReelDecoderCard projectId={projectId} />
+        </div>
       )}
 
       {!settingsOnly && (
