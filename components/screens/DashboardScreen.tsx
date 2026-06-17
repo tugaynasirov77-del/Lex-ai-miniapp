@@ -381,51 +381,158 @@ function BillingPill({
       })
     : null;
 
+  if (!isFree) {
+    // Pro / Pro+ — компактный статус
+    return (
+      <button
+        onClick={onTap}
+        style={{
+          appearance: "none",
+          width: "100%",
+          marginTop: 14,
+          padding: "10px 14px",
+          borderRadius: 12,
+          border: `1px solid ${CARD_BORDER}`,
+          background: CARD_BG,
+          color: INK,
+          fontFamily: "inherit",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            padding: "3px 8px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.08)",
+            color: INK,
+          }}
+        >
+          {tierLabel}
+        </span>
+        <span style={{ fontSize: 13, flex: 1, textAlign: "left", color: MUTED }}>
+          {expires ? `Активен до ${expires}` : "Управление подпиской"}
+        </span>
+        <span style={{ color: MUTED, fontSize: 16, lineHeight: 1 }}>›</span>
+      </button>
+    );
+  }
+
+  // Free — продающий банер с акцией
   return (
     <button
       onClick={onTap}
       style={{
         appearance: "none",
+        position: "relative",
         width: "100%",
-        marginTop: 14,
-        padding: "10px 14px",
-        borderRadius: 12,
-        border: `1px solid ${isFree ? "rgba(245,231,10,0.35)" : CARD_BORDER}`,
-        background: isFree ? "rgba(245,231,10,0.08)" : CARD_BG,
+        marginTop: 16,
+        padding: "16px 18px",
+        borderRadius: 18,
+        border: `1px solid rgba(245,231,10,0.45)`,
+        background:
+          "radial-gradient(circle 200px at 100% 0%, rgba(245,231,10,0.18), transparent 60%)," +
+          "radial-gradient(circle 240px at 0% 100%, rgba(240,90,0,0.14), transparent 60%)," +
+          "linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(10,6,8,0.55) 100%)",
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
+        display: "block",
+        textAlign: "left",
+        overflow: "hidden",
+        boxShadow: `0 12px 36px rgba(245,231,10,0.18)`,
       }}
     >
+      {/* Декоративная "звезда" — повышает CTA */}
       <span
+        aria-hidden
         style={{
-          fontSize: 10,
+          position: "absolute",
+          top: -28,
+          right: -28,
+          width: 110,
+          height: 110,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(245,231,10,0.35) 0%, rgba(245,231,10,0) 70%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.10em",
+            textTransform: "uppercase",
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: YELLOW,
+            color: "#0A0608",
+            boxShadow: `0 6px 14px ${YELLOW}55`,
+          }}
+        >
+          {tierLabel}
+        </span>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#FF6B5C",
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "rgba(255,107,92,0.10)",
+            border: "1px solid rgba(255,107,92,0.35)",
+          }}
+        >
+          −30% сегодня
+        </span>
+      </div>
+
+      <div
+        style={{
+          fontSize: 16,
           fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          padding: "3px 8px",
-          borderRadius: 999,
-          background: isFree ? YELLOW : "rgba(255,255,255,0.08)",
-          color: isFree ? "#0A0608" : INK,
+          letterSpacing: "-0.01em",
+          lineHeight: 1.25,
+          marginBottom: 6,
         }}
       >
-        {tierLabel}
-      </span>
-      <span style={{ fontSize: 13, flex: 1, textAlign: "left", color: isFree ? INK : MUTED }}>
-        {isFree ? (
-          <>
-            Pro со скидкой <b style={{ color: YELLOW }}>−30%</b> · 690 ₽/мес
-          </>
-        ) : expires ? (
-          <>Активен до {expires}</>
-        ) : (
-          <>Управление подпиской</>
-        )}
-      </span>
-      <span style={{ color: MUTED, fontSize: 16, lineHeight: 1 }}>›</span>
+        Открой Pro — разбирай Reels хоть весь день
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span
+          style={{
+            fontSize: 22,
+            fontWeight: 900,
+            color: YELLOW,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          490&nbsp;₽
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            color: MUTED,
+            textDecoration: "line-through",
+            textDecorationColor: "rgba(255,255,255,0.3)",
+          }}
+        >
+          690&nbsp;₽
+        </span>
+        <span style={{ fontSize: 12, color: MUTED }}>/мес</span>
+        <span style={{ marginLeft: "auto", color: YELLOW, fontSize: 18, lineHeight: 1 }}>›</span>
+      </div>
     </button>
   );
 }

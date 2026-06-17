@@ -90,7 +90,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!gate.ok) {
     const msg =
       gate.tier === "free"
-        ? "Бесплатно 3 разбора в месяц. Перейди на Pro — 30 разборов в месяц."
+        ? "Бесплатно 1 разбор в месяц. Перейди на Pro — 30 разборов в месяц."
         : "Лимит на этот месяц исчерпан. Перейди на Pro+ — 100 разборов в месяц.";
     return Response.json(
       {
