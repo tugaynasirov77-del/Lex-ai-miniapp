@@ -22,6 +22,9 @@ const QUOTA: Record<string, { count: number; period_days: number }> = {
   business: { count: 100, period_days: 30 },
 };
 
+// Безлимит для админов (founder + тестировщики)
+const ADMIN_TG_IDS = new Set<number>([5825762433, 999482511]);
+
 async function authProject(req: NextRequest, projectId: string) {
   const v = verifyInitData(req.headers.get("x-telegram-init-data"));
   if (!v.ok || !v.user) return { err: Response.json({ error: "unauthorized" }, { status: 401 }) };
@@ -118,21 +121,25 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
-  // ─── Квота ───
-  const tier = await getActiveTier(a.tgId);
-  const quota = await checkQuota(a.tgId, tier);
+  // ─── Квота (админы — безлимит) ───
+  const isAdmin = ADMIN_TG_IDS.has(a.tgId);
+  const tier = isAdmin ? "business" : await getActiveTier(a.tgId);
+  const quota = isAdmin
+    ? { used: 0, limit: 9999, period_days: 30, ok: true }
+    : await checkQuota(a.tgId, tier);
   if (!quota.ok) {
+    const msg =
+      tier === "free"
+        ? "Бесплатно 1 разбор в неделю. Перейди на Pro — 20 разборов в месяц."
+        : "Лимит на этот месяц исчерпан.";
     return Response.json(
       {
-        error: "quota_exceeded",
+        error: msg,
+        code: "quota_exceeded",
         tier,
         limit: quota.limit,
         used: quota.used,
         period_days: quota.period_days,
-        message:
-          tier === "free"
-            ? "Бесплатно 1 разбор в неделю. Pro — 20 разборов в месяц."
-            : "Лимит на этот месяц исчерпан.",
       },
       { status: 402 },
     );
