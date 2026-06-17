@@ -153,11 +153,11 @@ function stripFences(raw: string): string {
   return s;
 }
 
-async function claudeJson<T>(prompt: string, text: string, maxTokens = 16000): Promise<T> {
+async function claudeJson<T>(prompt: string, text: string, opts: { maxTokens?: number; model?: string } = {}): Promise<T> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const msg = await anthropic.messages.create({
-    model: "claude-opus-4-7",
-    max_tokens: maxTokens,
+    model: opts.model || "claude-opus-4-7",
+    max_tokens: opts.maxTokens ?? 4000,
     messages: [{ role: "user", content: prompt + text }],
   });
   const block = msg.content[0];
@@ -223,7 +223,7 @@ async function handleRevisionAdd(msg: any, text: string, session: SessionRow) {
         existing.map((i) => `- ${i.name} (${i.unit})`).join("\n")
       : "";
   const prompt = PARSE_REVISION_PROMPT_BASE + existingHint + "\n\nТекст:\n";
-  const parsed = await claudeJson<RevisionItem[]>(prompt, text);
+  const parsed = await claudeJson<RevisionItem[]>(prompt, text, { model: "claude-sonnet-4-6", maxTokens: 16000 });
   if (!Array.isArray(parsed) || parsed.length === 0) {
     await tg("sendMessage", { chat_id: chatId, text: "🤔 Не нашёл позиций. Повтори голосом/текстом." });
     return;
