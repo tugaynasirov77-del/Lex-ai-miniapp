@@ -76,13 +76,14 @@ const PARSE_REVISION_PROMPT_BASE = `Ты — помощник бармена. Б
 Извлеки ВСЕ упомянутые позиции из текста.
 
 Верни СТРОГО JSON-массив без markdown:
-[{"name": "Наименование", "unit": "л"|"кг"|"шт", "amount": число}, ...]
+[{"name": "Наименование", "unit": "л"|"кг"|"шт", "amount": число_или_null}, ...]
 
 Правила:
 - Алкоголь/соки/сиропы/вода/любые жидкости — unit: "л" (литры)
 - Фрукты/специи/сахар/любые весовые — unit: "кг"
 - Лимоны/лаймы/яблоки/банки/упаковки/штучный товар — unit: "шт"
 - ВСЕГДА конвертируй мл→л и гр→кг: "300 мл" → amount: 0.3, unit: "л"; "500 гр" → 0.5 кг; "1500 мл" → 1.5 л; "пол-литра" → 0.5 л; "литр" → 1 л; "кило" → 1 кг; "пол-кило" → 0.5 кг
+- Если количество НЕ названо (только перечисление товаров без чисел) — поставь amount: null
 - Названия с заглавной, бренд если назвал
 - Только массив, никакого текста вокруг
 
@@ -92,7 +93,7 @@ const PARSE_REVISION_PROMPT_BASE = `Ты — помощник бармена. Б
 - Если ниже дан список уже добавленных позиций — ОБЯЗАТЕЛЬНО используй ТО ЖЕ написание имени и ТУ ЖЕ единицу, что в списке. Не выдумывай альтернативные написания.
 `;
 
-type RevisionItem = { name: string; unit: string; amount: number };
+type RevisionItem = { name: string; unit: string; amount: number | null };
 type SessionRow = { chat_id: string; items: RevisionItem[]; started_at: string };
 
 const normKey = (name: string, unit: string) => {
@@ -230,27 +231,55 @@ async function handleRevisionAdd(msg: any, text: string, session: SessionRow) {
   const map = new Map<string, RevisionItem>();
   for (const i of session.items || []) map.set(normKey(i.name, i.unit), { ...i });
 
-  const lines: string[] = [];
+  const addedNames: string[] = [];
+  const filledLines: string[] = [];
+
   for (const p of parsed) {
     const key = normKey(p.name, p.unit);
     const existing = map.get(key);
+    const pAmount = p.amount == null ? null : Number(p.amount);
+
     if (existing) {
-      const newAmount = (Number(existing.amount) || 0) + (Number(p.amount) || 0);
-      existing.amount = newAmount;
-      lines.push(`✓ *${p.name}*: +${p.amount} ${p.unit} → итого ${newAmount} ${p.unit}`);
+      if (pAmount != null) {
+        const prev = existing.amount == null ? 0 : Number(existing.amount);
+        const next = prev + pAmount;
+        existing.amount = next;
+        filledLines.push(
+          prev > 0
+            ? `✓ *${p.name}*: +${pAmount} ${p.unit} → итого ${next} ${p.unit}`
+            : `✓ *${p.name}*: ${next} ${p.unit}`
+        );
+      }
+      // если позиция уже есть и amount не назван — ничего не делаем
     } else {
-      map.set(key, { name: p.name, unit: p.unit, amount: Number(p.amount) || 0 });
-      lines.push(`✓ *${p.name}*: ${p.amount} ${p.unit}`);
+      map.set(key, { name: p.name, unit: p.unit, amount: pAmount });
+      if (pAmount != null) {
+        filledLines.push(`✓ *${p.name}*: ${pAmount} ${p.unit} (новая позиция)`);
+      } else {
+        addedNames.push(`• ${p.name} (${p.unit})`);
+      }
     }
   }
 
   const newItems = Array.from(map.values());
   await saveItems(chatId, newItems);
-  await tg("sendMessage", {
-    chat_id: chatId,
-    text: lines.join("\n") + `\n\nВсего позиций в ревизии: *${newItems.length}*`,
-    parse_mode: "Markdown",
-  });
+
+  const totalFilled = newItems.filter((i) => i.amount != null && Number(i.amount) > 0).length;
+  const totalAll = newItems.length;
+
+  let reply = "";
+  if (addedNames.length > 0) {
+    reply += `📋 Добавил в список (${addedNames.length}):\n${addedNames.join("\n")}\n\n`;
+  }
+  if (filledLines.length > 0) {
+    reply += filledLines.join("\n") + "\n\n";
+  }
+  reply += `Всего позиций: *${totalAll}* | с остатком: *${totalFilled}*`;
+  if (addedNames.length > 0 && filledLines.length === 0) {
+    reply += `\n\n*Шаг 2:* теперь проходись по списку и говори остатки: «водка 700», «джек 350»`;
+  }
+
+  await tg("sendMessage", { chat_id: chatId, text: reply, parse_mode: "Markdown" });
 }
 
 async function processMessage(msg: any) {
@@ -262,7 +291,8 @@ async function processMessage(msg: any) {
     await startSession(chatId);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "🧾 Ревизия открыта.\n\nКидай позиции голосом или текстом — я буду суммировать дубли.",
+      text: "🧾 Ревизия открыта.\n\n*Шаг 1:* кинь список позиций (голосом или текстом). Без чисел, просто перечисли: «Водка, Джек Дэниелс, джин Бомбей, ром, лайм, лимон...»\n\nПотом будем заполнять остатки.",
+      parse_mode: "Markdown",
       reply_markup: KB_REVISION,
     });
     return;
