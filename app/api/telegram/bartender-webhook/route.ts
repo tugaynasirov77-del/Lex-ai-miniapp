@@ -1,19 +1,26 @@
 import { NextRequest, after } from "next/server";
 import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const TOKEN = () => process.env.BARTENDER_BOT_TOKEN!;
-const FOLDER_ID = () => process.env.GOOGLE_DRIVE_FOLDER_ID!;
+const TTK_FOLDER = () => process.env.GOOGLE_DRIVE_FOLDER_ID!;
+const REV_FOLDER = () => process.env.REVISION_FOLDER_ID!;
 
 const WELCOME = `Привет! Я бот-бармен 🍸
 
-Кидай голосовое или текст — назови напиток, ингредиенты и граммовку. Я соберу ТТК и пришлю Google-таблицу.
+*ТТК-карты:* кидай голосовое/текст с напитком и ингредиентами — соберу ТТК и пришлю Google-таблицу.
+Пример: «Негрони, джин 30, кампари 30, вермут 30, метод стир»
 
-Пример: «Негрони, джин 30 мл, кампари 30 мл, вермут россо 30 мл, метод стир»`;
+*Ревизия:*
+• /revision\\_start — начать ревизию
+• в режиме ревизии кидай позиции голосом/текстом, я суммирую дубли
+• /revision\\_save — сохранить и получить таблицу
+• /revision\\_cancel — отменить`;
 
 async function tg(method: string, body: any): Promise<any> {
   const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/${method}`, {
@@ -30,28 +37,26 @@ async function tgGetFileUrl(fileId: string): Promise<string | null> {
   return path ? `https://api.telegram.org/file/bot${TOKEN()}/${path}` : null;
 }
 
-const PARSE_PROMPT = `Ты — помощник бармена. Из текста ниже извлеки технологическую карту коктейля по форме «Акт контрольной проработки блюда».
+// ───────────────────────── TTK ─────────────────────────
 
-Верни СТРОГО JSON без markdown, без комментариев, без обёртки. Структура:
+const PARSE_TTK_PROMPT = `Ты — помощник бармена. Из текста извлеки технологическую карту коктейля.
+
+Верни СТРОГО JSON без markdown:
 {
-  "name": "Название напитка",
-  "yield_ml": число — выход блюда в мл,
-  "ingredients": [
-    {"name": "Наименование продукта", "unit": "мл" или "гр", "brutto": число, "netto": число}
-  ],
-  "technology": "Технология приготовления одним абзацем"
+  "name": "Название",
+  "yield_ml": число,
+  "ingredients": [{"name": "...", "unit": "мл"|"гр", "brutto": 0, "netto": число}],
+  "technology": "Технология одним абзацем"
 }
 
 Правила:
-- Жидкости (алкоголь, соки, сиропы, вода, пюре) — unit: "мл"
-- Твёрдые украшения, фрукты, лёд, мята, цедра — unit: "гр"
-- brutto всегда оставляй 0, заполняй только netto (для коктейлей потерь нет)
-- yield_ml — оцени по сумме жидкостей, лёд в выход НЕ считай
-- Технология: даже если бармен не сказал — придумай стандартную (билд/шейк/стир) исходя из состава, одним абзацем
-- Названия ингредиентов с заглавной буквы
-- Никаких лишних полей, никакого текста вне JSON
+- Жидкости — "мл", украшения/фрукты/лёд — "гр"
+- brutto = 0, заполняй netto
+- yield_ml — сумма жидкостей (лёд не считай)
+- Технология — придумай (билд/шейк/стир) если не сказано
+- Названия с заглавной
 
-Текст бармена:
+Текст:
 `;
 
 type TTK = {
@@ -61,37 +66,92 @@ type TTK = {
   technology: string;
 };
 
+// ───────────────────────── Revision ─────────────────────────
+
+const PARSE_REVISION_PROMPT = `Ты — помощник бармена. Бармен диктует позиции ревизии (остатки на складе бара).
+Извлеки ВСЕ упомянутые позиции из текста.
+
+Верни СТРОГО JSON-массив без markdown:
+[{"name": "Наименование", "unit": "мл"|"гр"|"шт", "amount": число}, ...]
+
+Правила:
+- Алкоголь/соки/сиропы/вода — "мл"
+- Фрукты/специи/сахар — "гр"
+- Лимоны/лаймы/яблоки/банки/упаковки — "шт"
+- Названия с заглавной, бренд если назвал ("Джин Bombay" → "Джин Bombay")
+- Если бармен сказал "литр" → 1000 мл, "пол-литра" → 500 мл, "кило" → 1000 гр
+- Только массив, никакого текста вокруг
+
+Текст:
+`;
+
+type RevisionItem = { name: string; unit: string; amount: number };
+type SessionRow = { chat_id: string; items: RevisionItem[]; started_at: string };
+
+const normKey = (name: string, unit: string) =>
+  `${name.trim().toLowerCase()}::${unit.trim().toLowerCase()}`;
+
+async function getSession(chatId: number): Promise<SessionRow | null> {
+  const sb = getSupabase();
+  const { data } = await sb.from("bartender_sessions").select("*").eq("chat_id", String(chatId)).maybeSingle();
+  return data as SessionRow | null;
+}
+
+async function startSession(chatId: number) {
+  const sb = getSupabase();
+  await sb.from("bartender_sessions").upsert({
+    chat_id: String(chatId),
+    items: [],
+    started_at: new Date().toISOString(),
+  });
+}
+
+async function saveItems(chatId: number, items: RevisionItem[]) {
+  const sb = getSupabase();
+  await sb.from("bartender_sessions").update({ items }).eq("chat_id", String(chatId));
+}
+
+async function endSession(chatId: number) {
+  const sb = getSupabase();
+  await sb.from("bartender_sessions").delete().eq("chat_id", String(chatId));
+}
+
+// ───────────────────────── AI helpers ─────────────────────────
+
 async function transcribe(audioUrl: string): Promise<string> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
   const audioRes = await fetch(audioUrl);
   const buf = Buffer.from(await audioRes.arrayBuffer());
   const file = new File([new Uint8Array(buf)], "voice.ogg", { type: "audio/ogg" });
-  const r = await openai.audio.transcriptions.create({
-    model: "whisper-1",
-    file,
-    language: "ru",
-  });
+  const r = await openai.audio.transcriptions.create({ model: "whisper-1", file, language: "ru" });
   return r.text;
 }
 
-async function parseDrink(text: string): Promise<TTK> {
+function stripFences(raw: string): string {
+  let s = raw.trim();
+  if (s.startsWith("```")) {
+    s = s.split("```")[1] || s;
+    if (s.startsWith("json")) s = s.slice(4);
+    s = s.trim();
+  }
+  return s;
+}
+
+async function claudeJson<T>(prompt: string, text: string): Promise<T> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const msg = await anthropic.messages.create({
     model: "claude-opus-4-7",
     max_tokens: 2000,
-    messages: [{ role: "user", content: PARSE_PROMPT + text }],
+    messages: [{ role: "user", content: prompt + text }],
   });
   const block = msg.content[0];
-  let raw = block.type === "text" ? block.text.trim() : "";
-  if (raw.startsWith("```")) {
-    raw = raw.split("```")[1] || raw;
-    if (raw.startsWith("json")) raw = raw.slice(4);
-    raw = raw.trim();
-  }
-  return JSON.parse(raw);
+  const raw = block.type === "text" ? block.text : "";
+  return JSON.parse(stripFences(raw)) as T;
 }
 
-async function createSheet(ttk: TTK): Promise<string> {
+// ───────────────────────── Apps Script calls ─────────────────────────
+
+async function callAppsScript(payload: any): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45000);
   try {
@@ -99,22 +159,13 @@ async function createSheet(ttk: TTK): Promise<string> {
     const r = await fetch(process.env.APPS_SCRIPT_URL!, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        secret: process.env.APPS_SCRIPT_SECRET,
-        folderId: FOLDER_ID(),
-        ttk,
-      }),
+      body: JSON.stringify({ secret: process.env.APPS_SCRIPT_SECRET, ...payload }),
       redirect: "follow",
       signal: ctrl.signal,
     });
     const text = await r.text();
     console.log(`[bartender] AppsScript ${Date.now() - t0}ms status=${r.status} body=${text.slice(0, 200)}`);
-    let data: any;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error(`Apps Script non-JSON (status ${r.status}): ${text.slice(0, 150)}`);
-    }
+    const data = JSON.parse(text);
     if (data.error) throw new Error(`Apps Script: ${data.error}`);
     if (!data.url) throw new Error(`Apps Script: no URL`);
     return data.url;
@@ -123,10 +174,107 @@ async function createSheet(ttk: TTK): Promise<string> {
   }
 }
 
+const createTTKSheet = (ttk: TTK) => callAppsScript({ folderId: TTK_FOLDER(), ttk });
+const createRevisionSheet = (items: RevisionItem[]) =>
+  callAppsScript({ folderId: REV_FOLDER(), action: "revision", items, date: new Date().toISOString() });
+
+// ───────────────────────── Handlers ─────────────────────────
+
+async function handleTTK(msg: any, text: string) {
+  const chatId = msg.chat.id;
+  await tg("sendMessage", { chat_id: chatId, text: "🧠 Составляю ТТК..." });
+  const ttk = await claudeJson<TTK>(PARSE_TTK_PROMPT, text);
+  await tg("sendMessage", { chat_id: chatId, text: "📊 Создаю Google-таблицу..." });
+  const url = await createTTKSheet(ttk);
+  const ingList = (ttk.ingredients || [])
+    .map((i) => `• ${i.name} — ${i.netto ?? "?"} ${i.unit || ""}`)
+    .join("\n");
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `✅ Готово!\n\n*${ttk.name}* (выход ${ttk.yield_ml ?? "?"} мл)\n\n${ingList}\n\n📄 ${url}`,
+    parse_mode: "Markdown",
+  });
+}
+
+async function handleRevisionAdd(msg: any, text: string, session: SessionRow) {
+  const chatId = msg.chat.id;
+  await tg("sendMessage", { chat_id: chatId, text: "🧠 Разбираю позиции..." });
+
+  const parsed = await claudeJson<RevisionItem[]>(PARSE_REVISION_PROMPT, text);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    await tg("sendMessage", { chat_id: chatId, text: "🤔 Не нашёл позиций. Повтори голосом/текстом." });
+    return;
+  }
+
+  const map = new Map<string, RevisionItem>();
+  for (const i of session.items || []) map.set(normKey(i.name, i.unit), { ...i });
+
+  const lines: string[] = [];
+  for (const p of parsed) {
+    const key = normKey(p.name, p.unit);
+    const existing = map.get(key);
+    if (existing) {
+      const newAmount = (Number(existing.amount) || 0) + (Number(p.amount) || 0);
+      existing.amount = newAmount;
+      lines.push(`✓ *${p.name}*: +${p.amount} ${p.unit} → итого ${newAmount} ${p.unit}`);
+    } else {
+      map.set(key, { name: p.name, unit: p.unit, amount: Number(p.amount) || 0 });
+      lines.push(`✓ *${p.name}*: ${p.amount} ${p.unit}`);
+    }
+  }
+
+  const newItems = Array.from(map.values());
+  await saveItems(chatId, newItems);
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: lines.join("\n") + `\n\nВсего позиций в ревизии: *${newItems.length}*`,
+    parse_mode: "Markdown",
+  });
+}
+
 async function processMessage(msg: any) {
   const chatId = msg.chat.id;
-  let text = "";
+  const textIn = String(msg.text || "").trim();
 
+  // Команды ревизии
+  if (textIn === "/revision_start") {
+    await startSession(chatId);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "🧾 Ревизия открыта.\n\nКидай позиции голосом или текстом — я буду суммировать дубли.\n\n/revision_save — сохранить\n/revision_cancel — отменить",
+    });
+    return;
+  }
+
+  if (textIn === "/revision_cancel") {
+    await endSession(chatId);
+    await tg("sendMessage", { chat_id: chatId, text: "❌ Ревизия отменена." });
+    return;
+  }
+
+  if (textIn === "/revision_save") {
+    const session = await getSession(chatId);
+    if (!session || !session.items || session.items.length === 0) {
+      await tg("sendMessage", { chat_id: chatId, text: "Нет активной ревизии или позиций нет. /revision_start" });
+      return;
+    }
+    try {
+      await tg("sendMessage", { chat_id: chatId, text: "📊 Сохраняю ревизию в Google-таблицу..." });
+      const url = await createRevisionSheet(session.items);
+      await endSession(chatId);
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `✅ Ревизия сохранена (${session.items.length} позиций)\n\n📄 ${url}`,
+      });
+    } catch (e: any) {
+      console.error("[bartender] revision save failed:", e);
+      await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка: ${e?.message || e}` });
+    }
+    return;
+  }
+
+  // Получаем текст (из голоса или текста)
+  let text = "";
   try {
     if (msg.voice || msg.audio) {
       await tg("sendChatAction", { chat_id: chatId, action: "typing" });
@@ -145,28 +293,16 @@ async function processMessage(msg: any) {
       return;
     }
 
-    await tg("sendChatAction", { chat_id: chatId, action: "typing" });
-    await tg("sendMessage", { chat_id: chatId, text: "🧠 Составляю ТТК..." });
-    const ttk = await parseDrink(text);
-
-    await tg("sendMessage", { chat_id: chatId, text: "📊 Создаю Google-таблицу..." });
-    const url = await createSheet(ttk);
-
-    const ingList = (ttk.ingredients || [])
-      .map((i) => `• ${i.name} — ${i.brutto ?? "?"} ${i.unit || ""}`)
-      .join("\n");
-
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: `✅ Готово!\n\n*${ttk.name}* (выход ${ttk.yield_ml ?? "?"} мл)\n\n${ingList}\n\n📄 ${url}`,
-      parse_mode: "Markdown",
-    });
+    // Если активна ревизия — добавляем позиции, иначе ТТК
+    const session = await getSession(chatId);
+    if (session) {
+      await handleRevisionAdd(msg, text, session);
+    } else {
+      await handleTTK(msg, text);
+    }
   } catch (e: any) {
     console.error("[bartender] processing failed:", e);
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: `❌ Ошибка: ${e?.message || e}`,
-    });
+    await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка: ${e?.message || e}` });
   }
 }
 
@@ -177,14 +313,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return Response.json({ ok: true });
   }
-
   const msg = update?.message;
   if (!msg || msg.chat?.type !== "private") return Response.json({ ok: true });
 
   const text = String(msg.text || "").trim();
-  if (text === "/start") {
+  if (text === "/start" || text === "/help") {
     after(async () => {
-      await tg("sendMessage", { chat_id: msg.chat.id, text: WELCOME });
+      await tg("sendMessage", { chat_id: msg.chat.id, text: WELCOME, parse_mode: "Markdown" });
     });
     return Response.json({ ok: true });
   }
