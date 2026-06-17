@@ -2,6 +2,7 @@ import { NextRequest, after } from "next/server";
 import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { getSupabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -291,7 +292,7 @@ async function processMessage(msg: any) {
     await startSession(chatId);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "🧾 Ревизия открыта.\n\n*Шаг 1:* кинь список позиций (голосом или текстом). Без чисел, просто перечисли: «Водка, Джек Дэниелс, джин Бомбей, ром, лайм, лимон...»\n\nПотом будем заполнять остатки.",
+      text: "🧾 Ревизия открыта.\n\n*Шаг 1:* пришли список позиций. Варианты:\n• Файл .xlsx или .csv (как документ)\n• Ссылка на Google Таблицу (открытую по ссылке)\n• Просто перечисли голосом/текстом\n\nПотом по этому списку будешь голосом говорить остатки.",
       parse_mode: "Markdown",
       reply_markup: KB_REVISION,
     });
@@ -336,6 +337,28 @@ async function processMessage(msg: any) {
     return;
   }
 
+  // Документ (xlsx/csv) — только в режиме ревизии
+  if (msg.document) {
+    const session = await getSession(chatId);
+    if (!session) {
+      await tg("sendMessage", { chat_id: chatId, text: "Файл могу принять только в режиме ревизии. Нажми 🧾 Ревизия." });
+      return;
+    }
+    try {
+      await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю файл..." });
+      const text = await extractTextFromDocument(msg.document);
+      if (!text) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог извлечь позиции из файла." });
+        return;
+      }
+      await handleRevisionAdd(msg, text, session);
+    } catch (e: any) {
+      console.error("[bartender] document parse failed:", e);
+      await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка чтения файла: ${e?.message || e}` });
+    }
+    return;
+  }
+
   // Получаем текст (из голоса или текста)
   let text = "";
   try {
@@ -356,8 +379,23 @@ async function processMessage(msg: any) {
       return;
     }
 
-    // Если активна ревизия — добавляем позиции, иначе ТТК
     const session = await getSession(chatId);
+
+    // Google Sheets ссылка — в режиме ревизии
+    if (session) {
+      const gsId = extractGoogleSheetsId(text);
+      if (gsId) {
+        await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю Google-таблицу..." });
+        const csvText = await fetchGoogleSheetCsv(gsId);
+        if (!csvText) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог скачать таблицу. Открой к ней доступ «всем по ссылке»." });
+          return;
+        }
+        await handleRevisionAdd(msg, csvText, session);
+        return;
+      }
+    }
+
     if (session) {
       await handleRevisionAdd(msg, text, session);
     } else {
@@ -367,6 +405,44 @@ async function processMessage(msg: any) {
     console.error("[bartender] processing failed:", e);
     await tg("sendMessage", { chat_id: chatId, text: `❌ Ошибка: ${e?.message || e}` });
   }
+}
+
+async function extractTextFromDocument(doc: any): Promise<string> {
+  const fileName: string = doc.file_name || "";
+  const url = await tgGetFileUrl(doc.file_id);
+  if (!url) throw new Error("Не смог скачать файл");
+  const res = await fetch(url);
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  if (/\.csv$/i.test(fileName)) {
+    return buf.toString("utf-8");
+  }
+  if (/\.(xlsx|xls)$/i.test(fileName)) {
+    const wb = XLSX.read(buf, { type: "buffer" });
+    const lines: string[] = [];
+    for (const name of wb.SheetNames) {
+      const sheet = wb.Sheets[name];
+      const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
+      for (const row of rows) {
+        const cells = row.map((c) => String(c || "").trim()).filter(Boolean);
+        if (cells.length > 0) lines.push(cells.join(" | "));
+      }
+    }
+    return lines.join("\n");
+  }
+  throw new Error("Поддерживаю только .xlsx и .csv");
+}
+
+function extractGoogleSheetsId(text: string): string | null {
+  const m = text.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchGoogleSheetCsv(sheetId: string): Promise<string | null> {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  const r = await fetch(url, { redirect: "follow" });
+  if (!r.ok) return null;
+  return await r.text();
 }
 
 export async function POST(req: NextRequest) {
