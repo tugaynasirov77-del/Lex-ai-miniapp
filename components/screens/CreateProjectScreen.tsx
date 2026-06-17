@@ -128,6 +128,11 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
           });
           hapticNotify("success");
           actions.setIds({ projectId });
+          // IG: пропускаем шаг с @username — сразу в рабочий экран
+          if (platform === "instagram") {
+            actions.navigate("project");
+            return;
+          }
           setStep("attach");
         }}
       />
