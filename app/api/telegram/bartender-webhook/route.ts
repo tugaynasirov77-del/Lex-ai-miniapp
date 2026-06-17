@@ -324,9 +324,8 @@ async function processMessage(msg: any) {
       await tg("sendMessage", { chat_id: chatId, text: "📥 Подтягиваю актуальный список из твоей таблицы..." });
       const id = extractGoogleSheetsId(saved.source_url);
       if (!id) throw new Error("сохранённая ссылка повреждена");
-      const csv = await fetchGoogleSheetCsv(id);
-      if (!csv) throw new Error("не смог прочитать таблицу — проверь, что доступ открыт «всем по ссылке»");
-      const freshNames = parseNamesFromCsv(csv);
+      const freshNames = await fetchSourceNames(id);
+      if (!freshNames || freshNames.length === 0) throw new Error("не смог прочитать таблицу — открой доступ «всем по ссылке» → Читатель");
       const freshItems: RevisionItem[] = freshNames.map((n) => ({ name: n, unit: guessUnit(n), amount: null }));
 
       const diffMsg = diffPositions(saved.positions || [], freshItems);
@@ -442,15 +441,10 @@ async function processMessage(msg: any) {
     if (session) {
       const gsId = extractGoogleSheetsId(text);
       if (gsId) {
-        await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю Google-таблицу и привязываю как источник списка..." });
-        const csvText = await fetchGoogleSheetCsv(gsId);
-        if (!csvText) {
-          await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог скачать таблицу. Открой доступ «всем по ссылке» → Читатель." });
-          return;
-        }
-        const names = parseNamesFromCsv(csvText);
-        if (!names.length) {
-          await tg("sendMessage", { chat_id: chatId, text: "❌ В таблице не нашёл позиций (колонка с названиями)." });
+        await tg("sendMessage", { chat_id: chatId, text: "📥 Читаю таблицу и привязываю как источник списка..." });
+        const names = await fetchSourceNames(gsId);
+        if (!names || !names.length) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Не смог прочитать таблицу. Открой доступ «всем по ссылке» → Читатель." });
           return;
         }
         const items: RevisionItem[] = names.map((n) => ({ name: n, unit: guessUnit(n), amount: null }));
@@ -606,15 +600,65 @@ function diffPositions(prev: RevisionItem[], next: RevisionItem[]): string {
 }
 
 function extractGoogleSheetsId(text: string): string | null {
-  const m = text.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  const m =
+    text.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/) ||
+    text.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    text.match(/drive\.google\.com\/.*[?&]id=([a-zA-Z0-9_-]+)/);
   return m ? m[1] : null;
 }
 
-async function fetchGoogleSheetCsv(sheetId: string): Promise<string | null> {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-  const r = await fetch(url, { redirect: "follow" });
-  if (!r.ok) return null;
-  return await r.text();
+async function fetchSourceNames(fileId: string): Promise<string[] | null> {
+  // 1. Пробуем как нативную Google Sheet (CSV export)
+  try {
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${fileId}/export?format=csv`, { redirect: "follow" });
+    if (r.ok) {
+      const ct = r.headers.get("content-type") || "";
+      if (ct.includes("csv") || ct.includes("text/plain")) {
+        const text = await r.text();
+        const names = parseNamesFromCsv(text);
+        if (names.length > 0) return names;
+      }
+    }
+  } catch (e) {
+    console.warn("[bartender] csv export failed:", (e as any)?.message);
+  }
+  // 2. Пробуем как xlsx в Drive (прямое скачивание)
+  try {
+    const r = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`, { redirect: "follow" });
+    if (r.ok) {
+      const buf = Buffer.from(await r.arrayBuffer());
+      // если xlsx — парсим
+      try {
+        const wb = XLSX.read(buf, { type: "buffer" });
+        const rows: string[][] = [];
+        for (const sheetName of wb.SheetNames) {
+          const sheet = wb.Sheets[sheetName];
+          const sheetRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
+          for (const r of sheetRows) rows.push(r.map((c) => String(c || "").trim()));
+        }
+        const col = pickBestColumn(rows);
+        const seen = new Set<string>();
+        const names: string[] = [];
+        for (const r of rows) {
+          const val = (r[col] || "").trim();
+          if (!looksLikeName(val)) continue;
+          const key = val.toLowerCase().replace(/\s+/g, " ");
+          if (seen.has(key)) continue;
+          seen.add(key);
+          names.push(val);
+        }
+        if (names.length > 0) return names;
+      } catch {
+        // не xlsx — может быть csv
+        const text = buf.toString("utf-8");
+        const names = parseNamesFromCsv(text);
+        if (names.length > 0) return names;
+      }
+    }
+  } catch (e) {
+    console.warn("[bartender] drive download failed:", (e as any)?.message);
+  }
+  return null;
 }
 
 export async function POST(req: NextRequest) {
