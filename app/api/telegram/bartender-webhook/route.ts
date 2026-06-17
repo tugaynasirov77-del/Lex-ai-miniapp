@@ -1,7 +1,6 @@
 import { NextRequest, after } from "next/server";
 import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { google } from "googleapis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,112 +89,21 @@ async function parseDrink(text: string): Promise<TTK> {
   return JSON.parse(raw);
 }
 
-function getGoogle() {
-  const saJson = process.env.GOOGLE_SA_JSON!;
-  const creds = JSON.parse(saJson);
-  const auth = new google.auth.GoogleAuth({
-    credentials: creds,
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive",
-    ],
-  });
-  return {
-    sheets: google.sheets({ version: "v4", auth }),
-    drive: google.drive({ version: "v3", auth }),
-  };
-}
-
 async function createSheet(ttk: TTK): Promise<string> {
-  const { sheets, drive } = getGoogle();
-
-  // Owner of the folder = real user. Files we create as SA hit SA's 0-quota,
-  // so we transfer ownership immediately to the folder owner.
-  const folderMeta = await drive.files.get({
-    fileId: FOLDER_ID(),
-    fields: "owners(emailAddress)",
+  const r = await fetch(process.env.APPS_SCRIPT_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      secret: process.env.APPS_SCRIPT_SECRET,
+      folderId: FOLDER_ID(),
+      ttk,
+    }),
+    redirect: "follow",
   });
-  const ownerEmail = folderMeta.data.owners?.[0]?.emailAddress;
-
-  const file = await drive.files.create({
-    requestBody: {
-      name: `ТТК — ${ttk.name}`,
-      mimeType: "application/vnd.google-apps.spreadsheet",
-      parents: [FOLDER_ID()],
-    },
-    fields: "id, webViewLink",
-  });
-  const sid = file.data.id!;
-
-  if (ownerEmail) {
-    try {
-      await drive.permissions.create({
-        fileId: sid,
-        transferOwnership: true,
-        sendNotificationEmail: false,
-        requestBody: { role: "owner", type: "user", emailAddress: ownerEmail },
-      });
-    } catch (e: any) {
-      // Consumer Gmail accounts may require pending-transfer confirmation —
-      // fall back: just give writer access, user keeps folder access.
-      console.warn("[bartender] transferOwnership failed:", e?.message);
-    }
-  }
-
-  const rows: any[][] = [
-    [`ТТК: ${ttk.name}`],
-    [],
-    ["Выход, мл:", ttk.yield_ml ?? ""],
-    [],
-    ["Ингредиент", "мл", "граммы"],
-  ];
-  for (const ing of ttk.ingredients || []) {
-    rows.push([ing.name || "", ing.ml ?? "", ing.g ?? ""]);
-  }
-  rows.push([], ["Технология приготовления:"], [ttk.technology || ""]);
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: sid,
-    range: "A1",
-    valueInputOption: "RAW",
-    requestBody: { values: rows },
-  });
-
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: sid,
-    requestBody: {
-      requests: [
-        {
-          repeatCell: {
-            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
-            cell: { userEnteredFormat: { textFormat: { bold: true, fontSize: 14 } } },
-            fields: "userEnteredFormat.textFormat",
-          },
-        },
-        {
-          repeatCell: {
-            range: { sheetId: 0, startRowIndex: 4, endRowIndex: 5 },
-            cell: {
-              userEnteredFormat: {
-                textFormat: { bold: true },
-                backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
-              },
-            },
-            fields: "userEnteredFormat(textFormat,backgroundColor)",
-          },
-        },
-        {
-          updateDimensionProperties: {
-            range: { sheetId: 0, dimension: "COLUMNS", startIndex: 0, endIndex: 1 },
-            properties: { pixelSize: 250 },
-            fields: "pixelSize",
-          },
-        },
-      ],
-    },
-  });
-
-  return file.data.webViewLink!;
+  const data = await r.json();
+  if (data.error) throw new Error(`Apps Script: ${data.error}`);
+  if (!data.url) throw new Error(`Apps Script: no URL in response`);
+  return data.url;
 }
 
 async function processMessage(msg: any) {
