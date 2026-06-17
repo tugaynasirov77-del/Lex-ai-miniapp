@@ -72,7 +72,7 @@ type TTK = {
 
 // ───────────────────────── Revision ─────────────────────────
 
-const PARSE_REVISION_PROMPT = `Ты — помощник бармена. Бармен диктует позиции ревизии (остатки на складе бара).
+const PARSE_REVISION_PROMPT_BASE = `Ты — помощник бармена. Бармен диктует позиции ревизии (остатки на складе бара).
 Извлеки ВСЕ упомянутые позиции из текста.
 
 Верни СТРОГО JSON-массив без markdown:
@@ -82,18 +82,28 @@ const PARSE_REVISION_PROMPT = `Ты — помощник бармена. Бар�
 - Алкоголь/соки/сиропы/вода — "мл"
 - Фрукты/специи/сахар — "гр"
 - Лимоны/лаймы/яблоки/банки/упаковки — "шт"
-- Названия с заглавной, бренд если назвал ("Джин Bombay" → "Джин Bombay")
+- Названия с заглавной, бренд если назвал
 - Если бармен сказал "литр" → 1000 мл, "пол-литра" → 500 мл, "кило" → 1000 гр
 - Только массив, никакого текста вокруг
 
-Текст:
+КРИТИЧЕСКИ ВАЖНО про дубли:
+- "Jack Daniel's", "Jack Daniels", "Джек Дэниелс", "джек дениэлс" — это ОДНА ПОЗИЦИЯ
+- "Bombay Sapphire", "Бомбей Сапфир", "джин Бомбей" — это ОДНА ПОЗИЦИЯ
+- Если ниже дан список уже добавленных позиций — ОБЯЗАТЕЛЬНО используй ТО ЖЕ написание имени и ТУ ЖЕ единицу, что в списке. Не выдумывай альтернативные написания.
 `;
 
 type RevisionItem = { name: string; unit: string; amount: number };
 type SessionRow = { chat_id: string; items: RevisionItem[]; started_at: string };
 
-const normKey = (name: string, unit: string) =>
-  `${name.trim().toLowerCase()}::${unit.trim().toLowerCase()}`;
+const normKey = (name: string, unit: string) => {
+  const n = name
+    .toLowerCase()
+    .replace(/[''`'".,\-_()«»"]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const u = unit.toLowerCase().trim();
+  return `${n}::${u}`;
+};
 
 async function getSession(chatId: number): Promise<SessionRow | null> {
   const sb = getSupabase();
@@ -204,7 +214,14 @@ async function handleRevisionAdd(msg: any, text: string, session: SessionRow) {
   const chatId = msg.chat.id;
   await tg("sendMessage", { chat_id: chatId, text: "🧠 Разбираю позиции..." });
 
-  const parsed = await claudeJson<RevisionItem[]>(PARSE_REVISION_PROMPT, text);
+  const existing = session.items || [];
+  const existingHint =
+    existing.length > 0
+      ? `\n\nУже добавленные позиции (используй точно такие же написания если упомянуто):\n` +
+        existing.map((i) => `- ${i.name} (${i.unit})`).join("\n")
+      : "";
+  const prompt = PARSE_REVISION_PROMPT_BASE + existingHint + "\n\nТекст:\n";
+  const parsed = await claudeJson<RevisionItem[]>(prompt, text);
   if (!Array.isArray(parsed) || parsed.length === 0) {
     await tg("sendMessage", { chat_id: chatId, text: "🤔 Не нашёл позиций. Повтори голосом/текстом." });
     return;
