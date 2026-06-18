@@ -25,7 +25,8 @@ export type ScreenKey =
   | "settings"
   | "personal-script"
   | "onboarding-success"
-  | "plan";
+  | "plan"
+  | "create-hub";
 
 /** Какой контент юзер выбрал на choose-format. */
 export type ContentFormat = "reel" | "carousel" | "post" | "weekly-plan";
