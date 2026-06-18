@@ -24,7 +24,8 @@ export type ScreenKey =
   | "lex-create"
   | "settings"
   | "personal-script"
-  | "onboarding-success";
+  | "onboarding-success"
+  | "plan";
 
 /** Какой контент юзер выбрал на choose-format. */
 export type ContentFormat = "reel" | "carousel" | "post" | "weekly-plan";

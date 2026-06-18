@@ -9,16 +9,17 @@ const YELLOW = "#F5E70A";
 const MUTED = "rgba(255,255,255,0.55)";
 
 type Tab = {
-  key: "main" | "profile" | "settings";
+  key: "main" | "create" | "plan" | "profile";
   label: string;
   icon: React.ReactNode;
   screen: ScreenKey;
 };
 
 const TABS: Tab[] = [
-  { key: "main", label: "Главный", icon: <HomeIcon />, screen: "home" },
+  { key: "main", label: "Главная", icon: <HomeIcon />, screen: "home" },
+  { key: "create", label: "Создать", icon: <PlusIcon />, screen: "project" },
+  { key: "plan", label: "План", icon: <CalendarIcon />, screen: "plan" },
   { key: "profile", label: "Профиль", icon: <UserIcon />, screen: "dashboard" },
-  { key: "settings", label: "Настройки", icon: <CogIcon />, screen: "settings" },
 ];
 
 export default function BottomTabBar() {
@@ -43,14 +44,14 @@ export default function BottomTabBar() {
   const cs = state.currentScreen;
   // На welcome-онбординге таб-бар скрыт — это линейный экран без навигации.
   if (cs === "welcome") return null;
-  const projectFromSettings = state.screenMeta?.projectInitialTab === "settings";
+  // Настройки/биллинг живут внутри Профиля → подсвечиваем «Профиль».
   const active: Tab["key"] =
     cs === "home"
       ? "main"
-      : cs === "settings" || cs === "billing"
-      ? "settings"
-      : cs === "project" && projectFromSettings
-      ? "settings"
+      : cs === "project"
+      ? "create"
+      : cs === "plan"
+      ? "plan"
       : "profile";
 
   return (
@@ -131,11 +132,20 @@ function UserIcon() {
   );
 }
 
-function CogIcon() {
+function PlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" stroke="currentColor" strokeWidth="1.4"/>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 8.5v7M8.5 12h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
