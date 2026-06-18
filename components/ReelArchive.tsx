@@ -26,9 +26,14 @@ type ArchiveItem = {
   created_at: string;
 };
 
-type Props = { projectId: string; refreshKey?: number };
+type Props = {
+  projectId: string;
+  refreshKey?: number;
+  /** «Адаптировать ещё раз» — повторно собрать сценарий по этому разбору. */
+  onReuse?: (decodeId: string) => void;
+};
 
-export default function ReelArchive({ projectId, refreshKey = 0 }: Props) {
+export default function ReelArchive({ projectId, refreshKey = 0, onReuse }: Props) {
   const [items, setItems] = useState<ArchiveItem[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [demoDismissed, setDemoDismissed] = useState(false);
@@ -164,6 +169,7 @@ export default function ReelArchive({ projectId, refreshKey = 0 }: Props) {
           key={it.id}
           item={it}
           open={openId === it.id}
+          onReuse={onReuse}
           onToggle={() => {
             hapticImpact("light");
             setOpenId(openId === it.id ? null : it.id);
@@ -179,11 +185,13 @@ function ArchiveCard({
   open,
   onToggle,
   isDemo,
+  onReuse,
 }: {
   item: ArchiveItem;
   open: boolean;
   onToggle: () => void;
   isDemo?: boolean;
+  onReuse?: (decodeId: string) => void;
 }) {
   const fmtCount = (n: number) =>
     n >= 1_000_000
@@ -248,6 +256,32 @@ function ArchiveCard({
             <span>💬 {fmtCount(item.comment_count)}</span>
             <span style={{ marginLeft: "auto", color: SUB_MUTED }}>{dateStr}</span>
           </div>
+          {/* Теги механики (бриф раздел 13) */}
+          {(() => {
+            const tags = mechanicTags(item.analysis);
+            if (tags.length === 0) return null;
+            return (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 6,
+                      background: "rgba(122,200,255,0.10)",
+                      border: "1px solid rgba(122,200,255,0.22)",
+                      color: "#7AC8FF",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         <div style={{ color: MUTED, fontSize: 14, lineHeight: 1, transition: "transform 200ms", transform: open ? "rotate(90deg)" : "none" }}>›</div>
       </button>
@@ -394,6 +428,33 @@ function ArchiveCard({
               <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{item.analysis.cta}</p>
             </Section>
           )}
+
+          {/* Действие: адаптировать ещё раз (бриф раздел 13) */}
+          {onReuse && !isDemo && (
+            <button
+              onClick={() => {
+                hapticImpact("medium");
+                onReuse(item.id);
+              }}
+              style={{
+                appearance: "none",
+                width: "100%",
+                padding: "12px 0",
+                border: "none",
+                borderRadius: 12,
+                background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
+                color: "#0A0608",
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+              }}
+            >
+              🎬 Сделать ещё сценарий по этому разбору
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -509,4 +570,38 @@ function fmtTime(sec: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+// Теги механики разбора (бриф раздел 13) — выводим из типа хука,
+// формата и психотриггеров. Нормализуем к коротким человекочитаемым меткам.
+const MECHANIC_DICT: { match: RegExp; tag: string }[] = [
+  { match: /list|список|пункт/i, tag: "список" },
+  { match: /story|истор|рассказ/i, tag: "история" },
+  { match: /provoc|провокац|спор|контрвер/i, tag: "провокация" },
+  { match: /expert|эксперт|разбор/i, tag: "экспертный" },
+  { match: /personal|личн|я\s/i, tag: "личное" },
+  { match: /sale|продаж|оффер/i, tag: "продажи" },
+  { match: /mistake|ошибк|fail/i, tag: "ошибки" },
+  { match: /how|инструкц|шаг|tutorial/i, tag: "инструкция" },
+  { match: /before|после|до.и.после|transform/i, tag: "до/после" },
+  { match: /myth|миф|заблужд/i, tag: "миф" },
+  { match: /opinion|мнени/i, tag: "мнение" },
+  { match: /react|реакц/i, tag: "реакция" },
+  { match: /shock|шок|stake|ставк/i, tag: "шок-хук" },
+];
+
+function mechanicTags(analysis: ReelAnalysisDTO): string[] {
+  const haystack = [
+    analysis.hook?.type || "",
+    analysis.format || "",
+    ...(analysis.engagement_triggers || []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const tags = new Set<string>();
+  for (const { match, tag } of MECHANIC_DICT) {
+    if (match.test(haystack)) tags.add(tag);
+  }
+  return Array.from(tags).slice(0, 4);
 }
