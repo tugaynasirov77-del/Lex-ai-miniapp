@@ -13,6 +13,7 @@ import {
   type ContentDraftDTO,
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
+import StateBlock from "./StateBlock";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -291,9 +292,11 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
       {/* Пусто */}
       {drafts && drafts.length === 0 && (
-        <div style={{ padding: 20, textAlign: "center", color: MUTED, fontSize: 13, lineHeight: 1.5, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 14 }}>
-          Пока нет материалов. Вставь ссылку на Reels выше — и LEX соберёт первый сценарий.
-        </div>
+        <StateBlock
+          emoji="🎬"
+          title="Пока нет материалов"
+          body="Вставь ссылку на Reels выше — и LEX соберёт первый сценарий."
+        />
       )}
     </ScreenWrap>
   );
