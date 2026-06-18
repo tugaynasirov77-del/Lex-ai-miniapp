@@ -6,15 +6,27 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/streak — текущая и максимальная серия дней с ≥1 контентом.
+ * GET /api/streak — серия дней с ПОЛЕЗНЫМ действием (бриф раздел 21).
  *
- * Логика (Duolingo-style):
- *   - Берём content_drafts за последние 90 дней по всем проектам юзера.
- *   - Группируем по дате (МСК).
- *   - current = подряд идущие дни, заканчивающиеся сегодня ИЛИ вчера (grace).
- *     Если ни сегодня, ни вчера нет — current = 0.
- *   - longest = максимальная серия за окно.
+ * «Активный день» — день, когда юзер реально создавал/двигал контент,
+ * а НЕ просто открыл приложение. Источники (объединяем):
+ *   1. analytics_events с полезными событиями (предпочтительно, точнее):
+ *      script_saved, script_added_to_plan, content_status_changed,
+ *      content_marked_published, project_created.
+ *   2. content_drafts (status != rejected) по проектам юзера — created_at
+ *      и updated_at. Сохраняет историю до появления analytics_events.
+ *
+ * current = подряд идущие активные дни, заканчивающиеся сегодня ИЛИ вчера.
+ * longest = максимальная серия за окно 90 дней.
  */
+const USEFUL_EVENTS = [
+  "script_saved",
+  "script_added_to_plan",
+  "content_status_changed",
+  "content_marked_published",
+  "project_created",
+];
+
 export async function GET(req: NextRequest) {
   const v = verifyInitData(req.headers.get("x-telegram-init-data"));
   if (!v.ok || !v.user)
@@ -23,31 +35,50 @@ export async function GET(req: NextRequest) {
   const tgId = v.user.id;
   const sb = getSupabase();
 
-  // Все проекты юзера
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Уникальные активные дни в МСК (yyyy-mm-dd)
+  const days = new Set<string>();
+  const addDay = (iso?: string | null) => {
+    if (!iso) return;
+    const t = new Date(iso).getTime();
+    if (isNaN(t)) return;
+    const msk = new Date(t + 3 * 3600 * 1000);
+    days.add(
+      `${msk.getUTCFullYear()}-${String(msk.getUTCMonth() + 1).padStart(2, "0")}-${String(msk.getUTCDate()).padStart(2, "0")}`,
+    );
+  };
+
+  // 1. Полезные продуктовые события
+  const { data: events } = await sb
+    .from("analytics_events")
+    .select("created_at")
+    .eq("tg_id", tgId)
+    .in("event", USEFUL_EVENTS)
+    .gte("created_at", since);
+  for (const e of events || []) addDay((e as any).created_at);
+
+  // 2. content_drafts (не rejected) по проектам юзера — created_at + updated_at
   const { data: projs } = await sb
     .from("projects")
     .select("id")
     .eq("tg_id", tgId);
   const projectIds = (projs || []).map((p: any) => p.id);
-  if (projectIds.length === 0) {
-    return Response.json({ current: 0, longest: 0, today: false });
+  if (projectIds.length > 0) {
+    const { data: drafts } = await sb
+      .from("content_drafts")
+      .select("created_at,updated_at")
+      .in("project_id", projectIds)
+      .neq("status", "rejected")
+      .gte("updated_at", since);
+    for (const d of drafts || []) {
+      addDay((d as any).created_at);
+      addDay((d as any).updated_at);
+    }
   }
 
-  // Драфты за 90 дней
-  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: drafts } = await sb
-    .from("content_drafts")
-    .select("created_at")
-    .in("project_id", projectIds)
-    .gte("created_at", since);
-
-  // Уникальные дни в МСК (yyyy-mm-dd)
-  const days = new Set<string>();
-  for (const d of drafts || []) {
-    const t = new Date((d as any).created_at).getTime();
-    const msk = new Date(t + 3 * 3600 * 1000);
-    const key = `${msk.getUTCFullYear()}-${String(msk.getUTCMonth() + 1).padStart(2, "0")}-${String(msk.getUTCDate()).padStart(2, "0")}`;
-    days.add(key);
+  if (days.size === 0) {
+    return Response.json({ current: 0, longest: 0, today: false });
   }
 
   const dayKey = (d: Date) =>
