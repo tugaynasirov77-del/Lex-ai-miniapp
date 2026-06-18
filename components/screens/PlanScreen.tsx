@@ -86,6 +86,7 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeItem, setActiveItem] = useState<PlanItemDTO | null>(null);
+  const [postPublish, setPostPublish] = useState<PlanItemDTO | null>(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -115,8 +116,12 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
       await updateDraft(item.id, { status });
       hapticNotify("success");
       track("content_status_changed", { draft_id: item.id, status });
-      if (status === "published") track("content_marked_published", { draft_id: item.id });
       setActiveItem(null);
+      // После публикации → блок «Что делаем дальше?» (бриф р.20, продуктовый цикл)
+      if (status === "published") {
+        track("content_marked_published", { draft_id: item.id });
+        setPostPublish(item);
+      }
       void load();
     } catch {
       hapticNotify("error");
@@ -248,7 +253,88 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
           onRemove={removeFromPlan}
         />
       )}
+
+      {/* После публикации — «Что делаем дальше?» (бриф р.20) */}
+      {postPublish && (
+        <PostPublishSheet
+          item={postPublish}
+          onClose={() => setPostPublish(null)}
+          onCreateNext={() => {
+            setPostPublish(null);
+            if (projectId) actions.setIds({ projectId });
+            actions.setScreenMeta("projectInitialTab", "overview");
+            actions.navigate("project");
+          }}
+          onAnalyzeNew={() => {
+            setPostPublish(null);
+            if (projectId) actions.setIds({ projectId });
+            actions.setScreenMeta("projectInitialTab", "overview");
+            actions.navigate("project");
+          }}
+        />
+      )}
     </ScreenWrap>
+  );
+}
+
+/**
+ * Блок «Что делаем дальше?» после отметки материала опубликованным.
+ * Замыкает продуктовый цикл (бриф р.20): продолжение / другой хук /
+ * повторить механику / разобрать новый Reels.
+ */
+function PostPublishSheet({
+  item,
+  onClose,
+  onCreateNext,
+  onAnalyzeNew,
+}: {
+  item: PlanItemDTO;
+  onClose: () => void;
+  onCreateNext: () => void;
+  onAnalyzeNew: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 55,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "linear-gradient(180deg, #0F1A10 0%, #0A0608 100%)",
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          border: "1px solid rgba(91,214,107,0.22)",
+          padding: "18px 18px max(calc(env(safe-area-inset-bottom) + 18px), 28px)",
+        }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
+
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 34, marginBottom: 8 }}>🚀</div>
+          <div style={{ fontSize: 19, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>
+            Опубликовано!
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.45 }}>
+            «{item.title}» вышел в свет. Что делаем дальше?
+          </div>
+        </div>
+
+        <SheetBtn label="🎬 Создать продолжение темы" onClick={onCreateNext} />
+        <SheetBtn label="🪝 Попробовать другой хук" onClick={onCreateNext} />
+        <SheetBtn label="🔁 Повторить рабочую механику" onClick={onCreateNext} />
+        <SheetBtn label="🔍 Разобрать новый Reels" onClick={onAnalyzeNew} />
+        <SheetBtn label="Закрыть" onClick={onClose} subtle />
+      </div>
+    </div>
   );
 }
 

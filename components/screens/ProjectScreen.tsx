@@ -565,7 +565,15 @@ export default function ProjectScreen({ onBack }: Props) {
           <ContentLibrary projectId={projectId} />
         )}
         {isIg && igTab === "archive" && (
-          <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
+          <ReelArchive
+            projectId={projectId}
+            refreshKey={reelArchiveKey}
+            onReuse={() => {
+              // «Сделать ещё сценарий» из архива → на вкладку Обзор к Decoder
+              hapticImpact("light");
+              setTab("overview" as Tab);
+            }}
+          />
         )}
         {!isIg && tab === "content" && (
           <ContentTab
