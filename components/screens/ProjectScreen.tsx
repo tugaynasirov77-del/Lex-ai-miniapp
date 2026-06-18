@@ -27,6 +27,7 @@ import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgent
 import BrandSetupCard from "../BrandSetupCard";
 import ReelDecoderCard from "../ReelDecoderCard";
 import ReelArchive from "../ReelArchive";
+import CaptionGeneratorCard from "../CaptionGeneratorCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -464,6 +465,7 @@ export default function ProjectScreen({ onBack }: Props) {
             projectId={projectId}
             onDecoded={() => setReelArchiveKey((k) => k + 1)}
           />
+          <CaptionGeneratorCard projectId={projectId} />
           <div style={{ marginTop: 18 }}>
             <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
           </div>

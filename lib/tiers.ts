@@ -25,6 +25,7 @@ export type TierConfig = {
     carousel: LimitSpec;
     reel: LimitSpec;
     reel_decode: LimitSpec;    // главный лимит — разборы Reels
+    caption: LimitSpec;        // генерация подписей под Reels/посты
   };
   maxProjects: number;
   monthlyCapUsd: number;       // потолок Anthropic-расходов на проект
@@ -46,6 +47,7 @@ export const TIERS: Record<Tier, TierConfig> = {
       carousel:    { count: 2,  period: "week" },
       reel:        { count: 2,  period: "week" },
       reel_decode: { count: 3,  period: "month" },
+      caption:     { count: 5,  period: "month" },
     },
     maxProjects: 1,
     monthlyCapUsd: 0.4,
@@ -66,6 +68,7 @@ export const TIERS: Record<Tier, TierConfig> = {
       carousel:    { count: UNLIMITED, period: "month" },
       reel:        { count: UNLIMITED, period: "month" },
       reel_decode: { count: 30, period: "month" },
+      caption:     { count: UNLIMITED, period: "month" },
     },
     maxProjects: 2,
     monthlyCapUsd: 12,
@@ -89,6 +92,7 @@ export const TIERS: Record<Tier, TierConfig> = {
       carousel:    { count: UNLIMITED, period: "month" },
       reel:        { count: UNLIMITED, period: "month" },
       reel_decode: { count: 100, period: "month" },
+      caption:     { count: UNLIMITED, period: "month" },
     },
     maxProjects: 10,
     monthlyCapUsd: 40,

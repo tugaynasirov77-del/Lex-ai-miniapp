@@ -193,6 +193,18 @@ export function listReelDecodes(
   return getJSON(`/api/projects/${projectId}/reel/decode`);
 }
 
+export type CaptionStyle = "viral" | "expert" | "story" | "sales" | "minimal";
+export type CaptionVariantDTO = { style: CaptionStyle; style_label: string; text: string };
+export type CaptionGenResultDTO = { variants: CaptionVariantDTO[]; hashtags: string[] };
+export type CaptionQuotaDTO = { tier: "free" | "pro" | "business"; used: number; limit: number };
+
+export function generateCaptions(
+  projectId: string,
+  topic: string,
+): Promise<{ ok: true; result: CaptionGenResultDTO; quota: CaptionQuotaDTO }> {
+  return postJSON(`/api/projects/${projectId}/ig/caption`, { topic });
+}
+
 export type RefineDirection = "shorter" | "sharper" | "emotional" | "specific";
 export type RefinedPost = { hook: string; body: string; title: string };
 export function refinePost(

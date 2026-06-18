@@ -1,7 +1,7 @@
 import { getSupabase } from "./supabase";
 import { TIERS, tierFromString, type Tier, type TierConfig, type LimitSpec } from "./tiers";
 
-export type GateAction = "post" | "carousel" | "reel" | "reel_decode";
+export type GateAction = "post" | "carousel" | "reel" | "reel_decode" | "caption";
 
 /**
  * Whitelist tg_id'ов с безлимитом — обходят quota-чек.
@@ -78,6 +78,17 @@ export async function countUsage(
     return count ?? 0;
   }
 
+  if (action === "caption") {
+    // Caption-генерации трекаются через project_usage (agent_role='caption_generator').
+    const { count } = await sb
+      .from("project_usage")
+      .select("id, projects!inner(tg_id)", { count: "exact", head: true })
+      .eq("agent_role", "caption_generator")
+      .eq("projects.tg_id", tgId)
+      .gte("created_at", since);
+    return count ?? 0;
+  }
+
   // post/carousel/reel — генерация контента в content_drafts.
   const { count } = await sb
     .from("content_drafts")
@@ -139,6 +150,8 @@ function actionLabel(a: GateAction): string {
     ? "каруселей"
     : a === "reel_decode"
     ? "разборов Reels"
+    : a === "caption"
+    ? "подписей"
     : "сценариев Reels";
 }
 
