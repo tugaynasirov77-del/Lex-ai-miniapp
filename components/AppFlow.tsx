@@ -19,7 +19,7 @@ import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
 import { useWelcomeGate, ONBOARDING_LS_KEY } from "../hooks/useWelcomeGate";
-import { markOnboardingDone } from "../lib/api";
+import { markOnboardingDone, peekProjects } from "../lib/api";
 import { hapticImpact } from "../lib/telegram";
 import type { AdaptedTopicDTO } from "../lib/api";
 
@@ -195,6 +195,9 @@ export default function AppFlow() {
           {currentScreen === "onboarding-success" && (
             <OnboardingSuccessScreen
               scenarioTitle={state.screenMeta.savedScriptTitle as string | undefined}
+              projectName={
+                peekProjects()?.projects.find((p) => p.id === state.projectId)?.title
+              }
               onContinue={() => {
                 actions.navigate(state.projectId ? "project" : "home");
               }}
