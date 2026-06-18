@@ -28,6 +28,8 @@ import BrandSetupCard from "../BrandSetupCard";
 import ReelDecoderCard from "../ReelDecoderCard";
 import ReelArchive from "../ReelArchive";
 import CaptionGeneratorCard from "../CaptionGeneratorCard";
+import CarouselGeneratorCard from "../CarouselGeneratorCard";
+import ReelScriptGeneratorCard from "../ReelScriptGeneratorCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -465,6 +467,8 @@ export default function ProjectScreen({ onBack }: Props) {
             projectId={projectId}
             onDecoded={() => setReelArchiveKey((k) => k + 1)}
           />
+          <ReelScriptGeneratorCard projectId={projectId} />
+          <CarouselGeneratorCard projectId={projectId} />
           <CaptionGeneratorCard projectId={projectId} />
           <div style={{ marginTop: 18 }}>
             <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
