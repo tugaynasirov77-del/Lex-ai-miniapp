@@ -14,7 +14,10 @@ import {
   addTgCompetitor,
   addIgCompetitor,
   markPublishedExternally,
+  listProjectDrafts,
   ApiError,
+  type AdaptedTopicDTO,
+  type ContentDraftDTO,
   type ProjectDTO,
   type IgAggregateDTO,
   type IgAggregateCompetitor,
@@ -30,6 +33,7 @@ import ReelArchive from "../ReelArchive";
 import CaptionGeneratorCard from "../CaptionGeneratorCard";
 import CarouselGeneratorCard from "../CarouselGeneratorCard";
 import ReelScriptGeneratorCard from "../ReelScriptGeneratorCard";
+import ContentLibrary from "../ContentLibrary";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -38,7 +42,8 @@ const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.08)";
 
 type Props = { onBack: () => void };
-type Tab = "content" | "scout" | "settings";
+// IG-вкладки: overview/library/archive/settings. content/scout — legacy TG.
+type Tab = "content" | "scout" | "settings" | "overview" | "library" | "archive";
 
 
 // --- унифицированная карточка ленты ---
@@ -417,6 +422,13 @@ export default function ProjectScreen({ onBack }: Props) {
     // (никакого редиректа в legacy: единый flow остаётся в Mini App).
   };
 
+  // Активная IG-вкладка: tab может содержать legacy-значения (content/scout) —
+  // для IG нормализуем к 4 валидным, дефолт «overview».
+  const igTab: Tab =
+    tab === "library" || tab === "archive" || tab === "settings"
+      ? tab
+      : "overview";
+
   return (
     <ScreenWrap>
       <Header
@@ -462,24 +474,7 @@ export default function ProjectScreen({ onBack }: Props) {
       )}
 
       {!settingsOnly && isIg && (
-        <div style={{ marginTop: 14 }}>
-          <ReelDecoderCard
-            projectId={projectId}
-            onDecoded={() => setReelArchiveKey((k) => k + 1)}
-            onCreateScript={({ decodeId, topic }) => {
-              hapticImpact("medium");
-              actions.setScreenMeta("scriptTopic", topic);
-              actions.setScreenMeta("scriptDecodeId", decodeId);
-              actions.navigate("personal-script");
-            }}
-          />
-          <ReelScriptGeneratorCard projectId={projectId} />
-          <CarouselGeneratorCard projectId={projectId} />
-          <CaptionGeneratorCard projectId={projectId} />
-          <div style={{ marginTop: 18 }}>
-            <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
-          </div>
-        </div>
+        <IgTabBar tab={igTab} onTab={setTab} />
       )}
 
       {!settingsOnly && !isIg && (
@@ -548,6 +543,29 @@ export default function ProjectScreen({ onBack }: Props) {
             "max(calc(env(safe-area-inset-bottom) + 110px), 130px)",
         }}
       >
+        {isIg && igTab === "overview" && (
+          <IgOverviewTab
+            projectId={projectId}
+            reelArchiveKey={reelArchiveKey}
+            onDecoded={() => setReelArchiveKey((k) => k + 1)}
+            onCreateScript={({ decodeId, topic }) => {
+              hapticImpact("medium");
+              actions.setScreenMeta("scriptTopic", topic);
+              actions.setScreenMeta("scriptDecodeId", decodeId);
+              actions.navigate("personal-script");
+            }}
+            onSeeAll={() => {
+              hapticSelection();
+              setTab("library");
+            }}
+          />
+        )}
+        {isIg && igTab === "library" && (
+          <ContentLibrary projectId={projectId} />
+        )}
+        {isIg && igTab === "archive" && (
+          <ReelArchive projectId={projectId} refreshKey={reelArchiveKey} />
+        )}
         {!isIg && tab === "content" && (
           <ContentTab
             feed={feed}
@@ -624,6 +642,303 @@ export default function ProjectScreen({ onBack }: Props) {
       </div>
 
     </ScreenWrap>
+  );
+}
+
+// =====================================================================
+// IG: сегментированный контрол на 4 вкладки
+// =====================================================================
+
+const IG_TABS: { key: Tab; label: string }[] = [
+  { key: "overview", label: "Обзор" },
+  { key: "library", label: "Контент" },
+  { key: "archive", label: "Разборы" },
+  { key: "settings", label: "Настройки" },
+];
+
+function IgTabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 4,
+        marginTop: 18,
+        padding: 4,
+        background: "rgba(255,255,255,0.04)",
+        border: `1px solid rgba(255,255,255,0.08)`,
+        borderRadius: 999,
+      }}
+    >
+      {IG_TABS.map(({ key, label }) => {
+        const on = tab === key;
+        return (
+          <button
+            key={key}
+            onClick={() => {
+              hapticSelection();
+              onTab(key);
+            }}
+            style={{
+              appearance: "none",
+              flex: 1,
+              padding: "10px 8px",
+              borderRadius: 999,
+              border: "none",
+              background: on
+                ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`
+                : "transparent",
+              color: on ? "#0A0608" : MUTED,
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: on ? 800 : 600,
+              letterSpacing: on ? "0.02em" : "0.01em",
+              cursor: "pointer",
+              boxShadow: on
+                ? `0 6px 18px ${YELLOW}40, 0 0 0 1px rgba(255,255,255,0.15) inset`
+                : "none",
+              transition: "background 200ms, color 200ms, box-shadow 200ms",
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// =====================================================================
+// IG: вкладка «Обзор» — прогресс недели, быстрые действия, инструменты
+// =====================================================================
+
+const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
+  { id: "tool-decoder", label: "Разобрать Reels", icon: "🔍" },
+  { id: "tool-script", label: "Сценарий с нуля", icon: "🎬" },
+  { id: "tool-carousel", label: "Карусель", icon: "🖼" },
+  { id: "tool-caption", label: "Подпись", icon: "✏️" },
+];
+
+function IgOverviewTab({
+  projectId,
+  reelArchiveKey,
+  onDecoded,
+  onCreateScript,
+  onSeeAll,
+}: {
+  projectId: string;
+  reelArchiveKey: number;
+  onDecoded: () => void;
+  onCreateScript: (args: { decodeId: string; topic: AdaptedTopicDTO }) => void;
+  onSeeAll: () => void;
+}) {
+  const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listProjectDrafts(projectId, { status: "all" })
+      .then((r) => alive && setDrafts(r.drafts || []))
+      .catch(() => alive && setDrafts([]));
+    return () => {
+      alive = false;
+    };
+  }, [projectId, reelArchiveKey]);
+
+  // Материалов за последние 7 дней — «прогресс недели».
+  const weekCount = (() => {
+    if (!drafts) return null;
+    const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return drafts.filter(
+      (d) => d.created_at && new Date(d.created_at).getTime() >= since,
+    ).length;
+  })();
+
+  const recent = (drafts || []).slice(0, 5);
+
+  const scrollTo = (id: string) => {
+    hapticImpact("light");
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Прогресс недели */}
+      <div
+        style={{
+          padding: 14,
+          borderRadius: 16,
+          background:
+            "linear-gradient(135deg, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0.02) 100%)",
+          border: "1px solid rgba(245,231,10,0.22)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <div style={{ fontSize: 26 }}>📈</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
+            {weekCount === null
+              ? "Считаем материалы…"
+              : weekCount > 0
+                ? `За неделю создано: ${weekCount}`
+                : "На этой неделе пока пусто"}
+          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+            {weekCount && weekCount > 0
+              ? "Так держать — выкладывай регулярно"
+              : "Разбери Reels или собери сценарий ниже"}
+          </div>
+        </div>
+      </div>
+
+      {/* Быстрые действия */}
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+        {QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.id}
+            onClick={() => scrollTo(a.id)}
+            style={{
+              appearance: "none",
+              flex: "0 0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 14px",
+              borderRadius: 999,
+              border: `1px solid rgba(255,255,255,0.10)`,
+              background: "rgba(255,255,255,0.04)",
+              color: INK,
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+              cursor: "pointer",
+            }}
+          >
+            <span>{a.icon}</span>
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Последние материалы */}
+      {recent.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingLeft: 4,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                color: MUTED,
+                letterSpacing: "0.10em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              Последние материалы
+            </span>
+            <button
+              onClick={onSeeAll}
+              style={{
+                appearance: "none",
+                background: "transparent",
+                border: "none",
+                color: YELLOW,
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Все →
+            </button>
+          </div>
+          {recent.map((d) => (
+            <RecentRow key={d.id} draft={d} onOpen={onSeeAll} />
+          ))}
+        </div>
+      )}
+
+      {/* Главный инструмент — Decoder */}
+      <div id="tool-decoder">
+        <ReelDecoderCard
+          projectId={projectId}
+          onDecoded={onDecoded}
+          onCreateScript={onCreateScript}
+        />
+      </div>
+      <div id="tool-script">
+        <ReelScriptGeneratorCard projectId={projectId} />
+      </div>
+      <div id="tool-carousel">
+        <CarouselGeneratorCard projectId={projectId} />
+      </div>
+      <div id="tool-caption">
+        <CaptionGeneratorCard projectId={projectId} />
+      </div>
+    </div>
+  );
+}
+
+function RecentRow({ draft, onOpen }: { draft: ContentDraftDTO; onOpen: () => void }) {
+  const icon =
+    draft.content_type === "reel"
+      ? "🎬"
+      : draft.content_type === "carousel"
+        ? "🖼"
+        : draft.content_type === "caption"
+          ? "✏️"
+          : draft.content_type === "idea"
+            ? "💡"
+            : "📝";
+  const title =
+    (draft.title && draft.title.trim()) ||
+    (draft.source_topic && draft.source_topic.trim()) ||
+    "Без названия";
+  return (
+    <button
+      onClick={() => {
+        hapticImpact("light");
+        onOpen();
+      }}
+      style={{
+        appearance: "none",
+        textAlign: "left",
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 12px",
+        borderRadius: 12,
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        color: INK,
+        fontFamily: "inherit",
+        cursor: "pointer",
+      }}
+    >
+      <span style={{ fontSize: 18 }}>{icon}</span>
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: 13,
+          fontWeight: 600,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {title}
+      </span>
+      <span style={{ color: MUTED, fontSize: 15 }}>›</span>
+    </button>
   );
 }
 
