@@ -23,6 +23,7 @@ import { useResumeFlow } from "../hooks/useResumeFlow";
 import { useWelcomeGate, ONBOARDING_LS_KEY } from "../hooks/useWelcomeGate";
 import { markOnboardingDone, peekProjects } from "../lib/api";
 import { hapticImpact } from "../lib/telegram";
+import { track } from "../lib/analytics";
 import type { AdaptedTopicDTO } from "../lib/api";
 
 const FIRST_SCRIPT_LS_KEY = "lex_first_script_done";
@@ -62,6 +63,12 @@ export default function AppFlow() {
 
   // Восстановление flow из localStorage + автосохранение на изменениях state.
   useResumeFlow();
+
+  // Продуктовая аналитика: открытие приложения (раз за сессию).
+  useEffect(() => {
+    track("app_opened");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Решает, показать ли welcome-онбординг новому юзеру.
   useWelcomeGate();

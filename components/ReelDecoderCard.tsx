@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { decodeReel, type AdaptedTopicDTO, type ReelDecodeDTO, type ReelQuotaDTO } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import { track } from "../lib/analytics";
 import AdaptedTopicsBlock from "./AdaptedTopicsBlock";
 
 const HINT_DISMISS_KEY = "lex_decode_hint_dismissed";
@@ -56,17 +57,20 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
     setErr(null);
     setDecode(null);
     hapticImpact("medium");
+    track("reels_analysis_started", { project_id: projectId });
     try {
       const r = await decodeReel(projectId, url.trim());
       setDecode(r.decode);
       setCached(r.cached);
       if (r.quota) setQuota(r.quota);
       hapticNotify("success");
+      track("reels_analysis_completed", { project_id: projectId, cached: r.cached });
       onDecoded?.();
     } catch (e: any) {
       hapticNotify("error");
       const msg = e?.message || "не удалось разобрать";
       setErr(msg);
+      track("reels_analysis_failed", { project_id: projectId, error: msg.slice(0, 80) });
     } finally {
       setBusy(false);
     }

@@ -13,6 +13,7 @@ import {
   type ScriptRefineAction,
 } from "../../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
+import { track } from "../../lib/analytics";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -121,6 +122,7 @@ export default function PersonalScriptScreen({
       const id = await ensureSaved();
       if (!id) throw new Error("save failed");
       hapticNotify("success");
+      track("script_saved", { project_id: projectId, draft_id: id });
       onSaved?.(id);
     } catch (e: any) {
       hapticNotify("error");
@@ -134,6 +136,7 @@ export default function PersonalScriptScreen({
     if (!scenario) return;
     hapticSelection();
     const text = scenarioToText(scenario);
+    track("script_copied", { project_id: projectId });
     navigator.clipboard?.writeText(text).then(
       () => hapticNotify("success"),
       () => hapticNotify("error"),
@@ -149,6 +152,7 @@ export default function PersonalScriptScreen({
       if (!id) throw new Error("save failed");
       if (date) await setDraftPlannedDate(id, date);
       hapticNotify("success");
+      track("script_added_to_plan", { project_id: projectId, draft_id: id, date: date || "none" });
       onAddedToPlan?.(id, date || "");
     } catch (e: any) {
       hapticNotify("error");

@@ -7,6 +7,7 @@ import {
   type AdaptedTopicDTO,
 } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import { track } from "../lib/analytics";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -50,6 +51,7 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
         // Присваиваем стабильные client-side id для key
         const withIds = r.topics.map((t, i) => ({ ...t, id: `topic-${i}` }));
         setTopics(withIds);
+        track("adaptation_viewed", { project_id: projectId, count: withIds.length });
       })
       .catch((e: any) => {
         if (!alive) return;
@@ -301,6 +303,10 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
           onClick={() => {
             hapticImpact("medium");
             const t = topics![selectedIdx!];
+            track("adaptation_topic_selected", {
+              project_id: projectId,
+              is_own_idea: t.id === "topic-my",
+            });
             onCreateScript(t);
           }}
           style={{

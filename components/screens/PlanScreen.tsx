@@ -11,6 +11,7 @@ import {
 } from "../../lib/api";
 import { useFlow, useFlowActions } from "../../flow";
 import { hapticImpact, hapticNotify } from "../../lib/telegram";
+import { track } from "../../lib/analytics";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -103,11 +104,17 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    track("plan_opened");
+  }, []);
+
   async function changeStatus(item: PlanItemDTO, status: ContentStatus) {
     hapticImpact("light");
     try {
       await updateDraft(item.id, { status });
       hapticNotify("success");
+      track("content_status_changed", { draft_id: item.id, status });
+      if (status === "published") track("content_marked_published", { draft_id: item.id });
       setActiveItem(null);
       void load();
     } catch {
