@@ -239,6 +239,60 @@ export async function markOnboardingDone(): Promise<{ ok: true }> {
   );
 }
 
+// --- personal script (Reels сценарий) ---
+
+export type ScriptRefineAction =
+  | "shorter"
+  | "sharper"
+  | "calmer"
+  | "expert"
+  | "simpler"
+  | "alternative";
+
+export async function generateReelScript(
+  projectId: string,
+  topic: AdaptedTopicDTO,
+  decodeId?: string,
+): Promise<{ ok: true; scenario: ReelScenarioData }> {
+  return postJSON(`/api/projects/${projectId}/ig/script`, {
+    topic,
+    decode_id: decodeId,
+  });
+}
+
+export async function refineScriptBlock(
+  projectId: string,
+  args: { block_name: string; current_text: string; action: ScriptRefineAction },
+): Promise<{ ok: true; text: string }> {
+  return postJSON(`/api/projects/${projectId}/ig/script/refine`, args);
+}
+
+export type SaveScenarioDraftPayload = {
+  content_type: "reel";
+  status: string;
+  title: string;
+  source_decode_id?: string;
+  source_topic?: string;
+  scenario_data: ReelScenarioData;
+  body?: string;
+  caption?: string;
+  planned_for_date?: string;
+};
+
+export async function saveScenarioDraft(
+  projectId: string,
+  payload: SaveScenarioDraftPayload,
+): Promise<{ id: string }> {
+  return postJSON(`/api/projects/${projectId}/drafts`, payload);
+}
+
+export async function setDraftPlannedDate(
+  draftId: string,
+  plannedForDate: string | null,
+): Promise<{ ok: true }> {
+  return patchJSON(`/api/drafts/${draftId}`, { planned_for_date: plannedForDate });
+}
+
 export type CheckoutResp = { confirmation_url: string; payment_id: string };
 export function createYooKassaCheckout(
   tier: "pro" | "business",

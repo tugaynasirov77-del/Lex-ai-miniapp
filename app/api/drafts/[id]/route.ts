@@ -146,6 +146,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (Array.isArray(body?.media_urls)) update.media_urls = body.media_urls;
   if (typeof body?.published_externally === "boolean")
     update.published_externally = body.published_externally;
+  if (typeof body?.status === "string") update.status = body.status.slice(0, 40);
+  if (body?.scenario_data && typeof body.scenario_data === "object")
+    update.scenario_data = body.scenario_data;
+  // Контент-план: дата YYYY-MM-DD или null (снять с плана).
+  if (typeof body?.planned_for_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.planned_for_date))
+    update.planned_for_date = body.planned_for_date;
+  else if (body?.planned_for_date === null) update.planned_for_date = null;
   if (Object.keys(update).length === 0)
     return Response.json({ error: "no fields to update" }, { status: 400 });
 
