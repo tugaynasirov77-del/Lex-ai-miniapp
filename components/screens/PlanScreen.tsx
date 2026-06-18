@@ -12,6 +12,7 @@ import {
 import { useFlow, useFlowActions } from "../../flow";
 import { hapticImpact, hapticNotify } from "../../lib/telegram";
 import { track } from "../../lib/analytics";
+import StateBlock from "../StateBlock";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -138,10 +139,13 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
     return (
       <ScreenWrap>
         <Header title="Контент-план" />
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ textAlign: "center", color: MUTED, fontSize: 14, lineHeight: 1.5 }}>
-            Сначала создай Instagram-проект —<br />и здесь появится твой план на неделю.
-          </div>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <StateBlock
+            emoji="🗓"
+            title="Плана пока нет"
+            body="Сначала создай Instagram-проект — и здесь появится твой план на неделю."
+            action={{ label: "Создать проект", onClick: () => actions.navigate("create-project") }}
+          />
         </div>
       </ScreenWrap>
     );
@@ -180,9 +184,20 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
         <WeekNavBtn dir="next" onClick={() => { hapticImpact("light"); setWeekStart(shiftWeek(weekStart, 1)); }} />
       </div>
 
-      {err && (
-        <div style={{ padding: 12, borderRadius: 12, background: "rgba(255,115,115,0.08)", border: "1px solid rgba(255,115,115,0.30)", fontSize: 12, color: "#FF8B8B", marginBottom: 12 }}>
-          {err}
+      {/* Ошибка загрузки: если плана ещё нет — полноценный блок с retry,
+          если план уже показан (устарел) — тонкая плашка. */}
+      {err && !plan && (
+        <StateBlock
+          tone="error"
+          emoji="🔌"
+          title="Не удалось загрузить план"
+          body="Проверь интернет и попробуй снова."
+          action={{ label: "Повторить", onClick: () => void load() }}
+        />
+      )}
+      {err && plan && (
+        <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,115,115,0.08)", border: "1px solid rgba(255,115,115,0.30)", fontSize: 12, color: "#FF8B8B", marginBottom: 12 }}>
+          Не удалось обновить план. Показаны последние данные.
         </div>
       )}
 
@@ -208,23 +223,15 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
         )}
       </div>
 
-      {/* Подсказка как добавить */}
+      {/* Пустая неделя — подсказка как наполнить */}
       {plan && plan.summary.total === 0 && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 16,
-            borderRadius: 14,
-            background: CARD_BG,
-            border: `1px solid ${CARD_BORDER}`,
-            textAlign: "center",
-            fontSize: 13,
-            color: MUTED,
-            lineHeight: 1.5,
-          }}
-        >
-          На этой неделе пусто. Разбери Reels → создай сценарий →
-          «Добавить в план» — и материал появится здесь.
+        <div style={{ marginTop: 16 }}>
+          <StateBlock
+            emoji="🗓"
+            title="На этой неделе пусто"
+            body="Разбери Reels → создай сценарий → «Добавить в план» — и материал появится здесь."
+            action={{ label: "Создать контент", onClick: () => actions.navigate("create-hub") }}
+          />
         </div>
       )}
 
