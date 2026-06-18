@@ -34,6 +34,7 @@ import CaptionGeneratorCard from "../CaptionGeneratorCard";
 import CarouselGeneratorCard from "../CarouselGeneratorCard";
 import ReelScriptGeneratorCard from "../ReelScriptGeneratorCard";
 import ContentLibrary from "../ContentLibrary";
+import ContentPackCard from "../ContentPackCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -881,6 +882,9 @@ function IgOverviewTab({
       </div>
       <div id="tool-caption">
         <CaptionGeneratorCard projectId={projectId} />
+      </div>
+      <div id="tool-pack">
+        <ContentPackCard projectId={projectId} />
       </div>
     </div>
   );

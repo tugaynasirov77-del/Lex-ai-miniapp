@@ -293,6 +293,42 @@ export async function setDraftPlannedDate(
   return patchJSON(`/api/drafts/${draftId}`, { planned_for_date: plannedForDate });
 }
 
+// --- content pack (одна идея → несколько форматов) ---
+
+export type ContentPackReel = {
+  title: string;
+  hook: string;
+  on_screen_text: string;
+  voice_over: string;
+  storyboard: { scene: number; seconds: string; action: string; on_screen?: string }[];
+  duration_sec: number;
+  cta: string;
+};
+
+export type ContentPackCarousel = {
+  topic: string;
+  hook: string;
+  slides: { num: number; text: string }[];
+  caption: string;
+  hashtags: string[];
+};
+
+export type ContentPackCaption = { text: string; hashtags: string[] };
+
+export type ContentPackDTO = {
+  content_pack_id: string;
+  reel: ContentPackReel;
+  carousel: ContentPackCarousel;
+  caption: ContentPackCaption;
+};
+
+export async function generateContentPack(
+  projectId: string,
+  topic: string,
+): Promise<{ ok: true; content_pack_id: string; items: { id: string; content_type: string }[]; pack: { reel: ContentPackReel; carousel: ContentPackCarousel; caption: ContentPackCaption } }> {
+  return postJSON(`/api/projects/${projectId}/ig/pack`, { topic });
+}
+
 export type CheckoutResp = { confirmation_url: string; payment_id: string };
 export function createYooKassaCheckout(
   tier: "pro" | "business",
