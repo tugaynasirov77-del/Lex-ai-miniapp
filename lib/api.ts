@@ -73,8 +73,103 @@ export type ProjectDTO = {
   channel_subscribers?: number | null;
   instagram_username?: string | null;
   instagram_followers?: number | null;
+  // Расширенные настройки проекта из Quick Project Setup (Welcome onboarding)
+  niche?: string | null;
+  audience?: string | null;
+  content_goal?: string | null;
+  content_style?: string | null;
+  on_camera?: "yes" | "sometimes" | "no" | null;
+  what_sells?: string | null;
+  content_language?: string | null;
   created_at?: string;
   updated_at?: string;
+};
+
+// ── Новые типы для flow Reels → Сценарий → План ──
+
+export type ContentStatus =
+  | "idea"
+  | "draft"
+  | "scenario_ready"
+  | "ready_to_shoot"
+  | "shot"
+  | "ready_to_publish"
+  | "scheduled"
+  | "published"
+  | "archived"
+  // Legacy (старые posts из TG-эпохи)
+  | "pending"
+  | "approved"
+  | "rejected";
+
+export type ContentType = "post" | "carousel" | "reel" | "idea" | "caption";
+
+export type StoryboardScene = {
+  scene: number;
+  seconds: string;       // "0-3" / "3-12"
+  action: string;        // что делает автор / что в кадре
+  on_screen?: string;    // текст на экране
+};
+
+// Полный объект сценария Reels — 20+ полей из брифа.
+// Сохраняется в content_drafts.scenario_data jsonb.
+export type ReelScenarioData = {
+  title: string;
+  goal: string;
+  hook: string;
+  on_screen_text: string;
+  voice_over: string;
+  storyboard: StoryboardScene[];
+  duration_sec: number;
+  in_frame: string;
+  angle: string;
+  background: string;
+  light: string;
+  editing_hints: string;
+  text_overlays: string[];
+  music_hint: string;
+  cta: string;
+  caption: string;
+  hashtags: string[];
+  risks: string[];
+  alt_hooks: string[];       // 2 альтернативных варианта
+  alt_cta: string;           // 1 альтернативный CTA
+};
+
+export type ContentDraftDTO = {
+  id: string;
+  project_id: string;
+  platform: "instagram" | "telegram";
+  content_type: ContentType;
+  status: ContentStatus;
+  title?: string | null;
+  body?: string | null;
+  caption?: string | null;
+  source_decode_id?: string | null;
+  source_topic?: string | null;
+  scenario_data?: ReelScenarioData | null;
+  planned_for_date?: string | null;   // YYYY-MM-DD
+  idea_text?: string | null;
+  content_pack_id?: string | null;
+  ig_post_url?: string | null;
+  published_metrics?: { views?: number; likes?: number; comments?: number; saves?: number; shares?: number } | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Адаптированная тема — одна из 3 которые LEX предлагает после разбора Reels
+export type AdaptedTopicDTO = {
+  id: string;            // временный id для UI (uuid сгенерён клиентом)
+  title: string;         // название/идея Reels
+  hook: string;          // пример хука
+  rationale: string;     // короткое объяснение почему подходит проекту
+  format: string;        // предполагаемый формат
+  duration_sec: number;
+};
+
+export type AdaptResultDTO = {
+  decode_id: string;
+  topics: AdaptedTopicDTO[];
 };
 
 import * as clientCache from "./clientCache";
