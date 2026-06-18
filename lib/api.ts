@@ -123,6 +123,19 @@ export function bustClientCache(key?: "projects" | "billing" | "streak"): void {
   clientCache.bust(key);
 }
 
+// --- welcome onboarding ---
+
+export async function getOnboardingStatus(): Promise<{ onboarding_completed: boolean }> {
+  return getJSON<{ onboarding_completed: boolean }>("/api/user/prefs/onboarding-done");
+}
+
+export async function markOnboardingDone(): Promise<{ ok: true }> {
+  return postJSON<Record<string, never>, { ok: true }>(
+    "/api/user/prefs/onboarding-done",
+    {}
+  );
+}
+
 export type CheckoutResp = { confirmation_url: string; payment_id: string };
 export function createYooKassaCheckout(
   tier: "pro" | "business",

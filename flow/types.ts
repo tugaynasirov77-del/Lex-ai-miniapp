@@ -9,6 +9,7 @@ import type { Dispatch } from "react";
 /** Все экраны единого pipeline после home. */
 export type ScreenKey =
   | "home"
+  | "welcome"
   | "dashboard"
   | "create-project"
   | "add-competitors"

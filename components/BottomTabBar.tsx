@@ -41,6 +41,8 @@ export default function BottomTabBar() {
 
   // Маппинг текущего экрана → активная вкладка
   const cs = state.currentScreen;
+  // На welcome-онбординге таб-бар скрыт — это линейный экран без навигации.
+  if (cs === "welcome") return null;
   const projectFromSettings = state.screenMeta?.projectInitialTab === "settings";
   const active: Tab["key"] =
     cs === "home"
