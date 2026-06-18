@@ -466,6 +466,18 @@ export default function ProjectScreen({ onBack }: Props) {
           <ReelDecoderCard
             projectId={projectId}
             onDecoded={() => setReelArchiveKey((k) => k + 1)}
+            onCreateScript={({ decodeId, topic }) => {
+              // TODO Раунд 4: открыть PersonalScriptScreen с этой темой.
+              // Пока временно сохраняем выбор в flow-meta — друг подключит
+              // экран после своего PR.
+              try {
+                localStorage.setItem(
+                  "lex_pending_script",
+                  JSON.stringify({ decodeId, topic, projectId }),
+                );
+              } catch {}
+              hapticImpact("medium");
+            }}
           />
           <ReelScriptGeneratorCard projectId={projectId} />
           <CarouselGeneratorCard projectId={projectId} />
