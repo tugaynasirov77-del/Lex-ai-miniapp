@@ -159,7 +159,7 @@ export type ContentDraftDTO = {
 
 // Адаптированная тема — одна из 3 которые LEX предлагает после разбора Reels
 export type AdaptedTopicDTO = {
-  id: string;            // временный id для UI (uuid сгенерён клиентом)
+  id?: string;           // опциональный client-side id для key/выбора
   title: string;         // название/идея Reels
   hook: string;          // пример хука
   rationale: string;     // короткое объяснение почему подходит проекту
@@ -314,6 +314,30 @@ export function generateCaptions(
   topic: string,
 ): Promise<{ ok: true; result: CaptionGenResultDTO; quota: CaptionQuotaDTO }> {
   return postJSON(`/api/projects/${projectId}/ig/caption`, { topic });
+}
+
+// ───────────── Адаптация разбора под проект (3 темы) ─────────────
+
+export function adaptDecodeToTopics(
+  projectId: string,
+  decodeId: string,
+): Promise<{ ok: true; decode_id: string; topics: AdaptedTopicDTO[] }> {
+  return postJSON(`/api/projects/${projectId}/ig/adapt`, {
+    mode: "topics",
+    decode_id: decodeId,
+  });
+}
+
+export function refineMyTopic(
+  projectId: string,
+  decodeId: string,
+  userIdea: string,
+): Promise<{ ok: true; topic: AdaptedTopicDTO }> {
+  return postJSON(`/api/projects/${projectId}/ig/adapt`, {
+    mode: "refine",
+    decode_id: decodeId,
+    user_idea: userIdea,
+  });
 }
 
 export type RefineDirection = "shorter" | "sharper" | "emotional" | "specific";
