@@ -77,9 +77,8 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
     actions.navigate("project");
   };
 
-  const filtered = (data || []).filter((p) =>
-    filter === "all" ? true : p.platform === filter,
-  );
+  // IG-only продукт: легаси TG-проекты скрыты из всех списков
+  const filtered = (data || []).filter((p) => p.platform === "instagram");
 
   const goBilling = () => {
     hapticImpact("light");
@@ -101,34 +100,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
       {/* Update banner для существующих юзеров */}
       {data && data.length > 0 && <UpdateBanner />}
 
-      {/* Filter tabs */}
-      {data && data.length > 0 && (
-        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          {(["all", "telegram", "instagram"] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => {
-                hapticSelection();
-                setFilter(f);
-              }}
-              style={{
-                appearance: "none",
-                border: `1px solid ${filter === f ? YELLOW : CARD_BORDER}`,
-                background: filter === f ? YELLOW : "transparent",
-                color: filter === f ? "#0A0608" : INK,
-                fontFamily: "inherit",
-                fontSize: 13,
-                fontWeight: filter === f ? 700 : 500,
-                padding: "8px 14px",
-                borderRadius: 999,
-                cursor: "pointer",
-              }}
-            >
-              {f === "all" ? "Все" : f === "telegram" ? "Telegram" : "Instagram"}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Filter tabs убраны — продукт IG-only */}
 
       {/* Body */}
       <div

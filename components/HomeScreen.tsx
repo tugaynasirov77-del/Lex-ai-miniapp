@@ -427,7 +427,7 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
               color: MUTED,
             }}
           >
-            Посты, Reels и карусели для Telegram и&nbsp;Instagram
+            Разборы вирусных Reels, сценарии и контент для&nbsp;Instagram
           </p>
         </div>
 

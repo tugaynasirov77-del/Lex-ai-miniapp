@@ -48,7 +48,7 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
   const actions = useFlowActions();
 
   const [step, setStep] = useState<Step>(state.projectId ? "attach" : "platform");
-  const [platform, setPlatform] = useState<Platform | null>(null);
+  const [platform, setPlatform] = useState<Platform | null>("instagram");
   const [title, setTitle] = useState("");
   const [resuming, setResuming] = useState<boolean>(!!state.projectId);
 
@@ -217,7 +217,7 @@ function PlatformStep({
 
   return (
     <ScreenWrap>
-      <StepBadge current={1} total={2} label="Платформа" />
+      <StepBadge current={1} total={2} label="Проект" />
       <h1
         style={{
           margin: "10px 0 0",
@@ -228,80 +228,54 @@ function PlatformStep({
           textTransform: "uppercase",
         }}
       >
-        Где будем
+        Создаём
         <br />
-        вести контент?
+        Instagram-проект
       </h1>
       <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-        Один проект = один канал или аккаунт.
+        Один проект = один аккаунт Instagram.
       </p>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-        {(["telegram", "instagram"] as Platform[]).map((p) => {
-          const on = platform === p;
-          return (
-            <button
-              key={p}
-              onClick={() => onPlatform(p)}
-              style={{
-                appearance: "none",
-                flex: 1,
-                padding: "20px 12px",
-                borderRadius: 18,
-                border: `1.5px solid ${on ? YELLOW : CARD_BORDER}`,
-                background: on ? "rgba(245,231,10,0.08)" : CARD_BG,
-                color: INK,
-                fontFamily: "inherit",
-                cursor: "pointer",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  margin: "0 auto 12px",
-                  borderRadius: 14,
-                  background:
-                    p === "telegram"
-                      ? "linear-gradient(135deg, #37BBFE 0%, #1D8AC9 100%)"
-                      : "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow:
-                    p === "telegram"
-                      ? "0 8px 22px rgba(40,160,235,0.38), 0 0 0 1px rgba(255,255,255,0.14) inset"
-                      : "0 8px 22px rgba(221,42,123,0.36), 0 0 0 1px rgba(255,255,255,0.14) inset",
-                }}
-              >
-                {p === "telegram" ? (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M21.5 3.5L2.8 10.7c-1.1.4-1.1 1.1-.2 1.4l4.8 1.5 1.9 5.9c.2.7.4.9 1 .9.5 0 .7-.2 1-.5l2.4-2.3 4.9 3.6c.9.5 1.5.2 1.7-.8L23 5.2c.3-1.3-.5-1.9-1.5-1.7z"
-                      fill="#FFFFFF"
-                    />
-                  </svg>
-                ) : (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#FFFFFF" strokeWidth="1.9" />
-                    <circle cx="12" cy="12" r="4" stroke="#FFFFFF" strokeWidth="1.9" />
-                    <circle cx="17.2" cy="6.8" r="1.2" fill="#FFFFFF" />
-                  </svg>
-                )}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>
-                {p === "telegram" ? "Telegram" : "Instagram"}
-              </div>
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
-                {p === "telegram" ? "Канал" : "Аккаунт"}
-              </div>
-            </button>
-          );
-        })}
+      <div
+        style={{
+          marginTop: 20,
+          padding: "16px 14px",
+          borderRadius: 18,
+          border: `1.5px solid ${YELLOW}`,
+          background: "rgba(245,231,10,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            flexShrink: 0,
+            borderRadius: 14,
+            background: "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 8px 22px rgba(221,42,123,0.36), 0 0 0 1px rgba(255,255,255,0.14) inset",
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#FFFFFF" strokeWidth="1.9" />
+            <circle cx="12" cy="12" r="4" stroke="#FFFFFF" strokeWidth="1.9" />
+            <circle cx="17.2" cy="6.8" r="1.2" fill="#FFFFFF" />
+          </svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Instagram</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+            Разборы Reels, сценарии, карусели, подписи
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 20 }}>
         <Label>Название проекта</Label>
         <input
           value={title}

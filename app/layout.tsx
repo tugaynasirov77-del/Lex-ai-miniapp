@@ -14,8 +14,8 @@ import Splash from "../components/Splash";
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "LEX AI — команда",
-  description: "Дашборд управления AI-командой",
+  title: "LEX AI — Instagram Studio",
+  description: "AI-разборы Reels, сценарии и контент для Instagram",
 };
 
 export const viewport: Viewport = {
