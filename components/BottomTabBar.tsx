@@ -17,7 +17,7 @@ type Tab = {
 
 const TABS: Tab[] = [
   { key: "main", label: "Главная", icon: <HomeIcon />, screen: "home" },
-  { key: "create", label: "Создать", icon: <PlusIcon />, screen: "project" },
+  { key: "create", label: "Создать", icon: <PlusIcon />, screen: "create-hub" },
   { key: "plan", label: "План", icon: <CalendarIcon />, screen: "plan" },
   { key: "profile", label: "Профиль", icon: <UserIcon />, screen: "dashboard" },
 ];
@@ -48,7 +48,7 @@ export default function BottomTabBar() {
   const active: Tab["key"] =
     cs === "home"
       ? "main"
-      : cs === "project"
+      : cs === "create-hub" || cs === "project"
       ? "create"
       : cs === "plan"
       ? "plan"
