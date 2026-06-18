@@ -5,6 +5,7 @@ import { decodeReel, type AdaptedTopicDTO, type ReelDecodeDTO, type ReelQuotaDTO
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { track } from "../lib/analytics";
 import AdaptedTopicsBlock from "./AdaptedTopicsBlock";
+import PaywallSheet from "./PaywallSheet";
 
 const HINT_DISMISS_KEY = "lex_decode_hint_dismissed";
 
@@ -31,6 +32,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
   const [decode, setDecode] = useState<ReelDecodeDTO | null>(null);
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [cached, setCached] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Prefill: если юзер ввёл ссылку на Home («Что создаём сегодня?») —
   // подставляем её сюда и сразу запускаем разбор.
@@ -68,6 +70,12 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       onDecoded?.();
     } catch (e: any) {
       hapticNotify("error");
+      // Квота исчерпана (402) → показываем paywall, а не текстовую ошибку (бриф р.22)
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        track("reels_analysis_failed", { project_id: projectId, reason: "quota" });
+        return;
+      }
       const msg = e?.message || "не удалось разобрать";
       setErr(msg);
       track("reels_analysis_failed", { project_id: projectId, error: msg.slice(0, 80) });
@@ -228,6 +236,14 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       {/* Upsell — после результата, если квота на нуле или близка */}
       {decode && quota && quota.tier === "free" && quota.used >= quota.limit - 1 && (
         <UpsellCard quota={quota} />
+      )}
+
+      {/* Paywall — при исчерпании квоты (бриф р.22) */}
+      {paywallOpen && (
+        <PaywallSheet
+          variant="limit_reached"
+          onClose={() => setPaywallOpen(false)}
+        />
       )}
     </div>
   );
