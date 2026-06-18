@@ -12,6 +12,8 @@ import AddCompetitorsScreen from "./screens/AddCompetitorsScreen";
 import BillingScreen from "./screens/BillingScreen";
 import LexCreateScreen from "./screens/LexCreateScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import PersonalScriptScreen from "./screens/PersonalScriptScreen";
+import OnboardingSuccessScreen from "./screens/OnboardingSuccessScreen";
 import BottomTabBar from "./BottomTabBar";
 import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
@@ -19,6 +21,9 @@ import { useResumeFlow } from "../hooks/useResumeFlow";
 import { useWelcomeGate, ONBOARDING_LS_KEY } from "../hooks/useWelcomeGate";
 import { markOnboardingDone } from "../lib/api";
 import { hapticImpact } from "../lib/telegram";
+import type { AdaptedTopicDTO } from "../lib/api";
+
+const FIRST_SCRIPT_LS_KEY = "lex_first_script_done";
 
 const ENTER = { opacity: 0 };
 const SHOW = { opacity: 1 };
@@ -139,6 +144,62 @@ export default function AppFlow() {
           {currentScreen === "billing" && <BillingScreen onBack={goBack} />}
           {currentScreen === "lex-create" && <LexCreateScreen onBack={goBack} />}
           {currentScreen === "settings" && <SettingsScreen onBack={goBack} />}
+          {currentScreen === "personal-script" && (() => {
+            const topic = state.screenMeta.scriptTopic as AdaptedTopicDTO | undefined;
+            const decodeId = state.screenMeta.scriptDecodeId as string | undefined;
+            const projectId = state.projectId;
+            if (!topic || !projectId) {
+              // Defensive: если данные потеряны — назад в проект
+              actions.navigate("project");
+              return null;
+            }
+            return (
+              <PersonalScriptScreen
+                projectId={projectId}
+                decodeId={decodeId}
+                topic={topic}
+                onBack={goBack}
+                onSaved={(draftId) => {
+                  // Первый сохранённый сценарий → success-экран,
+                  // последующие → обратно в проект
+                  let firstDone = false;
+                  try {
+                    firstDone = localStorage.getItem(FIRST_SCRIPT_LS_KEY) === "1";
+                  } catch {}
+                  if (!firstDone) {
+                    try { localStorage.setItem(FIRST_SCRIPT_LS_KEY, "1"); } catch {}
+                    actions.setScreenMeta("savedDraftId", draftId);
+                    actions.setScreenMeta("savedScriptTitle", topic.title);
+                    actions.navigate("onboarding-success");
+                  } else {
+                    actions.navigate("project");
+                  }
+                }}
+                onAddedToPlan={(draftId, _date) => {
+                  let firstDone = false;
+                  try {
+                    firstDone = localStorage.getItem(FIRST_SCRIPT_LS_KEY) === "1";
+                  } catch {}
+                  if (!firstDone) {
+                    try { localStorage.setItem(FIRST_SCRIPT_LS_KEY, "1"); } catch {}
+                    actions.setScreenMeta("savedDraftId", draftId);
+                    actions.setScreenMeta("savedScriptTitle", topic.title);
+                    actions.navigate("onboarding-success");
+                  } else {
+                    actions.navigate("project");
+                  }
+                }}
+              />
+            );
+          })()}
+          {currentScreen === "onboarding-success" && (
+            <OnboardingSuccessScreen
+              scenarioTitle={state.screenMeta.savedScriptTitle as string | undefined}
+              onContinue={() => {
+                actions.navigate(state.projectId ? "project" : "home");
+              }}
+            />
+          )}
           {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
               удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
               старый currentScreen, useResumeFlow сбросит на home. */}
