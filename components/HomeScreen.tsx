@@ -1,27 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react"; // useEffect остаётся — нужен в BannerCarousel
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useFlow, useFlowActions } from "../flow";
+import {
+  peekProjects,
+  listProjects,
+  getWeekPlan,
+  listProjectDrafts,
+  type ProjectDTO,
+  type WeekPlanDTO,
+  type ContentDraftDTO,
+} from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
+const SUB_MUTED = "rgba(255,255,255,0.42)";
+const CARD_BG = "rgba(255,255,255,0.04)";
+const CARD_BORDER = "rgba(255,255,255,0.10)";
+const OK = "#5BD66B";
+const PREFILL_URL_KEY = "lex_prefill_reel_url";
 
-function LexLogo({ height = 40 }: { height?: number }) {
-  // PNG/JPG логотип из public/logo.jpg (треугольная "A" с жёлтым контуром).
+const TYPE_ICON: Record<string, string> = {
+  reel: "🎬",
+  carousel: "🖼",
+  caption: "✏️",
+  idea: "💡",
+  post: "📝",
+};
+
+type HomeScreenProps = { onStart?: () => void };
+
+function LexLogo({ height = 34 }: { height?: number }) {
   return (
     <div
       aria-label="LEX AI"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: height * 0.34,
-        height,
-        lineHeight: 1,
-      }}
+      style={{ display: "inline-flex", alignItems: "center", gap: height * 0.34, height, lineHeight: 1 }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/logo.jpg"
@@ -34,337 +51,394 @@ function LexLogo({ height = 40 }: { height?: number }) {
           borderRadius: height * 0.32,
         }}
       />
-      <div
-        style={{
-          fontSize: height * 0.62,
-          fontWeight: 700,
-          letterSpacing: "0.06em",
-          fontFamily: "'Inter', system-ui, sans-serif",
-        }}
-      >
-        <span style={{ color: "#FFFFFF" }}>LEX </span>
+      <div style={{ fontSize: height * 0.62, fontWeight: 700, letterSpacing: "0.06em" }}>
+        <span style={{ color: INK }}>LEX </span>
         <span style={{ color: YELLOW }}>AI</span>
       </div>
     </div>
   );
 }
 
-function ProgressUpsell({ used, total }: { used: number; total: number }) {
-  const left = Math.max(0, total - used);
-  const pct = Math.min(100, Math.round((used / total) * 100));
-  const critical = left <= 1; // ≤1 осталось — подкручиваем мотивацию
+export default function HomeScreen(_props: HomeScreenProps = {}) {
+  const { state } = useFlow();
+  const actions = useFlowActions();
+
+  const [projects, setProjects] = useState<ProjectDTO[]>(
+    () => peekProjects()?.projects.filter((p) => p.platform === "instagram") ?? [],
+  );
+  const [activeId, setActiveId] = useState<string | null>(
+    state.projectId || projects[0]?.id || null,
+  );
+  const [plan, setPlan] = useState<WeekPlanDTO | null>(null);
+  const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
+  const [url, setUrl] = useState("");
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  // Подтягиваем проекты (если кэш пустой)
+  useEffect(() => {
+    let alive = true;
+    listProjects()
+      .then((r) => {
+        if (!alive) return;
+        const ig = r.projects.filter((p) => p.platform === "instagram");
+        setProjects(ig);
+        if (!activeId && ig[0]) setActiveId(ig[0].id);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Подтягиваем план + материалы активного проекта
+  useEffect(() => {
+    if (!activeId) return;
+    let alive = true;
+    getWeekPlan(activeId).then((p) => alive && setPlan(p)).catch(() => {});
+    listProjectDrafts(activeId)
+      .then((r) => alive && setDrafts(r.drafts))
+      .catch(() => alive && setDrafts([]));
+    return () => { alive = false; };
+  }, [activeId]);
+
+  const activeProject = projects.find((p) => p.id === activeId) || null;
+
+  const goToProject = (tab?: string) => {
+    hapticImpact("light");
+    if (activeId) actions.setIds({ projectId: activeId });
+    if (tab) actions.setScreenMeta("projectInitialTab", tab);
+    actions.navigate(activeId ? "project" : "create-project");
+  };
+
+  const runDecode = () => {
+    if (!url.trim()) return;
+    hapticImpact("medium");
+    try { localStorage.setItem(PREFILL_URL_KEY, url.trim()); } catch {}
+    if (activeId) actions.setIds({ projectId: activeId });
+    actions.setScreenMeta("projectInitialTab", "overview");
+    actions.navigate(activeId ? "project" : "create-project");
+  };
+
+  // Нет проектов — экран создания первого
+  if (projects.length === 0) {
+    return (
+      <ScreenWrap>
+        <TopBar onSwitch={null} project={null} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 18, textAlign: "center" }}>
+          <div style={{ fontSize: 48 }}>🎬</div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+            Преврати любой Reels<br />в контент для своего блога
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: MUTED, lineHeight: 1.5 }}>
+            Создай первый Instagram-проект — и LEX начнёт разбирать Reels
+            и собирать сценарии под твою нишу.
+          </p>
+          <button onClick={() => { hapticImpact("medium"); actions.navigate("create-project"); }} style={primaryBtn}>
+            Создать проект
+          </button>
+        </div>
+      </ScreenWrap>
+    );
+  }
 
   return (
-    <Link
-      href="/billing"
-      onClick={() => hapticSelection()}
-      style={{
-        textDecoration: "none",
-        color: INK,
-        display: "block",
-        padding: "12px 16px",
-        borderRadius: 18,
-        background: "rgba(255,255,255,0.035)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}
-    >
+    <ScreenWrap>
+      <TopBar
+        project={activeProject}
+        onSwitch={projects.length > 1 ? () => { hapticSelection(); setSwitcherOpen((v) => !v); } : null}
+      />
+
+      {/* Переключатель проектов */}
+      {switcherOpen && projects.length > 1 && (
+        <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => { hapticSelection(); setActiveId(p.id); setSwitcherOpen(false); }}
+              style={{
+                appearance: "none",
+                textAlign: "left",
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: `1px solid ${p.id === activeId ? YELLOW : CARD_BORDER}`,
+                background: p.id === activeId ? "rgba(245,231,10,0.08)" : CARD_BG,
+                color: INK,
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Что создаём сегодня */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          fontSize: 13,
+          borderRadius: 20,
+          padding: 18,
+          marginBottom: 16,
+          background:
+            "radial-gradient(circle 200px at 100% 0%, rgba(245,133,41,0.20), transparent 60%)," +
+            "radial-gradient(circle 220px at 0% 100%, rgba(129,52,175,0.18), transparent 60%)," +
+            "linear-gradient(135deg, #160B14 0%, #0A0608 100%)",
+          border: "1px solid rgba(255,255,255,0.10)",
         }}
       >
-        <span style={{ color: critical ? YELLOW : MUTED, fontWeight: critical ? 700 : 500 }}>
-          Free: {left} из {total} Reels осталось
-        </span>
-        <span style={{ color: MUTED, fontSize: 12, whiteSpace: "nowrap" }}>
-          Открой Pro →
-        </span>
-      </div>
-      <div
-        style={{
-          marginTop: 9,
-          height: 6,
-          borderRadius: 999,
-          background: "rgba(255,255,255,0.07)",
-          overflow: "hidden",
-        }}
-      >
-        <div
+        <h2 style={{ margin: "0 0 12px", fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em" }}>
+          Что создаём сегодня?
+        </h2>
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Вставь ссылку на Reels…"
           style={{
-            width: `${pct}%`,
-            height: "100%",
-            background: critical
-              ? `linear-gradient(90deg, ${YELLOW}, #FFB400)`
-              : `linear-gradient(90deg, ${YELLOW}, ${YELLOW})`,
-            transition: "width 400ms cubic-bezier(0.16,1,0.3,1)",
-            boxShadow: critical ? `0 0 12px ${YELLOW}66` : "none",
+            appearance: "none",
+            width: "100%",
+            padding: "12px 14px",
+            background: "rgba(255,255,255,0.05)",
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 12,
+            color: INK,
+            fontFamily: "inherit",
+            fontSize: 14,
+            outline: "none",
+            marginBottom: 10,
           }}
         />
+        <button
+          onClick={runDecode}
+          disabled={!url.trim()}
+          style={{
+            ...primaryBtn,
+            opacity: url.trim() ? 1 : 0.5,
+            marginBottom: 12,
+          }}
+        >
+          Разобрать и адаптировать
+        </button>
+
+        {/* Быстрые действия */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+          <QuickChip label="✨ Сценарий" onClick={() => goToProject("overview")} />
+          <QuickChip label="🖼 Карусель" onClick={() => goToProject("overview")} />
+          <QuickChip label="✏️ Подпись" onClick={() => goToProject("overview")} />
+          <QuickChip label="💡 Идеи" onClick={() => goToProject("library")} />
+        </div>
       </div>
-    </Link>
+
+      {/* Прогресс недели */}
+      {plan && plan.summary.total > 0 && (
+        <Link
+          href="#"
+          onClick={(e) => { e.preventDefault(); hapticImpact("light"); actions.navigate("plan"); }}
+          style={{ textDecoration: "none", display: "block", marginBottom: 16 }}
+        >
+          <div
+            style={{
+              borderRadius: 16,
+              padding: 16,
+              background: "linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(245,231,10,0.03) 100%)",
+              border: "1px solid rgba(245,231,10,0.22)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>План на неделю</span>
+              <span style={{ fontSize: 13, color: YELLOW, fontWeight: 700 }}>
+                {plan.summary.ready + plan.summary.published} из {plan.summary.total} готовы
+              </span>
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${plan.summary.progress_pct}%`,
+                background: `linear-gradient(90deg, ${OK} 0%, ${YELLOW} 100%)`,
+              }} />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Продолжить работу — незавершённые */}
+      {drafts && (() => {
+        const unfinished = drafts.filter((d) =>
+          ["scenario_ready", "draft", "idea", "ready_to_shoot"].includes(d.status),
+        ).slice(0, 3);
+        if (unfinished.length === 0) return null;
+        return (
+          <Section title="Продолжить работу">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {unfinished.map((d) => (
+                <MaterialRow key={d.id} draft={d} onClick={() => goToProject("library")} />
+              ))}
+            </div>
+          </Section>
+        );
+      })()}
+
+      {/* Последние материалы */}
+      {drafts && drafts.length > 0 && (
+        <Section title="Последние материалы" action={{ label: "Все →", onClick: () => goToProject("library") }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {drafts.slice(0, 5).map((d) => (
+              <MaterialRow key={d.id} draft={d} onClick={() => goToProject("library")} />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Пусто */}
+      {drafts && drafts.length === 0 && (
+        <div style={{ padding: 20, textAlign: "center", color: MUTED, fontSize: 13, lineHeight: 1.5, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 14 }}>
+          Пока нет материалов. Вставь ссылку на Reels выше — и LEX соберёт первый сценарий.
+        </div>
+      )}
+    </ScreenWrap>
   );
 }
 
-type Slide = {
-  badge: string;
-  title: string;
-  subtitle: string;
-  icon: string; // эмодзи-иконка, лёгкий способ дать визуал без файлов
-  accent: string; // подкрашиваем фон слайда
-  image?: string; // опц. фоновая фотография слайда
-};
-
-const SLIDES: Slide[] = [
-  {
-    badge: "Один AI-инструмент",
-    title: "LEX AI пишет за тебя",
-    subtitle: "Посты, карусели и сценарии Reels — на основе анализа конкурентов",
-    icon: "✨",
-    accent: "rgba(178,30,60,0.30)",
-    image: "/slide-team.jpg",
-  },
-  {
-    badge: "3 варианта",
-    title: "Не один пост — три",
-    subtitle: "Выбираешь лучший вариант. Тапнул — ушло в канал",
-    icon: "📝",
-    accent: "rgba(96,18,80,0.38)",
-    image: "/slide-reels.jpg",
-  },
-  {
-    badge: "Контент-план",
-    title: "7 идей на неделю",
-    subtitle: "AI собирает план под твою нишу и аудиторию",
-    icon: "📅",
-    accent: "rgba(40,60,140,0.34)",
-    image: "/slide-plan.jpg",
-  },
-  {
-    badge: "Все форматы",
-    title: "TG и Instagram",
-    subtitle: "Посты, карусели, сценарии Reels — в одном окне",
-    icon: "🎯",
-    accent: "rgba(140,90,30,0.34)",
-    image: "/slide-formats.jpg",
-  },
-];
-
-function BannerCarousel() {
-  const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [dragDX, setDragDX] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const startX = useRef<number | null>(null);
-
-  // Прелоад всех фоновых картинок при монтировании, чтобы при смене слайда
-  // фон не подгружался с задержкой и не появлялся позже текста.
-  useEffect(() => {
-    SLIDES.forEach((sl) => {
-      if (!sl.image) return;
-      const i = new Image();
-      i.src = sl.image;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % SLIDES.length), 5000);
-    return () => clearInterval(t);
-  }, [paused]);
-
-  const go = (next: number) => {
-    setIdx((next + SLIDES.length) % SLIDES.length);
-    hapticSelection();
-  };
-
-  const onDown = (e: React.PointerEvent) => {
-    startX.current = e.clientX;
-    setDragging(true);
-    setPaused(true);
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (startX.current == null) return;
-    setDragDX(e.clientX - startX.current);
-  };
-  const onUp = () => {
-    const dx = dragDX;
-    setDragging(false);
-    setDragDX(0);
-    setPaused(false);
-    startX.current = null;
-    const THRESHOLD = 50;
-    if (dx > THRESHOLD) go(idx - 1);
-    else if (dx < -THRESHOLD) go(idx + 1);
-  };
-
-  const s = SLIDES[idx];
-
+function TopBar({ project, onSwitch }: { project: ProjectDTO | null; onSwitch: (() => void) | null }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? "Доброй ночи" : hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
   return (
-    <div
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onPointerLeave={() => {
-        if (dragging) onUp();
-      }}
-      style={{
-        touchAction: "pan-y",
-        userSelect: "none",
-        position: "relative",
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 28,
-        background:
-          "linear-gradient(180deg, rgba(22,16,20,0.92) 0%, rgba(14,10,14,0.88) 100%)",
-        boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
-        overflow: "hidden",
-        maxHeight: "52vh",
-      }}
-    >
-      {/* фоновая фотография слайда (если задана) — без fade, появляется мгновенно */}
-      {s.image && (
-        <div
-          aria-hidden
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <LexLogo height={30} />
+      </div>
+      <div style={{ fontSize: 13, color: MUTED }}>{greeting} 👋</div>
+      {project && (
+        <button
+          onClick={onSwitch ?? undefined}
           style={{
-            position: "absolute",
-            inset: 0,
-            background: `url(${s.image}) center / cover no-repeat`,
-            opacity: 0.85,
-            transition: "background 280ms ease",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* тёмная вуаль: сильнее в нижней части, чтобы текст и точки не терялись */}
-      {s.image && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(8,5,8,0.35) 0%, rgba(8,5,8,0.65) 55%, rgba(8,5,8,0.95) 100%)",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* акцентный glow меняется со слайдом */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `radial-gradient(120% 80% at 100% 0%, ${s.accent} 0%, transparent 60%)`,
-          transition: "background 600ms ease",
-          pointerEvents: "none",
-        }}
-      />
-
-      <div
-        key={idx}
-        style={{
-          position: "relative",
-          flex: 1,
-          padding: 20,
-          display: "flex",
-          flexDirection: "column",
-          animation: "lex-slide-in 520ms cubic-bezier(0.16,1,0.3,1) both",
-          transform: dragging ? `translateX(${dragDX * 0.4}px)` : undefined,
-          transition: dragging ? "none" : "transform 320ms cubic-bezier(0.16,1,0.3,1)",
-        }}
-      >
-        <div>
-          <span
-            style={{
-              display: "inline-block",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "#0A0608",
-              background: YELLOW,
-              padding: "5px 10px",
-              borderRadius: 999,
-            }}
-          >
-            {s.badge}
-          </span>
-        </div>
-
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 22,
-            fontWeight: 700,
-            lineHeight: 1.15,
-            letterSpacing: "-0.01em",
-            color: "#FFFFFF",
+            appearance: "none",
+            background: "none",
+            border: "none",
+            padding: 0,
+            marginTop: 2,
+            color: INK,
+            fontFamily: "inherit",
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            cursor: onSwitch ? "pointer" : "default",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {s.title}
-        </div>
-        <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-          {s.subtitle}
-        </div>
-
-        {/* dots — прижаты к низу, но с воздухом снизу */}
-        <div style={{ marginTop: "auto", paddingTop: 22, paddingBottom: 8, display: "flex", gap: 6, justifyContent: "center" }}>
-          {SLIDES.map((_, i) => (
-            <button
-              key={i}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                setIdx(i);
-                hapticSelection();
-              }}
-              aria-label={`слайд ${i + 1}`}
-              style={{
-                width: i === idx ? 22 : 6,
-                height: 6,
-                borderRadius: 999,
-                background: i === idx ? YELLOW : "rgba(255,255,255,0.25)",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                transition: "width 320ms ease, background 320ms ease",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes lex-slide-in {
-          0% { opacity: 0; transform: translateY(8px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+          {project.title}
+          {onSwitch && <span style={{ color: MUTED, fontSize: 14 }}>▾</span>}
+        </button>
+      )}
     </div>
   );
 }
 
-const PILLS = [
-  { label: "План на неделю", href: "/projects" },
-  { label: "Открыть ревью", href: "/review" },
-  { label: "Лимиты и тариф", href: "/billing" },
-];
+function QuickChip({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        appearance: "none",
+        flexShrink: 0,
+        padding: "8px 14px",
+        borderRadius: 999,
+        border: `1px solid ${CARD_BORDER}`,
+        background: "rgba(255,255,255,0.05)",
+        color: INK,
+        fontFamily: "inherit",
+        fontSize: 13,
+        fontWeight: 600,
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
-type HomeScreenProps = {
-  /** Колбэк по тапу «Начать» — управляется родителем (AppFlow). */
-  onStart?: () => void;
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: { label: string; onClick: () => void };
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 700 }}>
+          {title}
+        </div>
+        {action && (
+          <button onClick={action.onClick} style={{ appearance: "none", background: "none", border: "none", color: YELLOW, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+            {action.label}
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function statusLabel(status: string): { label: string; color: string } {
+  if (status === "published") return { label: "Опубликовано", color: OK };
+  if (["ready_to_shoot", "shot", "ready_to_publish", "scheduled", "approved"].includes(status))
+    return { label: "Готово к съёмке", color: YELLOW };
+  return { label: "Черновик", color: SUB_MUTED };
+}
+
+function MaterialRow({ draft, onClick }: { draft: ContentDraftDTO; onClick: () => void }) {
+  const sl = statusLabel(draft.status);
+  const title = draft.title || draft.source_topic || "Без названия";
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        appearance: "none",
+        textAlign: "left",
+        width: "100%",
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${CARD_BORDER}`,
+        background: CARD_BG,
+        color: INK,
+        fontFamily: "inherit",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <span style={{ fontSize: 16, flexShrink: 0 }}>{TYPE_ICON[draft.content_type] || "📄"}</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {title}
+      </span>
+      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: sl.color }}>{sl.label}</span>
+    </button>
+  );
+}
+
+const primaryBtn: React.CSSProperties = {
+  appearance: "none",
+  width: "100%",
+  padding: "14px 0",
+  border: "none",
+  borderRadius: 999,
+  background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
+  color: "#0A0608",
+  fontSize: 15,
+  fontWeight: 800,
+  letterSpacing: "0.02em",
+  fontFamily: "inherit",
+  cursor: "pointer",
 };
 
-export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
+function ScreenWrap({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -374,67 +448,14 @@ export default function HomeScreen({ onStart }: HomeScreenProps = {}) {
         flexDirection: "column",
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
+        padding:
+          "max(calc(env(safe-area-inset-top) + 56px), 88px) 18px " +
+          "max(calc(env(safe-area-inset-bottom) + 96px), 110px)",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }}
     >
-      {/* HEADER — компактный, не съедает первый экран */}
-      <header
-        style={{
-          padding: "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px 0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 4,
-        }}
-      >
-        <LexLogo height={36} />
-      </header>
-
-      {/* CONTENT — статичный, без скролла */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          padding: "16px 22px max(calc(env(safe-area-inset-bottom) + 110px), 130px)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          overflow: "hidden",
-        }}
-      >
-        {/* HERO — плотный, без растягивания верха */}
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 32,
-              lineHeight: 1,
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              textTransform: "uppercase",
-            }}
-          >
-            Контент
-            <br />
-            без&nbsp;рутины
-          </h1>
-          <p
-            style={{
-              margin: "10px 0 0",
-              fontSize: 13,
-              lineHeight: 1.35,
-              color: MUTED,
-            }}
-          >
-            Разборы вирусных Reels, сценарии и контент для&nbsp;Instagram
-          </p>
-        </div>
-
-        {/* BANNER CAROUSEL — заполняет всю свободную высоту до CTA */}
-        <BannerCarousel />
-      </div>
-
+      {children}
     </div>
   );
 }

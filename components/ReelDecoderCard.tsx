@@ -21,6 +21,8 @@ type Props = {
   onCreateScript?: (args: { decodeId: string; topic: AdaptedTopicDTO }) => void;
 };
 
+const PREFILL_URL_KEY = "lex_prefill_reel_url";
+
 export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }: Props) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,6 +30,25 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
   const [decode, setDecode] = useState<ReelDecodeDTO | null>(null);
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [cached, setCached] = useState(false);
+
+  // Prefill: если юзер ввёл ссылку на Home («Что создаём сегодня?») —
+  // подставляем её сюда и сразу запускаем разбор.
+  useEffect(() => {
+    let pending = "";
+    try {
+      pending = localStorage.getItem(PREFILL_URL_KEY) || "";
+      if (pending) localStorage.removeItem(PREFILL_URL_KEY);
+    } catch {}
+    if (pending) {
+      setUrl(pending);
+      // запуск после установки url
+      setTimeout(() => {
+        const btn = document.getElementById("lex-decode-run-btn");
+        btn?.click();
+      }, 50);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function run() {
     if (!url.trim() || busy) return;
@@ -122,6 +143,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
           disabled={busy}
         />
         <button
+          id="lex-decode-run-btn"
           onClick={run}
           disabled={busy || !url.trim()}
           style={{
