@@ -682,13 +682,13 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         padding: "20px 8px",
       }}
     >
-      <div style={{ fontSize: 44 }}>🗂️</div>
+      <div style={{ fontSize: 44 }}>🎬</div>
       <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>
-        Подключите первый канал
+        Создайте первый проект
       </h2>
       <p style={{ margin: 0, fontSize: 13, color: MUTED, maxWidth: 280, lineHeight: 1.45 }}>
-        За 2 шага: выберите платформу — подключите канал. Дальше агенты сами
-        соберут план и предложат посты.
+        Подключите Instagram-аккаунт — и LEX начнёт разбирать Reels и собирать
+        сценарии под вашу нишу.
       </p>
       <button onClick={onCreate} style={{ ...primaryBtn, marginTop: 10 }}>
         НАЧАТЬ
