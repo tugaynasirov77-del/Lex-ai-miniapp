@@ -59,6 +59,14 @@ async function getJSON<TResp>(path: string): Promise<TResp> {
 export type CreateProjectPayload = {
   title: string;
   platform?: "telegram" | "instagram";
+  // Quick Project Setup — расширенные поля онбординга проекта.
+  niche?: string;
+  audience?: string;
+  content_goal?: string;
+  content_style?: string;
+  on_camera?: "yes" | "sometimes" | "no";
+  what_sells?: string;
+  content_language?: string;
 };
 
 export type CreateProjectResult = { project?: { id: string }; projectId?: string };
