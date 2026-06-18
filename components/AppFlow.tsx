@@ -14,6 +14,7 @@ import LexCreateScreen from "./screens/LexCreateScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import PersonalScriptScreen from "./screens/PersonalScriptScreen";
 import OnboardingSuccessScreen from "./screens/OnboardingSuccessScreen";
+import PlanScreen from "./screens/PlanScreen";
 import BottomTabBar from "./BottomTabBar";
 import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
@@ -203,12 +204,7 @@ export default function AppFlow() {
               }}
             />
           )}
-          {currentScreen === "plan" && (
-            // Временная заглушка — реальный PlanScreen подключит автор Раунда 2.
-            <div style={{ padding: 40, textAlign: "center", color: "#888" }}>
-              Недельный план скоро появится
-            </div>
-          )}
+          {currentScreen === "plan" && <PlanScreen onBack={goBack} />}
           {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
               удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
               старый currentScreen, useResumeFlow сбросит на home. */}
