@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
 import HomeScreen from "./HomeScreen";
+import WelcomeScreen from "./WelcomeScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import ProjectScreen from "./screens/ProjectScreen";
 import CreateProjectScreen from "./screens/CreateProjectScreen";
@@ -15,6 +16,8 @@ import BottomTabBar from "./BottomTabBar";
 import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
 import { useResumeFlow } from "../hooks/useResumeFlow";
+import { useWelcomeGate, ONBOARDING_LS_KEY } from "../hooks/useWelcomeGate";
+import { markOnboardingDone } from "../lib/api";
 import { hapticImpact } from "../lib/telegram";
 
 const ENTER = { opacity: 0 };
@@ -47,10 +50,27 @@ export default function AppFlow() {
   };
 
   // Telegram BackButton — централизованно через хук.
-  useTgBackButton(currentScreen !== "home", goBack);
+  // На welcome back-кнопку не показываем — это линейный онбординг.
+  useTgBackButton(currentScreen !== "home" && currentScreen !== "welcome", goBack);
 
   // Восстановление flow из localStorage + автосохранение на изменениях state.
   useResumeFlow();
+
+  // Решает, показать ли welcome-онбординг новому юзеру.
+  useWelcomeGate();
+
+  // Завершение онбординга: ставим флаги (локально + сервер) и уводим в создание
+  // проекта. completeOnboarding вызывается из WelcomeScreen.
+  const completeOnboarding = () => {
+    try {
+      localStorage.setItem(ONBOARDING_LS_KEY, "1");
+    } catch {
+      /* noop */
+    }
+    markOnboardingDone().catch(() => {
+      /* best-effort — localStorage уже закрыл показ */
+    });
+  };
 
   // Полностью блокируем скролл документа на flow-странице,
   // оставляем мягкий rubber-band только внутри foreground.
@@ -98,6 +118,13 @@ export default function AppFlow() {
         >
           {currentScreen === "home" && (
             <HomeScreen onStart={() => goNext("dashboard")} />
+          )}
+          {currentScreen === "welcome" && (
+            <WelcomeScreen
+              onComplete={completeOnboarding}
+              onStart={() => actions.navigate("create-project")}
+              onSkipToCreate={() => actions.navigate("create-project")}
+            />
           )}
           {currentScreen === "dashboard" && (
             <DashboardScreen onBack={goBack} />
