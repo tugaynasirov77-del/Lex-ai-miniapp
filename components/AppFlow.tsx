@@ -203,6 +203,12 @@ export default function AppFlow() {
               }}
             />
           )}
+          {currentScreen === "plan" && (
+            // Временная заглушка — реальный PlanScreen подключит автор Раунда 2.
+            <div style={{ padding: 40, textAlign: "center", color: "#888" }}>
+              Недельный план скоро появится
+            </div>
+          )}
           {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
               удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
               старый currentScreen, useResumeFlow сбросит на home. */}
