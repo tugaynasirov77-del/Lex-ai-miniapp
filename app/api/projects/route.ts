@@ -35,11 +35,34 @@ export async function POST(req: NextRequest) {
   if ("error" in a) return a.error;
   try {
     const body = await req.json();
-    const { title, status, progress, agents, platform } = body ?? {};
+    const {
+      title,
+      status,
+      progress,
+      agents,
+      platform,
+      niche,
+      audience,
+      content_goal,
+      content_style,
+      on_camera,
+      what_sells,
+      content_language,
+    } = body ?? {};
     if (typeof title !== "string" || !title.trim()) {
       return Response.json({ error: "title required" }, { status: 400 });
     }
     const plat: "telegram" | "instagram" = platform === "instagram" ? "instagram" : "telegram";
+
+    // Quick Project Setup — пишем только заданные строковые поля.
+    const setup: Record<string, string> = {};
+    if (typeof niche === "string" && niche.trim()) setup.niche = niche.trim();
+    if (typeof audience === "string" && audience.trim()) setup.audience = audience.trim();
+    if (typeof content_goal === "string" && content_goal.trim()) setup.content_goal = content_goal.trim();
+    if (typeof content_style === "string" && content_style.trim()) setup.content_style = content_style.trim();
+    if (on_camera === "yes" || on_camera === "sometimes" || on_camera === "no") setup.on_camera = on_camera;
+    if (typeof what_sells === "string" && what_sells.trim()) setup.what_sells = what_sells.trim();
+    if (typeof content_language === "string" && content_language.trim()) setup.content_language = content_language.trim();
 
     const sb = getSupabase();
     const { data, error } = await sb
@@ -51,6 +74,7 @@ export async function POST(req: NextRequest) {
         progress: typeof progress === "number" ? progress : 0,
         agents: Array.isArray(agents) ? agents : [],
         platform: plat,
+        ...setup,
       })
       .select()
       .single();

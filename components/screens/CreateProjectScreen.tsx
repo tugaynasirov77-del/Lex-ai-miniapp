@@ -112,19 +112,14 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
   if (step === "platform") {
     return (
       <PlatformStep
-        platform={platform}
         title={title}
-        onPlatform={(p) => {
-          hapticSelection();
-          setPlatform(p);
-        }}
         onTitle={setTitle}
-        onSubmit={async () => {
-          if (!platform) return;
+        onSubmit={async (setup) => {
           hapticImpact("medium");
           const { projectId } = await createProject({
             title: title.trim(),
-            platform,
+            platform: "instagram",
+            ...setup,
           });
           hapticNotify("success");
           actions.setIds({ projectId });
@@ -176,30 +171,95 @@ export default function CreateProjectScreen({ onBack: _onBack }: Props) {
 // STEP 1: platform + title
 // ---------------------------------------------------------------------------
 
+type OnCamera = "yes" | "sometimes" | "no";
+
+type QuickSetup = {
+  niche: string;
+  audience: string;
+  content_goal: string;
+  content_style: string;
+  on_camera: OnCamera;
+  what_sells: string;
+  content_language: string;
+};
+
+const GOAL_OPTIONS: { label: string; value: string }[] = [
+  { label: "Охваты", value: "Охваты" },
+  { label: "Продажи", value: "Продажи" },
+  { label: "Экспертность", value: "Экспертность" },
+  { label: "Личный бренд", value: "Личный бренд" },
+  { label: "Вовлечение", value: "Вовлечение" },
+];
+
+const STYLE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Экспертный", value: "Экспертный" },
+  { label: "Разговорный", value: "Разговорный" },
+  { label: "Дерзкий", value: "Дерзкий" },
+  { label: "Спокойный", value: "Спокойный" },
+  { label: "Юмористический", value: "Юмористический" },
+  { label: "Вдохновляющий", value: "Вдохновляющий" },
+];
+
+const ON_CAMERA_OPTIONS: { label: string; value: OnCamera }[] = [
+  { label: "Да", value: "yes" },
+  { label: "Иногда", value: "sometimes" },
+  { label: "Нет", value: "no" },
+];
+
+const LANGUAGE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Русский", value: "ru" },
+  { label: "Английский", value: "en" },
+  { label: "Другой", value: "other" },
+];
+
 function PlatformStep({
-  platform,
   title,
-  onPlatform,
   onTitle,
   onSubmit,
 }: {
-  platform: Platform | null;
   title: string;
-  onPlatform: (p: Platform) => void;
   onTitle: (v: string) => void;
-  onSubmit: () => Promise<void>;
+  onSubmit: (setup: QuickSetup) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = !!platform && title.trim().length >= 2 && !busy;
+  const [niche, setNiche] = useState("");
+  const [audience, setAudience] = useState("");
+  const [goal, setGoal] = useState("");
+  const [contentStyle, setContentStyle] = useState("");
+  const [onCamera, setOnCamera] = useState<OnCamera | "">("");
+  const [whatSells, setWhatSells] = useState("");
+  const [language, setLanguage] = useState("ru"); // Русский по умолчанию
+
+  const clearError = () => {
+    if (error) setError(null);
+  };
+
+  const canSubmit =
+    title.trim().length >= 2 &&
+    niche.trim().length >= 2 &&
+    audience.trim().length >= 2 &&
+    goal !== "" &&
+    contentStyle !== "" &&
+    onCamera !== "" &&
+    language !== "" &&
+    !busy;
 
   const submit = async () => {
     if (!canSubmit) return;
     setBusy(true);
     setError(null);
     try {
-      await onSubmit();
+      await onSubmit({
+        niche: niche.trim(),
+        audience: audience.trim(),
+        content_goal: goal,
+        content_style: contentStyle,
+        on_camera: onCamera,
+        what_sells: whatSells.trim(),
+        content_language: language,
+      });
     } catch (e) {
       hapticNotify("error");
       setError(
@@ -221,75 +281,118 @@ function PlatformStep({
       <h1
         style={{
           margin: "10px 0 0",
-          fontSize: 28,
-          lineHeight: 1.05,
+          fontSize: 26,
+          lineHeight: 1.1,
           fontWeight: 800,
           letterSpacing: "-0.02em",
-          textTransform: "uppercase",
         }}
       >
-        Создаём
-        <br />
-        Instagram-проект
+        Расскажите немного о вашем блоге
       </h1>
       <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-        Один проект = один аккаунт Instagram.
+        LEX использует эти ответы, чтобы создавать контент именно под вашу тему,
+        аудиторию и стиль.
       </p>
 
-      <div
-        style={{
-          marginTop: 20,
-          padding: "16px 14px",
-          borderRadius: 18,
-          border: `1.5px solid ${YELLOW}`,
-          background: "rgba(245,231,10,0.06)",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-        }}
-      >
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            flexShrink: 0,
-            borderRadius: 14,
-            background: "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 8px 22px rgba(221,42,123,0.36), 0 0 0 1px rgba(255,255,255,0.14) inset",
-          }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#FFFFFF" strokeWidth="1.9" />
-            <circle cx="12" cy="12" r="4" stroke="#FFFFFF" strokeWidth="1.9" />
-            <circle cx="17.2" cy="6.8" r="1.2" fill="#FFFFFF" />
-          </svg>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Instagram</div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-            Разборы Reels, сценарии, карусели, подписи
-          </div>
-        </div>
+      <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 20 }}>
+        <Field label="Название проекта">
+          <input
+            value={title}
+            onChange={(e) => {
+              onTitle(e.target.value);
+              clearError();
+            }}
+            maxLength={60}
+            placeholder="Например: Мой блог про маркетинг"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Тема / ниша блога">
+          <input
+            value={niche}
+            onChange={(e) => {
+              setNiche(e.target.value);
+              clearError();
+            }}
+            maxLength={80}
+            placeholder="Например: маркетинг для экспертов"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Целевая аудитория">
+          <input
+            value={audience}
+            onChange={(e) => {
+              setAudience(e.target.value);
+              clearError();
+            }}
+            maxLength={120}
+            placeholder="Например: эксперты и предприниматели 25–45"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Главная цель контента">
+          <ChipGroup
+            options={GOAL_OPTIONS}
+            value={goal}
+            onChange={(v) => {
+              setGoal(v);
+              clearError();
+            }}
+          />
+        </Field>
+
+        <Field label="Стиль подачи">
+          <ChipGroup
+            options={STYLE_OPTIONS}
+            value={contentStyle}
+            onChange={(v) => {
+              setContentStyle(v);
+              clearError();
+            }}
+          />
+        </Field>
+
+        <Field label="Готовы сниматься лицом?">
+          <ChipGroup
+            options={ON_CAMERA_OPTIONS}
+            value={onCamera}
+            onChange={(v) => {
+              setOnCamera(v);
+              clearError();
+            }}
+          />
+        </Field>
+
+        <Field label="Что продаёте / продвигаете (необязательно)">
+          <input
+            value={whatSells}
+            onChange={(e) => {
+              setWhatSells(e.target.value);
+              clearError();
+            }}
+            maxLength={120}
+            placeholder="Например: курс по продажам в Reels"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Язык контента">
+          <ChipGroup
+            options={LANGUAGE_OPTIONS}
+            value={language}
+            onChange={(v) => {
+              setLanguage(v);
+              clearError();
+            }}
+          />
+        </Field>
       </div>
 
-      <div style={{ marginTop: 20 }}>
-        <Label>Название проекта</Label>
-        <input
-          value={title}
-          onChange={(e) => {
-            onTitle(e.target.value);
-            if (error) setError(null);
-          }}
-          maxLength={60}
-          placeholder="Например: Мой канал про маркетинг"
-          style={inputStyle}
-        />
-      </div>
-
-      <div style={{ flex: 1 }} />
+      <div style={{ flex: 1, minHeight: 16 }} />
 
       {error && (
         <p
@@ -313,9 +416,66 @@ function PlatformStep({
           cursor: canSubmit ? "pointer" : "not-allowed",
         }}
       >
-        {busy ? "СОЗДАЁМ…" : "ДАЛЬШЕ"}
+        {busy ? "СОЗДАЁМ…" : "ПРОДОЛЖИТЬ"}
       </button>
     </ScreenWrap>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function ChipGroup<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { label: string; value: T }[];
+  value: T | "";
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => {
+              hapticImpact("light");
+              onChange(o.value);
+            }}
+            style={{
+              appearance: "none",
+              padding: "8px 14px",
+              borderRadius: 999,
+              border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
+              background: active ? "rgba(245,231,10,0.10)" : "transparent",
+              color: active ? YELLOW : INK,
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: active ? 700 : 500,
+              cursor: "pointer",
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
