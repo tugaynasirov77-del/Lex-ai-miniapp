@@ -9,6 +9,7 @@
  */
 
 export type ReminderTrigger =
+  | "scheduled_today" // сегодня по плану есть материал
   | "draft_unfinished" // незавершённый черновик 12ч+
   | "first_decode_followup" // через ~24ч после первого разбора Reels
   | "inactive_2d" // не делал контент 2+ дня
@@ -23,6 +24,13 @@ export type ReminderText = {
 };
 
 export const REMINDER_TEXTS: Record<ReminderTrigger, ReminderText[]> = {
+  scheduled_today: [
+    { text: "🎬 Сегодня по плану «{TITLE}». Сценарий готов — осталось снять." },
+    { text: "📅 На сегодня запланирован «{TITLE}». Время снимать и публиковать!" },
+    { text: "🎯 «{TITLE}» ждёт съёмки сегодня. Открой план и поехали." },
+    { text: "⏰ Сегодня в плане «{TITLE}». Сделаем сегодня — или перенесём?" },
+  ],
+
   draft_unfinished: [
     { text: "👀 У тебя остался незаконченный черновик. Доделаем за пару минут?" },
     { text: "📝 Черновик ждёт — давай добьём, пока не остыл?" },
@@ -86,7 +94,7 @@ export function pluralMaterials(n: number): string {
 
 export function renderReminder(
   trigger: ReminderTrigger,
-  vars: { N?: number },
+  vars: { N?: number; TITLE?: string },
   dayOfYear: number,
 ): string {
   const list = REMINDER_TEXTS[trigger];
@@ -96,6 +104,11 @@ export function renderReminder(
     s = s.replace(/\{N\}/g, String(vars.N))
       .replace(/\{DAYS\}/g, pluralDay(vars.N))
       .replace(/\{MATERIALS\}/g, pluralMaterials(vars.N));
+  }
+  if (vars.TITLE !== undefined) {
+    // Обрезаем длинные названия для читаемости в пуше
+    const t = vars.TITLE.length > 40 ? vars.TITLE.slice(0, 38) + "…" : vars.TITLE;
+    s = s.replace(/\{TITLE\}/g, t);
   }
   return s;
 }

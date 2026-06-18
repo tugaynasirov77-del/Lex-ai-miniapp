@@ -62,7 +62,7 @@ const FREQ_COOLDOWN_HOURS: Record<Frequency, number> = {
 };
 
 // Какие триггеры разрешены для rare-режима
-const RARE_ALLOWED: ReminderTrigger[] = ["draft_unfinished", "first_decode_followup", "inactive_2d"];
+const RARE_ALLOWED: ReminderTrigger[] = ["scheduled_today", "draft_unfinished", "first_decode_followup", "inactive_2d"];
 
 function withinQuietHours(): boolean {
   const h = mskHour();
@@ -82,6 +82,7 @@ type UserState = {
   decodeCount: number; // всего разборов Reels
   firstDecodeAt: number | null; // ms — время самого первого разбора
   lastReminderTrigger: ReminderTrigger | null;
+  scheduledTodayTitle: string | null; // материал запланирован на сегодня (план)
 };
 
 function dayKeyMsk(d: Date): string {
@@ -108,6 +109,9 @@ function computeStreak(dates: Set<string>): { len: number; today: boolean } {
 
 function pickTrigger(s: UserState): ReminderTrigger | null {
   const now = Date.now();
+
+  // 0. Сегодня по плану есть материал — самый actionable триггер (бриф р.19)
+  if (s.scheduledTodayTitle) return "scheduled_today";
 
   // 1. Незавершённый черновик 12ч+
   if (s.lastDraftPendingId) return "draft_unfinished";
@@ -141,6 +145,8 @@ function ctaForTrigger(trigger: ReminderTrigger): string {
   switch (trigger) {
     case "draft_unfinished":
       return "📝 Открыть черновик";
+    case "scheduled_today":
+      return "🎬 Открыть план";
     case "first_decode_followup":
       return "🔍 Разобрать ещё один Reels";
     case "after_publish":
@@ -264,7 +270,7 @@ export async function GET(req: Request) {
   const allProjIds = Array.from(new Set(Array.from(userProjectIds.values()).flat()));
   const { data: drafts } = await sb
     .from("content_drafts")
-    .select("id,project_id,status,created_at,updated_at")
+    .select("id,project_id,status,created_at,updated_at,planned_for_date,title,source_topic")
     .in("project_id", allProjIds)
     .gte("created_at", since60)
     .order("created_at", { ascending: false });
@@ -274,7 +280,7 @@ export async function GET(req: Request) {
   for (const [tg, ids] of userProjectIds) for (const id of ids) proj2tg.set(id, tg);
 
   // Группируем драфты по юзеру
-  type DraftRow = { id: string; project_id: string; status: string; created_at: string; updated_at: string | null };
+  type DraftRow = { id: string; project_id: string; status: string; created_at: string; updated_at: string | null; planned_for_date: string | null; title: string | null; source_topic: string | null };
   const byUser = new Map<number, DraftRow[]>();
   for (const d of (drafts || []) as DraftRow[]) {
     const tg = proj2tg.get(d.project_id);
@@ -331,6 +337,21 @@ export async function GET(req: Request) {
     for (const d of userDrafts) dates.add(dayKeyMsk(new Date(d.created_at)));
     const { len: streakDays, today: streakActiveToday } = computeStreak(dates);
 
+    // Запланировано на сегодня (план): материал с planned_for_date == сегодня,
+    // ещё не опубликован.
+    const todayKey = dayKeyMsk(new Date());
+    let scheduledTodayTitle: string | null = null;
+    for (const d of userDrafts) {
+      if (
+        d.planned_for_date === todayKey &&
+        d.status !== "published" &&
+        d.status !== "rejected"
+      ) {
+        scheduledTodayTitle = d.title || d.source_topic || "Reels";
+        break;
+      }
+    }
+
     const ds = decodeStats.get(tg);
     const state: UserState = {
       tg_id: tg,
@@ -345,6 +366,7 @@ export async function GET(req: Request) {
       decodeCount: ds?.count ?? 0,
       firstDecodeAt: ds?.firstAt ?? null,
       lastReminderTrigger: pref?.lastTrigger ?? null,
+      scheduledTodayTitle,
     };
 
     const trigger = pickTrigger(state);
@@ -358,7 +380,11 @@ export async function GET(req: Request) {
       continue;
     }
 
-    const text = renderReminder(trigger, { N: streakDays }, dayOfYear());
+    const text = renderReminder(
+      trigger,
+      { N: streakDays, TITLE: scheduledTodayTitle || undefined },
+      dayOfYear(),
+    );
     targets.push({ tg_id: tg, trigger, text, freq });
   }
 
