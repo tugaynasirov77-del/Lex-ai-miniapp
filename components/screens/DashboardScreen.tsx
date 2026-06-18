@@ -245,7 +245,7 @@ function StreakBadge({ streak }: { streak: StreakDTO }) {
       <div style={{ fontSize: 32, lineHeight: 1 }}>🔥</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em" }}>
-          {current} {pluralDay(current)} подряд
+          {current} {pluralDay(current)} создаёте контент
         </div>
         <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2, lineHeight: 1.35 }}>
           {subtitle}
