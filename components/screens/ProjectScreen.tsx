@@ -16,7 +16,6 @@ import {
   markPublishedExternally,
   listProjectDrafts,
   ApiError,
-  type AdaptedTopicDTO,
   type ContentDraftDTO,
   type ProjectDTO,
   type IgAggregateDTO,
@@ -28,13 +27,8 @@ import {
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 import { markAutoStart, useAutoStartAgents } from "../../hooks/useAutoStartAgents";
 import BrandSetupCard from "../BrandSetupCard";
-import ReelDecoderCard from "../ReelDecoderCard";
 import ReelArchive from "../ReelArchive";
-import CaptionGeneratorCard from "../CaptionGeneratorCard";
-import CarouselGeneratorCard from "../CarouselGeneratorCard";
-import ReelScriptGeneratorCard from "../ReelScriptGeneratorCard";
 import ContentLibrary from "../ContentLibrary";
-import ContentPackCard from "../ContentPackCard";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -548,16 +542,13 @@ export default function ProjectScreen({ onBack }: Props) {
           <IgOverviewTab
             projectId={projectId}
             reelArchiveKey={reelArchiveKey}
-            onDecoded={() => setReelArchiveKey((k) => k + 1)}
-            onCreateScript={({ decodeId, topic }) => {
-              hapticImpact("medium");
-              actions.setScreenMeta("scriptTopic", topic);
-              actions.setScreenMeta("scriptDecodeId", decodeId);
-              actions.navigate("personal-script");
-            }}
             onSeeAll={() => {
               hapticSelection();
               setTab("library");
+            }}
+            onOpenTool={(tool) => {
+              actions.setScreenMeta("toolTab", tool);
+              actions.navigate("tools");
             }}
           />
         )}
@@ -720,25 +711,26 @@ function IgTabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 // IG: вкладка «Обзор» — прогресс недели, быстрые действия, инструменты
 // =====================================================================
 
-const QUICK_ACTIONS: { id: string; label: string; icon: string }[] = [
-  { id: "tool-decoder", label: "Разобрать Reels", icon: "🔍" },
-  { id: "tool-script", label: "Сценарий с нуля", icon: "🎬" },
-  { id: "tool-carousel", label: "Карусель", icon: "🖼" },
-  { id: "tool-caption", label: "Подпись", icon: "✏️" },
+type QuickTool = "decoder" | "script" | "carousel" | "caption" | "pack";
+
+const QUICK_ACTIONS: { tool: QuickTool; label: string; icon: string }[] = [
+  { tool: "decoder", label: "Разобрать Reels", icon: "🔍" },
+  { tool: "script", label: "Сценарий с нуля", icon: "🎬" },
+  { tool: "carousel", label: "Карусель", icon: "🖼" },
+  { tool: "caption", label: "Подпись", icon: "✏️" },
+  { tool: "pack", label: "Пакет", icon: "📦" },
 ];
 
 function IgOverviewTab({
   projectId,
   reelArchiveKey,
-  onDecoded,
-  onCreateScript,
   onSeeAll,
+  onOpenTool,
 }: {
   projectId: string;
   reelArchiveKey: number;
-  onDecoded: () => void;
-  onCreateScript: (args: { decodeId: string; topic: AdaptedTopicDTO }) => void;
   onSeeAll: () => void;
+  onOpenTool: (tool: QuickTool) => void;
 }) {
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
 
@@ -762,11 +754,6 @@ function IgOverviewTab({
   })();
 
   const recent = (drafts || []).slice(0, 5);
-
-  const scrollTo = (id: string) => {
-    hapticImpact("light");
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -800,12 +787,12 @@ function IgOverviewTab({
         </div>
       </div>
 
-      {/* Быстрые действия */}
+      {/* Быстрые действия — ведут в раздел «Создать» / нужный таб инструментов */}
       <div style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
         {QUICK_ACTIONS.map((a) => (
           <button
-            key={a.id}
-            onClick={() => scrollTo(a.id)}
+            key={a.tool}
+            onClick={() => { hapticImpact("light"); onOpenTool(a.tool); }}
             style={{
               appearance: "none",
               flex: "0 0 auto",
@@ -874,26 +861,39 @@ function IgOverviewTab({
         </div>
       )}
 
-      {/* Главный инструмент — Decoder */}
-      <div id="tool-decoder">
-        <ReelDecoderCard
-          projectId={projectId}
-          onDecoded={onDecoded}
-          onCreateScript={onCreateScript}
-        />
-      </div>
-      <div id="tool-script">
-        <ReelScriptGeneratorCard projectId={projectId} />
-      </div>
-      <div id="tool-carousel">
-        <CarouselGeneratorCard projectId={projectId} />
-      </div>
-      <div id="tool-caption">
-        <CaptionGeneratorCard projectId={projectId} />
-      </div>
-      <div id="tool-pack">
-        <ContentPackCard projectId={projectId} />
-      </div>
+      {/* Большая CTA — в раздел инструментов */}
+      <button
+        onClick={() => { hapticImpact("medium"); onOpenTool("decoder"); }}
+        style={{
+          appearance: "none",
+          width: "100%",
+          padding: "16px 18px",
+          borderRadius: 18,
+          border: `1px solid rgba(245,231,10,0.32)`,
+          background:
+            "radial-gradient(circle 200px at 100% 0%, rgba(245,133,41,0.20), transparent 60%)," +
+            "linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(245,231,10,0.03) 100%)",
+          color: INK,
+          fontFamily: "inherit",
+          textAlign: "left",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          boxShadow: `0 12px 28px rgba(245,231,10,0.10)`,
+        }}
+      >
+        <div style={{ fontSize: 30 }}>🛠</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.01em" }}>
+            Открыть инструменты
+          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+            Разбор / Сценарий / Карусель / Подпись / Пакет
+          </div>
+        </div>
+        <span style={{ color: YELLOW, fontSize: 22, fontWeight: 800 }}>›</span>
+      </button>
     </div>
   );
 }

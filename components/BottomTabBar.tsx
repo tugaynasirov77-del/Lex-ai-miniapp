@@ -48,7 +48,7 @@ export default function BottomTabBar() {
   const active: Tab["key"] =
     cs === "home"
       ? "main"
-      : cs === "create-hub" || cs === "project"
+      : cs === "create-hub" || cs === "tools" || cs === "project"
       ? "create"
       : cs === "plan"
       ? "plan"

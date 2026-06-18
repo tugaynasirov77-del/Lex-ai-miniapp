@@ -12,52 +12,82 @@ const SUB_MUTED = "rgba(255,255,255,0.42)";
 const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
-// Куда ведёт карточка: вкладка проекта (projectInitialTab).
-type HubCard = {
-  icon: string;
-  title: string;
-  desc: string;
-  tab: "overview" | "library";
-  accent: string;
-};
+/** Идентификатор инструмента на экране /tools. */
+export type ToolId =
+  | "decoder"
+  | "script"
+  | "carousel"
+  | "caption"
+  | "pack";
+
+type HubCard =
+  | { kind: "tool"; tool: ToolId; icon: string; title: string; desc: string; accent: string }
+  | { kind: "library"; icon: string; title: string; desc: string; accent: string };
 
 const CARDS: HubCard[] = [
   {
+    kind: "tool",
+    tool: "decoder",
     icon: "🔍",
     title: "Разобрать Reels",
-    desc: "Вставь ссылку, получи разбор + сценарий",
-    tab: "overview",
+    desc: "Вставь ссылку — LEX разложит хук, структуру и сценарий",
     accent: "rgba(245,231,10,0.10)",
   },
   {
+    kind: "tool",
+    tool: "script",
     icon: "✨",
     title: "Сценарий с нуля",
-    desc: "Reels без референса, по твоей теме",
-    tab: "overview",
+    desc: "Reels без референса — задай тему, получишь сценарий",
     accent: "rgba(221,42,123,0.12)",
   },
   {
+    kind: "tool",
+    tool: "carousel",
     icon: "🖼",
     title: "Карусель",
-    desc: "Готовая карусель из 6 слайдов",
-    tab: "overview",
+    desc: "Готовая карусель из 6 слайдов под твою нишу",
     accent: "rgba(40,160,235,0.12)",
   },
   {
+    kind: "tool",
+    tool: "caption",
     icon: "✏️",
     title: "Подпись и хештеги",
-    desc: "Цепляющая подпись под пост",
-    tab: "overview",
+    desc: "5 вариантов подписи + 15 релевантных хештегов",
     accent: "rgba(91,214,107,0.12)",
   },
   {
+    kind: "tool",
+    tool: "pack",
+    icon: "📦",
+    title: "Контент-пакет",
+    desc: "Одна идея → Reels-сценарий + карусель + подпись",
+    accent: "rgba(245,133,41,0.14)",
+  },
+  {
+    kind: "library",
     icon: "💡",
     title: "Сохранённые идеи",
-    desc: "Открыть библиотеку материалов",
-    tab: "library",
-    accent: "rgba(245,133,41,0.12)",
+    desc: "Открыть библиотеку материалов проекта",
+    accent: "rgba(122,200,255,0.10)",
   },
 ];
+
+/** Выбираем «активный» IG-проект: state.projectId, иначе самый недавний по updated_at. */
+function pickActiveProject(stateProjectId: string | null, projects: ProjectDTO[]): ProjectDTO | null {
+  if (stateProjectId) {
+    const p = projects.find((x) => x.id === stateProjectId);
+    if (p) return p;
+  }
+  if (projects.length === 0) return null;
+  const sorted = [...projects].sort((a, b) => {
+    const at = new Date(a.updated_at || a.created_at || 0).getTime();
+    const bt = new Date(b.updated_at || b.created_at || 0).getTime();
+    return bt - at;
+  });
+  return sorted[0];
+}
 
 export default function CreateHubScreen() {
   const { state } = useFlow();
@@ -79,18 +109,27 @@ export default function CreateHubScreen() {
     };
   }, []);
 
-  // Активный проект: текущий из flow, иначе первый IG-проект.
-  const activeId = state.projectId || projects[0]?.id || null;
+  const active = pickActiveProject(state.projectId, projects);
 
-  const open = (tab: HubCard["tab"]) => {
+  const openTool = (tool: ToolId) => {
     hapticImpact("medium");
-    if (!activeId) {
-      // Нет проекта — сначала создаём.
+    if (!active) {
       actions.navigate("create-project");
       return;
     }
-    actions.setIds({ projectId: activeId });
-    actions.setScreenMeta("projectInitialTab", tab);
+    actions.setIds({ projectId: active.id });
+    actions.setScreenMeta("toolTab", tool);
+    actions.navigate("tools");
+  };
+
+  const openLibrary = () => {
+    hapticImpact("medium");
+    if (!active) {
+      actions.navigate("create-project");
+      return;
+    }
+    actions.setIds({ projectId: active.id });
+    actions.setScreenMeta("projectInitialTab", "library");
     actions.navigate("project");
   };
 
@@ -116,12 +155,24 @@ export default function CreateHubScreen() {
       <p style={{ margin: "6px 0 0", fontSize: 14, color: MUTED }}>
         Выбери, что собираем сегодня
       </p>
+      {active && (
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 11,
+            color: SUB_MUTED,
+            letterSpacing: "0.04em",
+          }}
+        >
+          Проект: <span style={{ color: INK, fontWeight: 600 }}>{active.title}</span>
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 22 }}>
         {CARDS.map((c) => (
           <button
             key={c.title}
-            onClick={() => open(c.tab)}
+            onClick={() => (c.kind === "tool" ? openTool(c.tool) : openLibrary())}
             style={{
               appearance: "none",
               textAlign: "left",
@@ -165,12 +216,16 @@ export default function CreateHubScreen() {
         ))}
       </div>
 
-      {!activeId && (
+      {!active && (
         <p style={{ margin: "18px 0 0", fontSize: 12, color: SUB_MUTED, textAlign: "center", lineHeight: 1.5 }}>
           Сначала создадим Instagram-проект — выбери любой инструмент, и LEX
           предложит его собрать.
         </p>
       )}
+
+      <style>{`
+        ${YELLOW ? "" : ""}
+      `}</style>
     </div>
   );
 }
