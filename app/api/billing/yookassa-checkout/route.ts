@@ -31,16 +31,25 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: v.error ?? "unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { tier?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    tier?: string;
+    period?: string;
+  };
   const tier = body.tier;
   if (tier !== "pro" && tier !== "business") {
     return Response.json({ error: "tier must be pro|business" }, { status: 400 });
   }
+  const period: "monthly" | "yearly" =
+    body.period === "yearly" ? "yearly" : "monthly";
 
   const cfg = TIERS[tier as Tier];
-  if (!cfg.priceRub) {
+  const amountRub =
+    period === "yearly" && cfg.priceRubYearly ? cfg.priceRubYearly : cfg.priceRub;
+  if (!amountRub) {
     return Response.json({ error: "no RUB price for tier" }, { status: 400 });
   }
+
+  const durationLabel = period === "yearly" ? "на 12 месяцев" : "на 30 дней";
 
   // Возврат — Mini App с маркером успеха. Frontend подхватит startapp
   // и перерисует BillingScreen с подтянутой свежей подпиской.
@@ -48,12 +57,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const payment = await createPayment({
-      amountRub: cfg.priceRub,
-      description: `Подписка LEX AI ${cfg.label} на 30 дней`,
+      amountRub,
+      description: `Подписка LEX AI ${cfg.label} ${durationLabel}`,
       returnUrl,
       metadata: {
         tg_id: String(v.user.id),
         tier,
+        period,
       },
     });
 

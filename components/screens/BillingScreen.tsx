@@ -9,6 +9,7 @@ type TierConfig = {
   label: string;
   priceStars: number;
   priceRub: number;
+  priceRubYearly?: number;
   limits: {
     post: LimitSpec;
     carousel: LimitSpec;
@@ -143,8 +144,103 @@ export default function BillingScreen({ onBack: _onBack }: Props) {
               ))}
           </div>
 
+          <FaqBlock />
+
           <TrustRow />
         </>
+      )}
+    </div>
+  );
+}
+
+function FaqBlock() {
+  const items = [
+    {
+      q: "А если бесплатного хватает?",
+      a: "3 разбора в месяц — это 1 в 10 дней. За это время твой конкурент выпустит 20+ Reels. На Pro ты разбираешь всю нишу за неделю, а не за квартал.",
+    },
+    {
+      q: "Не уверен в результате",
+      a: "Открой Free и сделай 1-2 разбора прямо сейчас. Каждый разбор содержит готовый сценарий — забери его, сними Reels, замерь результат. Если не сработало — просто не подключаешь Pro.",
+    },
+    {
+      q: "Дорого",
+      a: "490 ₽ в месяц = 16 ₽ в день, или цена 1 кофе. Один Reels который залетит на 100k охватов окупает год Pro.",
+    },
+    {
+      q: "Как отменить подписку?",
+      a: "В один тап в Настройках. Автопродления нет — деньги списываются только когда ты сам подключаешь следующий месяц или год.",
+    },
+    {
+      q: "Подойдёт для моей ниши?",
+      a: "Да. LEX работает с любой темой — фитнес, бьюти, бизнес, lifestyle, эксперты, эдьютейнмент. Анализ строится на структуре Reels, а не на содержании.",
+    },
+  ];
+  return (
+    <div style={{ marginTop: 32 }}>
+      <SectionTitle>Частые вопросы</SectionTitle>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+        {items.map((it, i) => (
+          <FaqItem key={i} q={it.q} a={it.a} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      style={{
+        background: CARD_BG,
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: 14,
+        overflow: "hidden",
+      }}
+    >
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          appearance: "none",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          color: INK,
+          fontFamily: "inherit",
+          padding: "14px 16px",
+          textAlign: "left",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          fontSize: 14,
+          fontWeight: 600,
+        }}
+      >
+        <span style={{ flex: 1 }}>{q}</span>
+        <span
+          style={{
+            color: MUTED,
+            fontSize: 14,
+            transition: "transform 200ms",
+            transform: open ? "rotate(90deg)" : "none",
+          }}
+        >
+          ›
+        </span>
+      </button>
+      {open && (
+        <div
+          style={{
+            padding: "0 16px 14px",
+            fontSize: 13,
+            color: MUTED,
+            lineHeight: 1.55,
+          }}
+        >
+          {a}
+        </div>
       )}
     </div>
   );
@@ -175,11 +271,11 @@ function Hero() {
           lineHeight: 1,
         }}
       >
-        Прокачай <span style={{ color: YELLOW }}>контент-фабрику</span>
+        AI-студия для <span style={{ color: YELLOW }}>Instagram</span>
       </h1>
       <p style={{ margin: 0, fontSize: 14, color: MUTED, lineHeight: 1.45 }}>
-        Разбирай чужие виральные Reels и получай готовые сценарии под свою нишу.
-        Без автопродления, отмена в любой момент.
+        Разбирай вирусные Reels, пиши сценарии и карусели, генерируй подписи —
+        всё в одном инструменте.
       </p>
     </div>
   );
@@ -327,6 +423,10 @@ function TierCard({
 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const hasYearly = !!tier.priceRubYearly && tier.priceRubYearly > 0;
+  const [period, setPeriod] = useState<"monthly" | "yearly">(
+    hasYearly && highlight ? "yearly" : "monthly",
+  );
 
   const buy = async () => {
     if (disabled || loading || isCurrent) return;
@@ -335,7 +435,7 @@ function TierCard({
     setErr(null);
     try {
       const { createYooKassaCheckout } = await import("../../lib/api");
-      const { confirmation_url } = await createYooKassaCheckout(tier.tier);
+      const { confirmation_url } = await createYooKassaCheckout(tier.tier, period);
       const tg = (typeof window !== "undefined" && (window as any).Telegram?.WebApp) || null;
       if (tg?.openLink) tg.openLink(confirmation_url);
       else if (tg?.openTelegramLink) tg.openTelegramLink(confirmation_url);
@@ -347,8 +447,17 @@ function TierCard({
     }
   };
 
-  // Ежедневная цена — psychological hack
-  const perDay = Math.round(tier.priceRub / 30);
+  const currentPriceRub =
+    period === "yearly" && tier.priceRubYearly ? tier.priceRubYearly : tier.priceRub;
+  const effectivePerMonth =
+    period === "yearly" && tier.priceRubYearly
+      ? Math.round(tier.priceRubYearly / 12)
+      : tier.priceRub;
+  const perDay = Math.round(effectivePerMonth / 30);
+  const savingsPct =
+    hasYearly && tier.priceRubYearly
+      ? Math.round((1 - tier.priceRubYearly / (tier.priceRub * 12)) * 100)
+      : 0;
 
   return (
     <div
@@ -402,6 +511,34 @@ function TierCard({
         </div>
       </div>
 
+      {hasYearly && !isCurrent && !disabled && (
+        <div style={{ display: "flex", gap: 6, marginTop: 14, marginBottom: 2 }}>
+          {(["monthly", "yearly"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              style={{
+                appearance: "none",
+                flex: 1,
+                padding: "8px 6px",
+                borderRadius: 10,
+                border: `1px solid ${period === p ? YELLOW : CARD_BORDER}`,
+                background:
+                  period === p ? "rgba(245,231,10,0.10)" : "rgba(255,255,255,0.04)",
+                color: period === p ? YELLOW : MUTED,
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: period === p ? 800 : 600,
+                cursor: "pointer",
+                position: "relative",
+              }}
+            >
+              {p === "monthly" ? "Месяц" : `Год · −${savingsPct}%`}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 14 }}>
         <span
           style={{
@@ -417,13 +554,17 @@ function TierCard({
             WebkitTextFillColor: "transparent",
           }}
         >
-          {tier.priceRub}
+          {currentPriceRub}
         </span>
         <span style={{ fontSize: 18, fontWeight: 700, color: MUTED }}>₽</span>
-        <span style={{ fontSize: 13, color: SUB_MUTED, marginLeft: 4 }}>/ мес</span>
+        <span style={{ fontSize: 13, color: SUB_MUTED, marginLeft: 4 }}>
+          {period === "yearly" ? "/ год" : "/ мес"}
+        </span>
       </div>
       <div style={{ fontSize: 11, color: SUB_MUTED, marginTop: 4 }}>
-        ≈ {perDay} ₽ в день · без автопродления
+        {period === "yearly"
+          ? `≈ ${effectivePerMonth} ₽/мес · экономия ${savingsPct}%`
+          : `≈ ${perDay} ₽ в день · без автопродления`}
       </div>
 
       {/* Features */}
@@ -494,7 +635,7 @@ function TierCard({
                 : "0 0 0 1px rgba(255,255,255,0.12) inset",
             }}
           >
-            {loading ? "Открываю оплату…" : `Подключить за ${tier.priceRub} ₽`}
+            {loading ? "Открываю оплату…" : `Подключить за ${currentPriceRub} ₽`}
           </button>
         )}
         {!isCurrent && !disabled && (

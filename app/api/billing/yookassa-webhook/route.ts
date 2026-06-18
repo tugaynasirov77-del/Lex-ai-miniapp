@@ -100,8 +100,10 @@ async function activateSubscription(payment: {
   if (existing) return;
 
   const cfg = TIERS[tier];
+  const period = metadata.period === "yearly" ? "yearly" : "monthly";
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const durationDays = period === "yearly" ? 365 : 30;
+  const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
   await sb.from("subscriptions").insert({
     tg_id: tgId,

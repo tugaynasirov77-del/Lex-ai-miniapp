@@ -124,8 +124,11 @@ export function bustClientCache(key?: "projects" | "billing" | "streak"): void {
 }
 
 export type CheckoutResp = { confirmation_url: string; payment_id: string };
-export function createYooKassaCheckout(tier: "pro" | "business"): Promise<CheckoutResp> {
-  return postJSON("/api/billing/yookassa-checkout", { tier });
+export function createYooKassaCheckout(
+  tier: "pro" | "business",
+  period: "monthly" | "yearly" = "monthly",
+): Promise<CheckoutResp> {
+  return postJSON("/api/billing/yookassa-checkout", { tier, period });
 }
 
 // ───────────── Reel Decoder ─────────────

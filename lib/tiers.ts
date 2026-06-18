@@ -15,11 +15,14 @@ export type LimitSpec = {
   period: LimitPeriod;
 };
 
+export type BillingPeriod = "monthly" | "yearly";
+
 export type TierConfig = {
   tier: Tier;
   label: string;
   priceStars: number;          // запасной способ оплаты (Telegram Stars)
-  priceRub: number;            // primary способ оплаты через ЮKassa, рубли
+  priceRub: number;            // месячная цена через ЮKassa, рубли
+  priceRubYearly?: number;     // годовая цена со скидкой (если есть)
   limits: {
     post: LimitSpec;
     carousel: LimitSpec;
@@ -63,6 +66,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     label: "Pro",
     priceStars: 290,
     priceRub: 490,
+    priceRubYearly: 3990, // 332₽/мес эффективно, -32%
     limits: {
       post:        { count: UNLIMITED, period: "month" },
       carousel:    { count: UNLIMITED, period: "month" },
@@ -87,6 +91,7 @@ export const TIERS: Record<Tier, TierConfig> = {
     label: "Pro+",
     priceStars: 850,
     priceRub: 1490,
+    priceRubYearly: 11900, // 992₽/мес эффективно, -33%
     limits: {
       post:        { count: UNLIMITED, period: "month" },
       carousel:    { count: UNLIMITED, period: "month" },
