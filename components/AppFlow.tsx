@@ -16,6 +16,7 @@ import PersonalScriptScreen from "./screens/PersonalScriptScreen";
 import OnboardingSuccessScreen from "./screens/OnboardingSuccessScreen";
 import PlanScreen from "./screens/PlanScreen";
 import CreateHubScreen from "./screens/CreateHubScreen";
+import ToolsScreen from "./screens/ToolsScreen";
 import BottomTabBar from "./BottomTabBar";
 import { useFlow, useFlowActions } from "../flow";
 import { useTgBackButton } from "../hooks/useTgBackButton";
@@ -214,6 +215,7 @@ export default function AppFlow() {
           )}
           {currentScreen === "plan" && <PlanScreen onBack={goBack} />}
           {currentScreen === "create-hub" && <CreateHubScreen />}
+          {currentScreen === "tools" && <ToolsScreen onBack={goBack} />}
           {/* Legacy screens (choose-format/project-brief/upload/generate/reel-approve/review)
               удалены — UI теперь идёт через единый LexCreateScreen. Если в localStorage
               старый currentScreen, useResumeFlow сбросит на home. */}
