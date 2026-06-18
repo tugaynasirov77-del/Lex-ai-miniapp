@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { decodeReel, type ReelDecodeDTO, type ReelQuotaDTO } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+
+const HINT_DISMISS_KEY = "lex_decode_hint_dismissed";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -90,6 +92,8 @@ export default function ReelDecoderCard({ projectId, onDecoded }: Props) {
         Кидай ссылку — LEX разложит хук, структуру, таймкоды и метрики. Плюс готовый
         сценарий под твою нишу.
       </p>
+
+      <HowToGetLink />
 
       {/* Input + button */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -185,6 +189,11 @@ export default function ReelDecoderCard({ projectId, onDecoded }: Props) {
       {/* Result */}
       {decode && (
         <ResultBlock decode={decode} cached={cached} />
+      )}
+
+      {/* Upsell — после результата, если квота на нуле или близка */}
+      {decode && quota && quota.tier === "free" && quota.used >= quota.limit - 1 && (
+        <UpsellCard quota={quota} />
       )}
     </div>
   );
@@ -656,6 +665,157 @@ function clean(s: string): string {
   // Снимаем висящие точку или запятую в самом начале (если AI странно вернул)
   r = r.replace(/^[.,;:]\s*/, "");
   return r;
+}
+
+function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
+  const left = Math.max(0, quota.limit - quota.used);
+  const headline =
+    left === 0
+      ? "Это был последний бесплатный разбор"
+      : "Остался 1 бесплатный разбор";
+  const sub =
+    left === 0
+      ? "На Pro ты получишь ещё 30 разборов в этом месяце — и сможешь сравнивать формулы Reels десятками."
+      : "Сразу прокачайся на Pro: 30 разборов в месяц, безлимит постов и приоритет в генерации.";
+  return (
+    <div
+      style={{
+        marginTop: 16,
+        padding: 18,
+        borderRadius: 18,
+        background:
+          "linear-gradient(135deg, rgba(221,42,123,0.16) 0%, rgba(245,133,41,0.14) 50%, rgba(245,231,10,0.10) 100%)",
+        border: "1px solid rgba(245,231,10,0.30)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 800,
+          color: YELLOW,
+          marginBottom: 8,
+        }}
+      >
+        🚀 Прокачайся до Pro
+      </div>
+      <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.25, marginBottom: 6 }}>
+        {headline}
+      </div>
+      <p style={{ margin: "0 0 14px", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
+        {sub}
+      </p>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 30, fontWeight: 800, color: YELLOW, letterSpacing: "-0.02em" }}>
+          490 ₽
+        </span>
+        <span style={{ fontSize: 12, color: SUB_MUTED }}>/ мес · отмена в один клик</span>
+      </div>
+      <a
+        href="/billing"
+        onClick={() => hapticImpact("medium")}
+        style={{
+          display: "block",
+          textAlign: "center",
+          padding: "14px 0",
+          borderRadius: 999,
+          background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
+          color: "#0A0608",
+          fontSize: 14,
+          fontWeight: 800,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          boxShadow: `0 14px 32px rgba(245,231,10,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
+        }}
+      >
+        Получить 30 разборов →
+      </a>
+    </div>
+  );
+}
+
+function HowToGetLink() {
+  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    try { setDismissed(localStorage.getItem(HINT_DISMISS_KEY) === "1"); } catch {}
+  }, []);
+
+  if (dismissed) return null;
+
+  return (
+    <div
+      style={{
+        marginBottom: 12,
+        background: "rgba(122,200,255,0.06)",
+        border: "1px solid rgba(122,200,255,0.22)",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
+    >
+      <button
+        onClick={() => { hapticImpact("light"); setOpen((v) => !v); }}
+        style={{
+          appearance: "none",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          color: INK,
+          fontFamily: "inherit",
+          padding: "10px 12px",
+          textAlign: "left",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 12,
+        }}
+      >
+        <span style={{ fontSize: 14 }}>🎬</span>
+        <span style={{ flex: 1, fontWeight: 600 }}>
+          Как взять ссылку на Reels
+        </span>
+        <span style={{ color: MUTED, fontSize: 12, transition: "transform 200ms", transform: open ? "rotate(90deg)" : "none" }}>›</span>
+      </button>
+      {open && (
+        <div style={{ padding: "0 12px 12px", fontSize: 12, color: MUTED, lineHeight: 1.55 }}>
+          <ol style={{ margin: "0 0 10px", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+            <li>Открой нужный Reels в Instagram (свой или чужой — любой публичный)</li>
+            <li>Нажми меню <b style={{ color: INK }}>⋯</b> в правом верхнем углу видео</li>
+            <li>Выбери <b style={{ color: INK }}>«Копировать ссылку»</b></li>
+            <li>Вставь её в поле ниже</li>
+          </ol>
+          <div style={{ fontSize: 11, color: SUB_MUTED, marginBottom: 8 }}>
+            💡 Подойдёт любой Reels: конкурента, лидера ниши, вирусный — LEX покажет почему он работает.
+          </div>
+          <button
+            onClick={() => {
+              try { localStorage.setItem(HINT_DISMISS_KEY, "1"); } catch {}
+              setDismissed(true);
+            }}
+            style={{
+              appearance: "none",
+              background: "transparent",
+              border: "none",
+              color: SUB_MUTED,
+              fontFamily: "inherit",
+              fontSize: 11,
+              padding: 0,
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            Понятно, больше не показывать
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function fmtTime(sec: number): string {

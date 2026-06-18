@@ -62,7 +62,7 @@ const FREQ_COOLDOWN_HOURS: Record<Frequency, number> = {
 };
 
 // Какие триггеры разрешены для rare-режима
-const RARE_ALLOWED: ReminderTrigger[] = ["draft_unfinished", "inactive_2d"];
+const RARE_ALLOWED: ReminderTrigger[] = ["draft_unfinished", "first_decode_followup", "inactive_2d"];
 
 function withinQuietHours(): boolean {
   const h = mskHour();
@@ -79,6 +79,9 @@ type UserState = {
   lastPublishedAt: number | null;
   streakDays: number; // подряд идущих дней с драфтом, заканчивающихся сегодня/вчера
   streakActiveToday: boolean;
+  decodeCount: number; // всего разборов Reels
+  firstDecodeAt: number | null; // ms — время самого первого разбора
+  lastReminderTrigger: ReminderTrigger | null;
 };
 
 function dayKeyMsk(d: Date): string {
@@ -109,7 +112,17 @@ function pickTrigger(s: UserState): ReminderTrigger | null {
   // 1. Незавершённый черновик 12ч+
   if (s.lastDraftPendingId) return "draft_unfinished";
 
-  // 2. Стрик: если ≥3, не закрыт сегодня — streak_kept; если был и прервался ~1 день назад — streak_broken
+  // 2. Первый разбор Reels: ровно 1 decode, был 20-72ч назад, ещё не слали этот тип
+  if (
+    s.decodeCount === 1 &&
+    s.firstDecodeAt &&
+    s.lastReminderTrigger !== "first_decode_followup"
+  ) {
+    const ago = now - s.firstDecodeAt;
+    if (ago >= 20 * 3600 * 1000 && ago <= 72 * 3600 * 1000) return "first_decode_followup";
+  }
+
+  // 3. Стрик: если ≥3, не закрыт сегодня — streak_kept; если был и прервался ~1 день назад — streak_broken
   if (s.streakDays >= 3 && !s.streakActiveToday) return "streak_kept";
 
   // 3. После публикации: 22-26ч назад
@@ -128,6 +141,8 @@ function ctaForTrigger(trigger: ReminderTrigger): string {
   switch (trigger) {
     case "draft_unfinished":
       return "📝 Открыть черновик";
+    case "first_decode_followup":
+      return "🔍 Разобрать ещё один Reels";
     case "after_publish":
       return "🚀 Сделать следующий";
     case "streak_kept":
@@ -212,16 +227,36 @@ export async function GET(req: Request) {
   // user_prefs
   const { data: prefs } = await sb
     .from("user_prefs")
-    .select("tg_id,reminder_frequency,last_reminder_sent_at")
+    .select("tg_id,reminder_frequency,last_reminder_sent_at,last_reminder_trigger")
     .in("tg_id", tgIds);
-  const prefMap = new Map<number, { freq: Frequency; lastAt: number | null }>();
+  const prefMap = new Map<
+    number,
+    { freq: Frequency; lastAt: number | null; lastTrigger: ReminderTrigger | null }
+  >();
   for (const p of prefs || []) {
     prefMap.set(Number((p as any).tg_id), {
       freq: (p as any).reminder_frequency as Frequency,
       lastAt: (p as any).last_reminder_sent_at
         ? new Date((p as any).last_reminder_sent_at).getTime()
         : null,
+      lastTrigger: ((p as any).last_reminder_trigger as ReminderTrigger) || null,
     });
+  }
+
+  // Разборы Reels (для триггера first_decode_followup) — счётчик + время первого
+  const { data: decodes } = await sb
+    .from("reel_decodes")
+    .select("tg_id,created_at")
+    .in("tg_id", tgIds)
+    .order("created_at", { ascending: true });
+  const decodeStats = new Map<number, { count: number; firstAt: number }>();
+  for (const d of decodes || []) {
+    const tg = Number((d as any).tg_id);
+    if (!Number.isFinite(tg)) continue;
+    const ts = new Date((d as any).created_at).getTime();
+    const cur = decodeStats.get(tg);
+    if (!cur) decodeStats.set(tg, { count: 1, firstAt: ts });
+    else cur.count++;
   }
 
   // Драфты за 60 дней (для стрика, последнего поста, незавершённого)
@@ -296,6 +331,7 @@ export async function GET(req: Request) {
     for (const d of userDrafts) dates.add(dayKeyMsk(new Date(d.created_at)));
     const { len: streakDays, today: streakActiveToday } = computeStreak(dates);
 
+    const ds = decodeStats.get(tg);
     const state: UserState = {
       tg_id: tg,
       projectIds: userProjectIds.get(tg) || [],
@@ -306,6 +342,9 @@ export async function GET(req: Request) {
       lastPublishedAt,
       streakDays,
       streakActiveToday,
+      decodeCount: ds?.count ?? 0,
+      firstDecodeAt: ds?.firstAt ?? null,
+      lastReminderTrigger: pref?.lastTrigger ?? null,
     };
 
     const trigger = pickTrigger(state);

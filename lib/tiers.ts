@@ -45,14 +45,14 @@ export const TIERS: Record<Tier, TierConfig> = {
       post:        { count: 2,  period: "week" },
       carousel:    { count: 2,  period: "week" },
       reel:        { count: 2,  period: "week" },
-      reel_decode: { count: 1,  period: "month" }, // только для теста
+      reel_decode: { count: 3,  period: "month" },
     },
     maxProjects: 1,
     monthlyCapUsd: 0.4,
     available: true,
     features: [
       "1 проект",
-      "1 разбор Reels в месяц",
+      "3 разбора Reels в месяц",
       "Базовая генерация постов",
     ],
   },

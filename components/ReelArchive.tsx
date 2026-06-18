@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { listReelDecodes, type ReelAnalysisDTO } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import { DEMO_REEL_DECODE } from "../lib/demoReelDecode";
+
+const DEMO_DISMISS_KEY = "lex_demo_decode_dismissed";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -28,6 +31,13 @@ type Props = { projectId: string; refreshKey?: number };
 export default function ReelArchive({ projectId, refreshKey = 0 }: Props) {
   const [items, setItems] = useState<ArchiveItem[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [demoDismissed, setDemoDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setDemoDismissed(localStorage.getItem(DEMO_DISMISS_KEY) === "1");
+    } catch {}
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -42,6 +52,12 @@ export default function ReelArchive({ projectId, refreshKey = 0 }: Props) {
       alive = false;
     };
   }, [projectId, refreshKey]);
+
+  const dismissDemo = () => {
+    try { localStorage.setItem(DEMO_DISMISS_KEY, "1"); } catch {}
+    setDemoDismissed(true);
+    setOpenId(null);
+  };
 
   if (items === null) {
     return (
@@ -66,21 +82,64 @@ export default function ReelArchive({ projectId, refreshKey = 0 }: Props) {
   }
 
   if (items.length === 0) {
+    if (demoDismissed) {
+      return (
+        <div
+          style={{
+            padding: 24,
+            textAlign: "center",
+            background: CARD_BG,
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 14,
+            color: MUTED,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          Здесь будут все твои разборы Reels.<br />
+          Кинь ссылку в поле выше — и появится первый.
+        </div>
+      );
+    }
     return (
-      <div
-        style={{
-          padding: 24,
-          textAlign: "center",
-          background: CARD_BG,
-          border: `1px solid ${CARD_BORDER}`,
-          borderRadius: 14,
-          color: MUTED,
-          fontSize: 13,
-          lineHeight: 1.5,
-        }}
-      >
-        Здесь будут все твои разборы Reels.<br />
-        Кинь ссылку в поле выше — и появится первый.
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: YELLOW,
+            letterSpacing: "0.10em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+            paddingLeft: 4,
+          }}
+        >
+          ✨ Пример разбора · посмотри что получишь
+        </div>
+        <ArchiveCard
+          item={DEMO_REEL_DECODE as unknown as ArchiveItem}
+          open={openId === DEMO_REEL_DECODE.id}
+          isDemo
+          onToggle={() => {
+            hapticImpact("light");
+            setOpenId(openId === DEMO_REEL_DECODE.id ? null : DEMO_REEL_DECODE.id);
+          }}
+        />
+        <button
+          onClick={dismissDemo}
+          style={{
+            appearance: "none",
+            background: "transparent",
+            border: "none",
+            color: SUB_MUTED,
+            fontFamily: "inherit",
+            fontSize: 12,
+            padding: "8px 4px",
+            cursor: "pointer",
+            textAlign: "center",
+          }}
+        >
+          Скрыть пример
+        </button>
       </div>
     );
   }
@@ -119,10 +178,12 @@ function ArchiveCard({
   item,
   open,
   onToggle,
+  isDemo,
 }: {
   item: ArchiveItem;
   open: boolean;
   onToggle: () => void;
+  isDemo?: boolean;
 }) {
   const fmtCount = (n: number) =>
     n >= 1_000_000
@@ -136,8 +197,10 @@ function ArchiveCard({
   return (
     <div
       style={{
-        background: CARD_BG,
-        border: `1px solid ${open ? "rgba(245,231,10,0.30)" : CARD_BORDER}`,
+        background: isDemo
+          ? "linear-gradient(135deg, rgba(245,231,10,0.06) 0%, rgba(245,231,10,0.02) 100%)"
+          : CARD_BG,
+        border: `1px solid ${open || isDemo ? "rgba(245,231,10,0.30)" : CARD_BORDER}`,
         borderRadius: 14,
         overflow: "hidden",
         transition: "border-color 200ms",
@@ -161,8 +224,23 @@ function ArchiveCard({
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
             @{item.author_username || "автор"}
+            {isDemo && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  background: "rgba(245,231,10,0.18)",
+                  color: YELLOW,
+                }}
+              >
+                ПРИМЕР
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", gap: 10, fontSize: 11, color: MUTED }}>
             <span>👁 {fmtCount(item.view_count)}</span>
