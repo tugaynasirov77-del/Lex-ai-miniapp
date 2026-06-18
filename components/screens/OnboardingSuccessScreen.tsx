@@ -28,15 +28,8 @@ export default function OnboardingSuccessScreen({
     hapticNotify("success");
   }, []);
 
-  // Подзаголовок-плашка только если пришли данные сценария/проекта.
-  const detail =
-    scenarioTitle && projectName
-      ? `Сценарий «${scenarioTitle}» сохранён в проекте «${projectName}»`
-      : scenarioTitle
-        ? `Сценарий «${scenarioTitle}» сохранён в проекте`
-        : projectName
-          ? `Сценарий сохранён в проекте «${projectName}»`
-          : null;
+  // Pill с деталями показываем только когда есть и сценарий, и проект.
+  const showPill = !!(scenarioTitle && projectName);
 
   return (
     <div
@@ -51,7 +44,8 @@ export default function OnboardingSuccessScreen({
         textAlign: "center",
         padding:
           "max(calc(env(safe-area-inset-top) + 56px), 88px) 24px " +
-          "max(calc(env(safe-area-inset-bottom) + 24px), 28px)",
+          // Нижний клиренс под фиксированный BottomTabBar (78px) + воздух.
+          "max(calc(env(safe-area-inset-bottom) + 96px), 110px)",
       }}
     >
       {/* Центральный блок */}
@@ -78,8 +72,12 @@ export default function OnboardingSuccessScreen({
             alignItems: "center",
             justifyContent: "center",
             background: "radial-gradient(circle at 50% 35%, #FFF382 0%, " + YELLOW + " 55%, #E5C500 100%)",
-            boxShadow: `0 0 0 10px rgba(245,231,10,0.10), 0 22px 60px rgba(245,231,10,0.45)`,
-            animation: "lex-success-pop 620ms cubic-bezier(0.34,1.56,0.64,1) 120ms both",
+            // Glow: мягкое жёлтое свечение в радиусе иконки.
+            boxShadow: `0 0 0 10px rgba(245,231,10,0.08), 0 0 48px 8px rgba(245,231,10,0.40), 0 22px 60px rgba(245,231,10,0.35)`,
+            // fade-in 0→1 (300ms ease-out) + scale 0.85→1 (300ms spring).
+            animation:
+              "lex-success-fadein 300ms ease-out 120ms both, " +
+              "lex-success-pop 300ms cubic-bezier(0.34,1.56,0.64,1) 120ms both",
           }}
         >
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -127,22 +125,25 @@ export default function OnboardingSuccessScreen({
             сохранён в проекте и доступен в вашем плане.
           </p>
 
-          {detail && (
+          {showPill && (
             <div
               style={{
                 marginTop: 4,
                 padding: "10px 16px",
-                borderRadius: 16,
+                borderRadius: 999,
                 background: "rgba(245,231,10,0.08)",
                 border: "1px solid rgba(245,231,10,0.28)",
                 fontSize: 13,
                 color: YELLOW,
                 fontWeight: 600,
                 lineHeight: 1.45,
-                maxWidth: 320,
+                maxWidth: 300,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              ✓ {detail}
+              📝 «{scenarioTitle}» · {projectName}
             </div>
           )}
         </div>
@@ -175,9 +176,13 @@ export default function OnboardingSuccessScreen({
       </button>
 
       <style>{`
+        @keyframes lex-success-fadein {
+          0%   { opacity: 0; }
+          100% { opacity: 1; }
+        }
         @keyframes lex-success-pop {
-          0%   { opacity: 0; transform: scale(0.4); }
-          100% { opacity: 1; transform: scale(1); }
+          0%   { transform: scale(0.85); }
+          100% { transform: scale(1); }
         }
         @keyframes lex-success-fade {
           0%   { opacity: 0; transform: translateY(8px); }
