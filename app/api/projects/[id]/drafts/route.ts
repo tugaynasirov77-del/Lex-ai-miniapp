@@ -24,21 +24,40 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if ("err" in a) return a.err;
 
   const status = req.nextUrl.searchParams.get("status");
+  const type = req.nextUrl.searchParams.get("type");
   const sb = getSupabase();
   let q = sb
     .from("content_drafts")
     .select("*")
     .eq("project_id", id);
-  if (status && status !== "all") {
+
+  if (status === "all") {
+    // Вся библиотека: всё кроме явно отбракованного.
+    q = q.neq("status", "rejected");
+  } else if (status) {
     q = q.eq("status", status);
   } else {
-    // По умолчанию — вся история: pending + approved + published.
-    // rejected скрываем (юзер их явно отбракован).
-    q = q.in("status", ["pending", "approved", "published"]);
+    // По умолчанию — рабочая лента: legacy posts (pending/approved/published)
+    // + новые сценарии Reels (scenario_ready и дальше по конвейеру).
+    q = q.in("status", [
+      "pending",
+      "approved",
+      "published",
+      "scenario_ready",
+      "ready_to_shoot",
+      "shot",
+      "ready_to_publish",
+      "scheduled",
+    ]);
   }
+
+  if (type && type !== "all") {
+    q = q.eq("content_type", type);
+  }
+
   const { data } = await q
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   return Response.json({ drafts: data ?? [] });
 }

@@ -402,6 +402,71 @@ export function refineMyTopic(
   });
 }
 
+// ───────────── Контент-план (Этап 2) ─────────────
+
+export type PlanItemDTO = {
+  id: string;
+  title: string;
+  content_type: ContentType;
+  status: ContentStatus;
+  planned_for_date: string;
+};
+
+export type PlanDayDTO = {
+  date: string;       // YYYY-MM-DD
+  weekday: string;    // Пн/Вт/...
+  items: PlanItemDTO[];
+};
+
+export type PlanSummaryDTO = {
+  total: number;
+  planned: number;
+  ready: number;
+  published: number;
+  progress_pct: number;
+};
+
+export type WeekPlanDTO = {
+  project: { id: string; title: string };
+  week_start: string;
+  week_end: string;
+  summary: PlanSummaryDTO;
+  days: PlanDayDTO[];
+};
+
+export function getWeekPlan(
+  projectId: string,
+  weekStart?: string,
+): Promise<WeekPlanDTO> {
+  const q = weekStart ? `?week_start=${encodeURIComponent(weekStart)}` : "";
+  return getJSON(`/api/projects/${projectId}/plan${q}`);
+}
+
+// Все материалы проекта (Library) — status='all' + опциональный фильтр по типу.
+export function listProjectDrafts(
+  projectId: string,
+  opts?: { status?: string; type?: ContentType },
+): Promise<{ drafts: ContentDraftDTO[] }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.type) params.set("type", opts.type);
+  const qs = params.toString();
+  return getJSON(`/api/projects/${projectId}/drafts${qs ? `?${qs}` : ""}`);
+}
+
+// PATCH материала — смена статуса / даты плана / scenario_data.
+export function updateDraft(
+  draftId: string,
+  patch: {
+    status?: ContentStatus;
+    planned_for_date?: string | null;
+    scenario_data?: ReelScenarioData;
+    title?: string;
+  },
+): Promise<{ ok: true } | { id: string }> {
+  return patchJSON(`/api/drafts/${draftId}`, patch);
+}
+
 export type RefineDirection = "shorter" | "sharper" | "emotional" | "specific";
 export type RefinedPost = { hook: string; body: string; title: string };
 export function refinePost(
