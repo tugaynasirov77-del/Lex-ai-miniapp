@@ -6,6 +6,7 @@ import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { track } from "../lib/analytics";
 import AdaptedTopicsBlock from "./AdaptedTopicsBlock";
 import StateBlock from "./StateBlock";
+import PaywallSheet from "./PaywallSheet";
 
 // Человечная ошибка разбора: что произошло + что делать (бриф раздел 23).
 type DecodeError = {
@@ -41,6 +42,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
   const [decode, setDecode] = useState<ReelDecodeDTO | null>(null);
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [cached, setCached] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Prefill: если юзер ввёл ссылку на Home («Что создаём сегодня?») —
   // подставляем её сюда и сразу запускаем разбор.
@@ -78,6 +80,13 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       onDecoded?.();
     } catch (e: any) {
       hapticNotify("error");
+      // Квота исчерпана (402) → показываем paywall, а не текстовую ошибку (бриф р.22)
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        track("reels_analysis_failed", { project_id: projectId, reason: "quota" });
+        return;
+      }
+      // Остальные ошибки → человечное состояние (бриф р.23)
       setErr(humanizeDecodeError(e));
       const raw = (e?.message || "не удалось разобрать").slice(0, 80);
       track("reels_analysis_failed", { project_id: projectId, error: raw });
@@ -247,6 +256,14 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       {/* Upsell — после результата, если квота на нуле или близка */}
       {decode && quota && quota.tier === "free" && quota.used >= quota.limit - 1 && (
         <UpsellCard quota={quota} />
+      )}
+
+      {/* Paywall — при исчерпании квоты (бриф р.22) */}
+      {paywallOpen && (
+        <PaywallSheet
+          variant="limit_reached"
+          onClose={() => setPaywallOpen(false)}
+        />
       )}
     </div>
   );
