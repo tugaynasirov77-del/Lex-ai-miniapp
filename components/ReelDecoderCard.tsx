@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { decodeReel, type AdaptedTopicDTO, type ReelDecodeDTO, type ReelQuotaDTO } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { track } from "../lib/analytics";
 import AdaptedTopicsBlock from "./AdaptedTopicsBlock";
+import StateBlock from "./StateBlock";
+
+// Человечная ошибка разбора: что произошло + что делать (бриф раздел 23).
+type DecodeError = {
+  emoji: string;
+  title: string;
+  body: string;
+  primary: "retry" | "edit"; // retry — повторить тот же запрос; edit — поправить ссылку
+};
 
 const HINT_DISMISS_KEY = "lex_decode_hint_dismissed";
 
@@ -27,7 +36,8 @@ const PREFILL_URL_KEY = "lex_prefill_reel_url";
 export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }: Props) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<DecodeError | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [decode, setDecode] = useState<ReelDecodeDTO | null>(null);
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [cached, setCached] = useState(false);
@@ -68,9 +78,9 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       onDecoded?.();
     } catch (e: any) {
       hapticNotify("error");
-      const msg = e?.message || "не удалось разобрать";
-      setErr(msg);
-      track("reels_analysis_failed", { project_id: projectId, error: msg.slice(0, 80) });
+      setErr(humanizeDecodeError(e));
+      const raw = (e?.message || "не удалось разобрать").slice(0, 80);
+      track("reels_analysis_failed", { project_id: projectId, error: raw });
     } finally {
       setBusy(false);
     }
@@ -126,6 +136,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       {/* Input + button */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <input
+          ref={inputRef}
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -198,20 +209,28 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
         </div>
       )}
 
-      {/* Error */}
+      {/* Error — человечное состояние с действием (бриф раздел 23) */}
       {err && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 10,
-            borderRadius: 10,
-            background: "rgba(255,115,115,0.08)",
-            border: "1px solid rgba(255,115,115,0.30)",
-            fontSize: 12,
-            color: "#FF8B8B",
-          }}
-        >
-          {err}
+        <div style={{ marginTop: 12 }}>
+          <StateBlock
+            tone="error"
+            compact
+            emoji={err.emoji}
+            title={err.title}
+            body={err.body}
+            action={
+              err.primary === "edit"
+                ? {
+                    label: "Вставить другую ссылку",
+                    onClick: () => {
+                      setUrl("");
+                      setErr(null);
+                      inputRef.current?.focus();
+                    },
+                  }
+                : { label: "Попробовать снова", onClick: run }
+            }
+          />
         </div>
       )}
 
@@ -1268,4 +1287,68 @@ function fmtTime(sec: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+/**
+ * Превращает техническую ошибку разбора в человечное состояние: что
+ * случилось + что делать (бриф раздел 23). НЕ обрабатывает квоту — ветка
+ * лимита/paywall живёт отдельно.
+ */
+function humanizeDecodeError(e: any): DecodeError {
+  const msg = String(e?.message || "").toLowerCase();
+  const status: number | undefined = typeof e?.status === "number" ? e.status : undefined;
+
+  // Нет сети: fetch упал без ответа сервера.
+  if (
+    e?.name === "TypeError" ||
+    /failed to fetch|networkerror|network request failed|load failed/.test(msg)
+  ) {
+    return {
+      emoji: "🔌",
+      title: "Нет связи",
+      body: "Проверь интернет и повтори — LEX не смог отправить запрос.",
+      primary: "retry",
+    };
+  }
+
+  // Некорректная ссылка.
+  if (
+    status === 400 ||
+    /распознать ссылку|распознать instagram|url required|формат instagram/.test(msg)
+  ) {
+    return {
+      emoji: "🔗",
+      title: "Не похоже на ссылку Reels",
+      body: "Нужен формат instagram.com/reel/… Скопируй ссылку прямо из Instagram и вставь снова.",
+      primary: "edit",
+    };
+  }
+
+  // Статичный пост вместо видео.
+  if (/статичный пост|не reels|не видео/.test(msg)) {
+    return {
+      emoji: "🖼",
+      title: "Это не Reels, а пост",
+      body: "Похоже, ссылка ведёт на фото-пост. Нужна ссылка именно на видео-Reels.",
+      primary: "edit",
+    };
+  }
+
+  // Приватный/недоступный/удалённый ролик.
+  if (/публичный|без логина|скачать видео|not found|404|private|приват|закрыт|удал/.test(msg)) {
+    return {
+      emoji: "🔒",
+      title: "Не удалось получить этот Reels",
+      body: "Возможно, аккаунт закрыт или публикация удалена. Попробуй другую ссылку.",
+      primary: "edit",
+    };
+  }
+
+  // Всё остальное — временный сбой обработки (RapidAPI/Whisper/Claude/5xx).
+  return {
+    emoji: "⚠️",
+    title: "Не получилось разобрать ролик",
+    body: "LEX не смог обработать это видео. Попробуй ещё раз или другую ссылку.",
+    primary: "retry",
+  };
 }

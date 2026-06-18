@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { listReelDecodes, type ReelAnalysisDTO } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { DEMO_REEL_DECODE } from "../lib/demoReelDecode";
+import StateBlock from "./StateBlock";
 
 const DEMO_DISMISS_KEY = "lex_demo_decode_dismissed";
 
@@ -37,6 +38,8 @@ export default function ReelArchive({ projectId, refreshKey = 0, onReuse }: Prop
   const [items, setItems] = useState<ArchiveItem[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [demoDismissed, setDemoDismissed] = useState(false);
+  const [loadErr, setLoadErr] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     try {
@@ -46,23 +49,39 @@ export default function ReelArchive({ projectId, refreshKey = 0, onReuse }: Prop
 
   useEffect(() => {
     let alive = true;
+    setLoadErr(false);
     listReelDecodes(projectId)
       .then((r) => {
         if (alive) setItems((r.items as any) || []);
       })
       .catch(() => {
-        if (alive) setItems([]);
+        if (alive) {
+          setItems([]);
+          setLoadErr(true);
+        }
       });
     return () => {
       alive = false;
     };
-  }, [projectId, refreshKey]);
+  }, [projectId, refreshKey, reloadTick]);
 
   const dismissDemo = () => {
     try { localStorage.setItem(DEMO_DISMISS_KEY, "1"); } catch {}
     setDemoDismissed(true);
     setOpenId(null);
   };
+
+  if (loadErr) {
+    return (
+      <StateBlock
+        tone="error"
+        emoji="🔌"
+        title="Не удалось загрузить разборы"
+        body="Проверь интернет и попробуй снова."
+        action={{ label: "Повторить", onClick: () => setReloadTick((t) => t + 1) }}
+      />
+    );
+  }
 
   if (items === null) {
     return (

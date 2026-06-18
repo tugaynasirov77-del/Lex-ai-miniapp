@@ -7,6 +7,7 @@ import {
   type ContentStatus,
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
+import StateBlock from "./StateBlock";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -92,6 +93,8 @@ function formatDate(iso?: string): string {
 
 export default function ContentLibrary({ projectId, onOpenItem }: Props) {
   const [items, setItems] = useState<ContentDraftDTO[] | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
@@ -99,17 +102,18 @@ export default function ContentLibrary({ projectId, onOpenItem }: Props) {
   useEffect(() => {
     let alive = true;
     setItems(null);
+    setLoadErr(false);
     listProjectDrafts(projectId, { status: "all" })
       .then((r) => {
         if (alive) setItems(r.drafts || []);
       })
       .catch(() => {
-        if (alive) setItems([]);
+        if (alive) setLoadErr(true);
       });
     return () => {
       alive = false;
     };
-  }, [projectId]);
+  }, [projectId, reloadTick]);
 
   const filtered = useMemo(() => {
     if (!items) return [];
@@ -142,7 +146,15 @@ export default function ContentLibrary({ projectId, onOpenItem }: Props) {
       />
 
       {/* Контент */}
-      {items === null ? (
+      {loadErr ? (
+        <StateBlock
+          tone="error"
+          emoji="🔌"
+          title="Не удалось загрузить материалы"
+          body="Проверь интернет и попробуй снова."
+          action={{ label: "Повторить", onClick: () => setReloadTick((t) => t + 1) }}
+        />
+      ) : items === null ? (
         <SkeletonList />
       ) : items.length === 0 ? (
         <EmptyState />
@@ -354,37 +366,21 @@ function SkeletonList() {
 
 function EmptyState() {
   return (
-    <div
-      style={{
-        padding: 24,
-        textAlign: "center",
-        background: CARD_BG,
-        border: `1px solid ${CARD_BORDER}`,
-        borderRadius: 14,
-        color: MUTED,
-        fontSize: 13,
-        lineHeight: 1.5,
-      }}
-    >
-      Здесь будут все твои материалы.
-      <br />
-      Создай первый — разбери Reels или напиши сценарий.
-    </div>
+    <StateBlock
+      emoji="📭"
+      title="Здесь будут все твои материалы"
+      body="Создай первый — разбери Reels или напиши сценарий."
+    />
   );
 }
 
 function NoMatch() {
   return (
-    <div
-      style={{
-        padding: 20,
-        textAlign: "center",
-        color: SUB_MUTED,
-        fontSize: 13,
-        lineHeight: 1.5,
-      }}
-    >
-      Ничего не найдено по выбранным фильтрам.
-    </div>
+    <StateBlock
+      compact
+      emoji="🔍"
+      title="Ничего не найдено"
+      body="По выбранным фильтрам материалов нет. Попробуй сбросить фильтры."
+    />
   );
 }

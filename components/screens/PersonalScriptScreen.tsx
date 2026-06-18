@@ -14,6 +14,7 @@ import {
 } from "../../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram";
 import { track } from "../../lib/analytics";
+import StateBlock from "../StateBlock";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -192,11 +193,14 @@ export default function PersonalScriptScreen({
     return (
       <Wrap>
         <TopHeader projectName={projectName} duration={null} onBack={onBack} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 16, padding: 24 }}>
-          <div style={{ fontSize: 13, color: DANGER, textAlign: "center" }}>{genError}</div>
-          <button onClick={() => { hapticImpact("medium"); setReloadTick((t) => t + 1); }} style={primaryBtn}>
-            Попробовать снова
-          </button>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: 8 }}>
+          <StateBlock
+            tone="error"
+            emoji="⚠️"
+            title="Не удалось собрать сценарий"
+            body="LEX не смог сгенерировать сценарий по этой теме. Попробуй ещё раз — обычно помогает."
+            action={{ label: "Попробовать снова", onClick: () => setReloadTick((t) => t + 1) }}
+          />
         </div>
       </Wrap>
     );
