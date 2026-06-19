@@ -16,6 +16,9 @@ import {
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 import StateBlock from "./StateBlock";
+import { DEMO_REEL_DECODE } from "../lib/demoReelDecode";
+
+const DEMO_DISMISS_KEY = "lex_home_demo_dismissed";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -77,6 +80,15 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [url, setUrl] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [demoDismissed, setDemoDismissed] = useState(true);
+
+  useEffect(() => {
+    try {
+      setDemoDismissed(localStorage.getItem(DEMO_DISMISS_KEY) === "1");
+    } catch {
+      setDemoDismissed(false);
+    }
+  }, []);
 
   // Подтягиваем проекты (если кэш пустой)
   useEffect(() => {
@@ -236,6 +248,21 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           Разобрать и адаптировать
         </button>
 
+        {/* Соц-доказательство — снимает недоверие к AI */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            color: SUB_MUTED,
+            marginBottom: 12,
+          }}
+        >
+          <span>🔥</span>
+          <span>340+ блогеров уже разбирают Reels с LEX</span>
+        </div>
+
         {/* Подсказка-активатор: лечит «не понимаю что вставить» */}
         <div style={{ fontSize: 12, color: SUB_MUTED, lineHeight: 1.45, marginBottom: 12 }}>
           🎬 Не знаешь что вставить? Возьми вирусный Reels конкурента или лидера
@@ -255,6 +282,16 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           <QuickChip label="📦 Пакет" onClick={() => goToTool("pack")} />
         </div>
       </div>
+
+      {/* Демо-разбор — «потрогать ценность» до своего действия (активатор) */}
+      {!demoDismissed && (
+        <DemoTeaser
+          onDismiss={() => {
+            try { localStorage.setItem(DEMO_DISMISS_KEY, "1"); } catch {}
+            setDemoDismissed(true);
+          }}
+        />
+      )}
 
       {/* Прогресс недели */}
       {plan && plan.summary.total > 0 && (
@@ -360,6 +397,125 @@ function TopBar({ project, onSwitch }: { project: ProjectDTO | null; onSwitch: (
           {project.title}
           {onSwitch && <span style={{ color: MUTED, fontSize: 14 }}>▾</span>}
         </button>
+      )}
+    </div>
+  );
+}
+
+function DemoTeaser({ onDismiss }: { onDismiss: () => void }) {
+  const [open, setOpen] = useState(false);
+  const d = DEMO_REEL_DECODE;
+  const a = d.analysis;
+  const fmt = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : String(n);
+  const why = (a.why_works || []).slice(0, 2);
+  const takeaways = (a.takeaways || []).slice(0, 2);
+
+  return (
+    <div
+      style={{
+        marginBottom: 16,
+        borderRadius: 16,
+        overflow: "hidden",
+        background: "linear-gradient(135deg, rgba(245,231,10,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+        border: "1px solid rgba(245,231,10,0.22)",
+      }}
+    >
+      <button
+        onClick={() => { hapticImpact("light"); setOpen((v) => !v); }}
+        style={{
+          appearance: "none",
+          width: "100%",
+          textAlign: "left",
+          background: "transparent",
+          border: "none",
+          color: INK,
+          fontFamily: "inherit",
+          padding: 14,
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.10em",
+            textTransform: "uppercase",
+            color: YELLOW,
+            marginBottom: 8,
+          }}
+        >
+          👀 Пример разбора · посмотри что получишь
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>@{d.author_username}</span>
+          <span style={{ fontSize: 11, color: SUB_MUTED }}>
+            👁 {fmt(d.view_count)} · ❤ {fmt(d.like_count)}
+          </span>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: INK }}>
+          🎯 «{a.hook.verbatim_quote || a.hook.text}»
+        </div>
+        <div style={{ fontSize: 11, color: YELLOW, fontWeight: 700, marginTop: 8 }}>
+          {open ? "▲ Свернуть" : "▼ Смотреть полный разбор"}
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {why.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#FFC480", marginBottom: 6 }}>
+                🔥 Почему сработало
+              </div>
+              {why.map((w, i) => (
+                <div key={i} style={{ fontSize: 12, color: MUTED, lineHeight: 1.45, paddingLeft: 12, position: "relative", marginBottom: 4 }}>
+                  <span style={{ position: "absolute", left: 0, color: "#FFC480" }}>·</span>{w}
+                </div>
+              ))}
+            </div>
+          )}
+          {takeaways.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: OK, marginBottom: 6 }}>
+                🎁 Что забрать в свой контент
+              </div>
+              {takeaways.map((t, i) => (
+                <div key={i} style={{ fontSize: 12, color: MUTED, lineHeight: 1.45, paddingLeft: 16, position: "relative", marginBottom: 4 }}>
+                  <span style={{ position: "absolute", left: 0, color: OK, fontWeight: 800 }}>{i + 1}.</span>{t}
+                </div>
+              ))}
+            </div>
+          )}
+          <div
+            style={{
+              fontSize: 12,
+              color: INK,
+              background: "rgba(245,231,10,0.08)",
+              border: "1px solid rgba(245,231,10,0.22)",
+              borderRadius: 10,
+              padding: 12,
+              lineHeight: 1.45,
+            }}
+          >
+            ✨ Так LEX разберёт <b>любой</b> Reels по твоей ссылке — и адаптирует под твою нишу.
+          </div>
+          <button
+            onClick={onDismiss}
+            style={{
+              appearance: "none",
+              background: "transparent",
+              border: "none",
+              color: SUB_MUTED,
+              fontFamily: "inherit",
+              fontSize: 12,
+              padding: "4px 0",
+              cursor: "pointer",
+            }}
+          >
+            Скрыть пример
+          </button>
+        </div>
       )}
     </div>
   );
