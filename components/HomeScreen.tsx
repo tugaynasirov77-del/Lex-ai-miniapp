@@ -8,9 +8,11 @@ import {
   listProjects,
   getWeekPlan,
   listProjectDrafts,
+  listReelDecodes,
   type ProjectDTO,
   type WeekPlanDTO,
   type ContentDraftDTO,
+  type ReelQuotaDTO,
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 import StateBlock from "./StateBlock";
@@ -72,6 +74,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   );
   const [plan, setPlan] = useState<WeekPlanDTO | null>(null);
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
+  const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [url, setUrl] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -98,6 +101,9 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     listProjectDrafts(activeId)
       .then((r) => alive && setDrafts(r.drafts))
       .catch(() => alive && setDrafts([]));
+    listReelDecodes(activeId)
+      .then((r) => alive && r.quota && setQuota(r.quota))
+      .catch(() => {});
     return () => { alive = false; };
   }, [activeId]);
 
@@ -108,6 +114,15 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     if (activeId) actions.setIds({ projectId: activeId });
     if (tab) actions.setScreenMeta("projectInitialTab", tab);
     actions.navigate(activeId ? "project" : "create-project");
+  };
+
+  // Открыть конкретный инструмент создания (таб ToolsScreen).
+  const goToTool = (toolTab: string) => {
+    hapticImpact("light");
+    if (!activeId) { actions.navigate("create-project"); return; }
+    actions.setIds({ projectId: activeId });
+    actions.setScreenMeta("toolTab", toolTab);
+    actions.navigate("tools");
   };
 
   const runDecode = () => {
@@ -215,18 +230,29 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           style={{
             ...primaryBtn,
             opacity: url.trim() ? 1 : 0.5,
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
           Разобрать и адаптировать
         </button>
 
-        {/* Быстрые действия */}
-        <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-          <QuickChip label="✨ Сценарий" onClick={() => goToProject("overview")} />
-          <QuickChip label="🖼 Карусель" onClick={() => goToProject("overview")} />
-          <QuickChip label="✏️ Подпись" onClick={() => goToProject("overview")} />
-          <QuickChip label="💡 Идеи" onClick={() => goToProject("library")} />
+        {/* Подсказка-активатор: лечит «не понимаю что вставить» */}
+        <div style={{ fontSize: 12, color: SUB_MUTED, lineHeight: 1.45, marginBottom: 12 }}>
+          🎬 Не знаешь что вставить? Возьми вирусный Reels конкурента или лидера
+          ниши — LEX покажет почему он работает.
+        </div>
+
+        {/* Счётчик разборов → осознание лимита (мягко ведёт к Pro) */}
+        {quota && (
+          <QuotaCounter quota={quota} onUpgrade={() => { hapticImpact("light"); actions.navigate("billing"); }} />
+        )}
+
+        {/* Быстрые действия — создание с нуля (ведут в инструменты) */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 12 }}>
+          <QuickChip label="✨ Сценарий" onClick={() => goToTool("script")} />
+          <QuickChip label="🖼 Карусель" onClick={() => goToTool("carousel")} />
+          <QuickChip label="✏️ Подпись" onClick={() => goToTool("caption")} />
+          <QuickChip label="📦 Пакет" onClick={() => goToTool("pack")} />
         </div>
       </div>
 
@@ -336,6 +362,43 @@ function TopBar({ project, onSwitch }: { project: ProjectDTO | null; onSwitch: (
         </button>
       )}
     </div>
+  );
+}
+
+function QuotaCounter({ quota, onUpgrade }: { quota: ReelQuotaDTO; onUpgrade: () => void }) {
+  const left = Math.max(0, quota.limit - quota.used);
+  const isPaid = quota.tier !== "free";
+  // На платных тарифах не дёргаем — просто не показываем счётчик-апселл.
+  if (isPaid) return null;
+
+  const empty = left === 0;
+  return (
+    <button
+      onClick={empty ? onUpgrade : undefined}
+      style={{
+        appearance: "none",
+        width: "100%",
+        textAlign: "left",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "9px 12px",
+        borderRadius: 10,
+        border: `1px solid ${empty ? "rgba(245,231,10,0.35)" : CARD_BORDER}`,
+        background: empty ? "rgba(245,231,10,0.08)" : "rgba(255,255,255,0.03)",
+        color: INK,
+        fontFamily: "inherit",
+        cursor: empty ? "pointer" : "default",
+      }}
+    >
+      <span style={{ fontSize: 13 }}>{empty ? "🔒" : "🎬"}</span>
+      <span style={{ flex: 1, fontSize: 12, color: empty ? YELLOW : MUTED, fontWeight: empty ? 700 : 500 }}>
+        {empty
+          ? "Бесплатные разборы закончились — открой Pro"
+          : `Осталось разборов: ${left} из ${quota.limit}`}
+      </span>
+      {empty && <span style={{ fontSize: 12, color: YELLOW, fontWeight: 800 }}>→</span>}
+    </button>
   );
 }
 
