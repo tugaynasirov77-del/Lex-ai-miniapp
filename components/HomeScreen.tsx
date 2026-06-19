@@ -35,10 +35,11 @@ const TYPE_ICON: Record<string, string> = {
 type HomeScreenProps = { onStart?: () => void };
 
 // Идеи дня — стартовый набор готовых входов (бриф: не оставлять пустое поле).
-const DAILY_IDEAS: { tag: string; tagColor: string; tagBg: string; emoji: string; title: string; category: string }[] = [
-  { tag: "Популярно", tagColor: "#9B30C9", tagBg: "#F3E6FA", emoji: "🎯", title: "Расскажи ошибку, которая стоила тебе денег", category: "Бизнес" },
-  { tag: "Тренд", tagColor: "#E0641B", tagBg: "#FCEEE2", emoji: "🔥", title: "Покажи свой рабочий процесс от начала до конца", category: "Личный бренд" },
-  { tag: "Высокий охват", tagColor: "#2E9E5B", tagBg: "#E4F6EC", emoji: "⏱", title: "3 совета, которые сэкономят время каждому", category: "Лайфстайл" },
+type IdeaDef = { tag: string; tagColor: string; tagBg: string; icon: "target" | "flame" | "clock"; title: string; category: string };
+const DAILY_IDEAS: IdeaDef[] = [
+  { tag: "Популярно", tagColor: "#9B30C9", tagBg: "#F3E6FA", icon: "target", title: "Расскажи ошибку, которая стоила тебе денег", category: "Бизнес" },
+  { tag: "Тренд", tagColor: "#E0641B", tagBg: "#FCEEE2", icon: "flame", title: "Покажи свой рабочий процесс от начала до конца", category: "Личный бренд" },
+  { tag: "Высокий охват", tagColor: "#2E9E5B", tagBg: "#E4F6EC", icon: "clock", title: "3 совета, которые сэкономят время каждому", category: "Лайфстайл" },
 ];
 
 export default function HomeScreen(_props: HomeScreenProps = {}) {
@@ -170,7 +171,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* Карточка ввода + градиентная кнопка */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 4px 14px" }}>
-          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, background: "#FCEAF2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🔗</div>
+          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, background: "#FCEAF2", display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 2 }}>Вставьте ссылку на Reels</div>
             <input
@@ -198,7 +199,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          <span>✨</span> Создать свой сценарий
+          <SparkleIcon /> Создать свой сценарий
         </button>
         <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10 }}>
           🔥 340+ блогеров уже разбирают Reels с LEX
@@ -211,16 +212,16 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* 3 фичи */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: "20px 14px", marginBottom: 24, boxShadow: "0 8px 28px rgba(20,20,40,0.05)" }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <Feature emoji="📺" bg="#F3E6FA" title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
-          <Feature emoji="🪄" bg="#FCEAF2" title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
-          <Feature emoji="📈" bg="#FCEEE2" title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
+          <Feature icon={<VideoIcon color="#9B30C9" />} bg="#F3E6FA" title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
+          <Feature icon={<WandIcon color={PINK} />} bg="#FCEAF2" title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
+          <Feature icon={<TrendIcon color="#E0641B" />} bg="#FCEEE2" title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
         </div>
       </div>
 
       {/* Идеи для Reels на сегодня */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📸</span>
+          <InstagramIcon color={PINK} />
           <span style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
         </div>
         <button onClick={goLibrary} style={{ appearance: "none", background: "none", border: "none", color: PINK, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -283,21 +284,25 @@ function LexLogo({ height = 26 }: { height?: number }) {
   );
 }
 
-function Feature({ emoji, bg, title, body }: { emoji: string; bg: string; title: string; body: string }) {
+function Feature({ icon, bg, title, body }: { icon: React.ReactNode; bg: string; title: string; body: string }) {
   return (
     <div style={{ flex: 1, textAlign: "center", padding: "0 4px" }}>
-      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{emoji}</div>
+      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
       <div style={{ fontSize: 12, fontWeight: 800, color: INK, lineHeight: 1.25, marginBottom: 6 }}>{title}</div>
       <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35 }}>{body}</div>
     </div>
   );
 }
 
-function IdeaCard({ idea, onUse }: { idea: typeof DAILY_IDEAS[number]; onUse: () => void }) {
+function IdeaCard({ idea, onUse }: { idea: IdeaDef; onUse: () => void }) {
+  const icon =
+    idea.icon === "target" ? <TargetIcon color={idea.tagColor} />
+    : idea.icon === "flame" ? <FlameIcon color={idea.tagColor} />
+    : <ClockIcon color={idea.tagColor} />;
   return (
     <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18, padding: 16, boxShadow: "0 6px 20px rgba(20,20,40,0.04)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, background: idea.tagBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{idea.emoji}</div>
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: idea.tagBg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
         <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 9px", borderRadius: 999, background: idea.tagBg, color: idea.tagColor }}>{idea.tag}</span>
       </div>
       <div style={{ fontSize: 15, fontWeight: 800, color: INK, lineHeight: 1.3, marginBottom: 6 }}>{idea.title}</div>
@@ -339,6 +344,90 @@ function MaterialRow({ draft, onClick }: { draft: ContentDraftDTO; onClick: () =
       <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
       <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: sl.color }}>{sl.label}</span>
     </button>
+  );
+}
+
+// ─── Стилизованные line-иконки (outline, currentColor) ───
+type IconProps = { size?: number; color?: string };
+
+function LinkIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M9 15l6-6M10.5 6.5l1.2-1.2a4 4 0 015.7 5.7l-1.2 1.2M13.5 17.5l-1.2 1.2a4 4 0 01-5.7-5.7l1.2-1.2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function VideoIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="14" rx="3.5" stroke={color} strokeWidth="1.8" />
+      <path d="M10.5 9.2l4 2.8-4 2.8V9.2z" fill={color} />
+    </svg>
+  );
+}
+
+function WandIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M5 19l9-9" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M14.5 6.5l1.2 1.2M17 4l.6 1.4L19 6l-1.4.6L17 8l-.6-1.4L15 6l1.4-.6L17 4zM7 13l.5 1.1L8.6 14.6l-1.1.5L7 16.2l-.5-1.1L5.4 14.6l1.1-.5L7 13z" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill={color} />
+    </svg>
+  );
+}
+
+function TrendIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 16l5-5 3 3 5-6" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 8h4v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TargetIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="4" stroke={color} strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="1.2" fill={color} />
+    </svg>
+  );
+}
+
+function FlameIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3c1 2.5-.5 4-1.8 5.3C8.6 9.8 7 11.4 7 14a5 5 0 0010 0c0-2-1-3.7-2-5-.4 1-1 1.6-1.8 2 .3-2.5-.7-5.5-1.2-8z" stroke={color} strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ClockIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
+      <path d="M12 8v4l2.5 2" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function InstagramIcon({ size = 20, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke={color} strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4" stroke={color} strokeWidth="1.8" />
+      <circle cx="17.2" cy="6.8" r="1.1" fill={color} />
+    </svg>
+  );
+}
+
+function SparkleIcon({ size = 18, color = "#FFFFFF" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" fill={color} />
+      <path d="M18 14l.8 2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-1L18 14z" fill={color} />
+    </svg>
   );
 }
 
