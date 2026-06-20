@@ -2,18 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { useFlow, useFlowActions } from "../flow";
-import { getOnboardingStatus, listProjects } from "../lib/api";
+import { listProjects } from "../lib/api";
 
 export const ONBOARDING_LS_KEY = "lex_onboarding_completed";
-
-function isCompletedLocally(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return localStorage.getItem(ONBOARDING_LS_KEY) === "1";
-  } catch {
-    return true;
-  }
-}
 
 /**
  * Решает, показывать ли welcome-онбординг.
@@ -36,20 +27,19 @@ export function useWelcomeGate() {
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    if (isCompletedLocally()) return;
 
     let alive = true;
     (async () => {
-      const [status, projects] = await Promise.all([
-        getOnboardingStatus().catch(() => ({ onboarding_completed: false })),
-        listProjects().catch(() => ({ projects: [] })),
-      ]);
+      // Онбординг считается пройденным ТОЛЬКО если у юзера есть проект.
+      // Локальный флаг — лишь оптимизация (не делаем сетевой вызов, если уже
+      // знаем, что проект был). Сам факт «работать можно» = наличие проекта,
+      // иначе анкету придётся показывать посреди работы (см. runDecode на Home).
+      const projects = await listProjects().catch(() => ({ projects: [] }));
       if (!alive) return;
 
-      const alreadyOnboarded =
-        status.onboarding_completed || projects.projects.length > 0;
+      const hasProject = projects.projects.length > 0;
 
-      if (alreadyOnboarded) {
+      if (hasProject) {
         try {
           localStorage.setItem(ONBOARDING_LS_KEY, "1");
         } catch {
@@ -58,7 +48,8 @@ export function useWelcomeGate() {
         return;
       }
 
-      // Новый юзер. Редиректим только если он не ушёл с home сам/через resume.
+      // Проекта нет → ведём в welcome (демо ценности + CTA на анкету).
+      // Редиректим только если юзер всё ещё на home (не перебиваем resume).
       if (screenRef.current === "home") {
         actions.navigate("welcome");
       }

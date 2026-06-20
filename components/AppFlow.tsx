@@ -8,6 +8,7 @@ import WelcomeScreen from "./WelcomeScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import ProjectScreen from "./screens/ProjectScreen";
 import CreateProjectScreen from "./screens/CreateProjectScreen";
+import OnboardingWizardScreen from "./screens/OnboardingWizardScreen";
 import AddCompetitorsScreen from "./screens/AddCompetitorsScreen";
 import BillingScreen from "./screens/BillingScreen";
 import LexCreateScreen from "./screens/LexCreateScreen";
@@ -137,8 +138,8 @@ export default function AppFlow() {
           {currentScreen === "welcome" && (
             <WelcomeScreen
               onComplete={completeOnboarding}
-              onStart={() => actions.navigate("create-project")}
-              onSkipToCreate={() => actions.navigate("create-project")}
+              onStart={() => actions.navigate("onboarding-wizard")}
+              onSkipToCreate={() => actions.navigate("onboarding-wizard")}
             />
           )}
           {currentScreen === "dashboard" && (
@@ -146,6 +147,9 @@ export default function AppFlow() {
           )}
           {currentScreen === "create-project" && (
             <CreateProjectScreen onBack={goBack} />
+          )}
+          {currentScreen === "onboarding-wizard" && (
+            <OnboardingWizardScreen />
           )}
           {currentScreen === "add-competitors" && (
             <AddCompetitorsScreen onBack={goBack} />

@@ -5,21 +5,23 @@ import { useFlow, useFlowActions } from "../flow";
 import { hapticSelection } from "../lib/telegram";
 import type { ScreenKey } from "../flow/types";
 
-const YELLOW = "#F5E70A";
+const ACCENT = "#E84B91";
+const GRADIENT = "linear-gradient(135deg, #A24FD6 0%, #E84B91 55%, #F88A4A 100%)";
 const MUTED = "rgba(255,255,255,0.55)";
 
+type IconCmp = (p: { active: boolean }) => React.ReactNode;
 type Tab = {
   key: "main" | "create" | "plan" | "profile";
   label: string;
-  icon: React.ReactNode;
+  Icon: IconCmp;
   screen: ScreenKey;
 };
 
 const TABS: Tab[] = [
-  { key: "main", label: "Главная", icon: <HomeIcon />, screen: "home" },
-  { key: "create", label: "Создать", icon: <PlusIcon />, screen: "create-hub" },
-  { key: "plan", label: "План", icon: <CalendarIcon />, screen: "plan" },
-  { key: "profile", label: "Профиль", icon: <UserIcon />, screen: "dashboard" },
+  { key: "main", label: "Главная", Icon: HomeIcon, screen: "home" },
+  { key: "create", label: "Создать", Icon: PlusIcon, screen: "create-hub" },
+  { key: "plan", label: "План", Icon: CalendarIcon, screen: "plan" },
+  { key: "profile", label: "Профиль", Icon: UserIcon, screen: "dashboard" },
 ];
 
 export default function BottomTabBar() {
@@ -42,8 +44,8 @@ export default function BottomTabBar() {
 
   // Маппинг текущего экрана → активная вкладка
   const cs = state.currentScreen;
-  // На welcome-онбординге таб-бар скрыт — это линейный экран без навигации.
-  if (cs === "welcome") return null;
+  // На онбординге (welcome/анкета) таб-бар скрыт — линейный экран без навигации.
+  if (cs === "welcome" || cs === "create-project" || cs === "onboarding-wizard") return null;
   // Настройки/биллинг живут внутри Профиля → подсвечиваем «Профиль».
   const active: Tab["key"] =
     cs === "home"
@@ -63,13 +65,14 @@ export default function BottomTabBar() {
         bottom: "max(calc(env(safe-area-inset-bottom) + 10px), 16px)",
         zIndex: 50,
         padding: "8px 6px",
-        background: "rgba(20,16,14,0.62)",
+        background: "rgba(16,16,24,0.66)",
         backdropFilter: "blur(36px) saturate(180%)",
         WebkitBackdropFilter: "blur(36px) saturate(180%)",
-        border: "1px solid rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: 28,
         boxShadow: "0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset",
         display: "flex",
+        alignItems: "center",
         gap: 4,
         transform: keyboardOpen ? "translateY(150%)" : "translateY(0)",
         transition: "transform 180ms ease-out",
@@ -78,34 +81,32 @@ export default function BottomTabBar() {
     >
       {TABS.map((t) => {
         const isActive = active === t.key;
+        const onTap = () => { hapticSelection(); actions.navigate(t.screen); };
+
         return (
           <button
             key={t.key}
-            onClick={() => {
-              hapticSelection();
-              actions.navigate(t.screen);
-            }}
+            onClick={onTap}
             style={{
               flex: 1,
-              background: isActive ? "rgba(245,231,10,0.10)" : "transparent",
+              background: "transparent",
               border: "none",
-              borderRadius: 22,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
               padding: "8px 0",
               cursor: "pointer",
-              color: isActive ? YELLOW : MUTED,
+              color: isActive ? ACCENT : MUTED,
               fontFamily: "inherit",
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: "0.02em",
-              transition: "background 200ms, color 200ms",
+              transition: "color 200ms",
             }}
           >
-            <div style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {t.icon}
+            <div style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <t.Icon active={isActive} />
             </div>
             {t.label}
           </button>
@@ -115,37 +116,39 @@ export default function BottomTabBar() {
   );
 }
 
-function HomeIcon() {
+function HomeIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path d="M3 11.5L12 4l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-8.5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M3 11.5L12 4l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-8.5z"
+        fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
     </svg>
   );
 }
 
-function UserIcon() {
+function UserIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="4" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7"/>
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 }
 
-function PlusIcon() {
+function PlusIcon({ active: _active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M12 8.5v7M8.5 12h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={_active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 8.5v7M8.5 12h7" stroke={_active ? "rgba(16,16,24,0.85)" : "currentColor"} strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
 
-function CalendarIcon() {
+function CalendarIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="5" width="17" height="15" rx="2.5" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3.5 9.5h17" stroke={active ? "rgba(16,16,24,0.85)" : "currentColor"} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

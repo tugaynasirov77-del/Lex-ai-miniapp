@@ -1,423 +1,280 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { hapticImpact, hapticSelection } from "../lib/telegram";
+import { hapticImpact } from "../lib/telegram";
 
-const YELLOW = "#F5E70A";
-const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const BG = "#0A0608";
+// ─── Тёмная тема (в гамму главной) ───
+const BG = "#0B0B11";
+const INK = "#F4F4F8";
+const MUTED = "#9A9AAB";
+const SUB_MUTED = "#6B6B7B";
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const SOFT = "#1C1C26";
+const IG_GRADIENT = "linear-gradient(95deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const PINK = "#E84B91";
+const PURPLE = "#A24FD6";
+
+// Тинты для плашек иконок
+const TINT_PURPLE = "rgba(162,79,214,0.16)";
+const TINT_PINK = "rgba(232,75,145,0.16)";
+const TINT_ORANGE = "rgba(248,138,74,0.16)";
+
+function iconTile(hex: string): React.CSSProperties {
+  return {
+    background: `linear-gradient(150deg, ${hex}30, ${hex}12)`,
+    border: `1px solid ${hex}3D`,
+    boxShadow: `0 6px 16px ${hex}26, inset 0 1px 0 ${hex}24`,
+  };
+}
 
 type Props = {
-  /** «Разобрать первый Reels» / «Начать работу» — ведёт на создание проекта. */
   onStart: () => void;
-  /** «Создать сценарий без референса» — тоже в создание проекта, но мягкий путь. */
   onSkipToCreate: () => void;
-  /** Пометить онбординг пройденным (localStorage + сервер). Вызывается перед уходом. */
   onComplete: () => void;
 };
 
-function LexLogo({ height = 64 }: { height?: number }) {
-  return (
-    <div
-      aria-label="LEX AI"
-      style={{
-        display: "inline-flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 14,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/logo.jpg"
-        alt=""
-        style={{
-          height,
-          width: height,
-          objectFit: "cover",
-          display: "block",
-          borderRadius: height * 0.3,
-        }}
-      />
-      <div
-        style={{
-          fontSize: 22,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          fontFamily: "'Inter', system-ui, sans-serif",
-        }}
-      >
-        <span style={{ color: INK }}>LEX </span>
-        <span style={{ color: YELLOW }}>AI</span>
-      </div>
-    </div>
-  );
-}
-
-type Step =
-  | { kind: "hero" }
-  | { kind: "slides" }
-  | { kind: "final" };
-
-const SLIDES: { icon: string; text: string }[] = [
-  {
-    icon: "🔍",
-    text:
-      "LEX разбирает структуру, хук, визуал и психологические триггеры вирусного Reels",
-  },
-  {
-    icon: "🎯",
-    text: "LEX адаптирует идею под тему, аудиторию и стиль пользователя",
-  },
-  {
-    icon: "🎬",
-    text:
-      "LEX создаёт готовый сценарий и помогает добавить его в контент-план",
-  },
-];
-
-export default function WelcomeScreen({
-  onStart,
-  onSkipToCreate,
-  onComplete,
-}: Props) {
-  // Линейный мини-flow: hero → 3 слайда → final.
-  const [phase, setPhase] = useState<Step["kind"]>("hero");
-  const [slide, setSlide] = useState(0);
-  const startX = useRef<number | null>(null);
-
-  const finish = (cb: () => void) => {
+export default function WelcomeScreen({ onStart, onComplete }: Props) {
+  const go = () => {
+    hapticImpact("medium");
     onComplete();
-    cb();
-  };
-
-  // --- свайп между слайдами ---
-  const onDown = (e: React.PointerEvent) => {
-    startX.current = e.clientX;
-  };
-  const onUp = (e: React.PointerEvent) => {
-    if (startX.current == null) return;
-    const dx = e.clientX - startX.current;
-    startX.current = null;
-    const THRESHOLD = 50;
-    if (dx < -THRESHOLD) nextSlide();
-    else if (dx > THRESHOLD) prevSlide();
-  };
-
-  const nextSlide = () => {
-    hapticSelection();
-    if (slide < SLIDES.length - 1) setSlide((s) => s + 1);
-    else setPhase("final");
-  };
-  const prevSlide = () => {
-    if (slide > 0) {
-      hapticSelection();
-      setSlide((s) => s - 1);
-    }
+    onStart();
   };
 
   return (
     <div
       style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
+        position: "absolute",
+        inset: 0,
         background: BG,
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
-          "max(calc(env(safe-area-inset-top) + 56px), 76px) 24px max(calc(env(safe-area-inset-bottom) + 24px), 28px)",
+          "max(calc(env(safe-area-inset-top) + 18px), 32px) 16px " +
+          "max(calc(env(safe-area-inset-bottom) + 16px), 22px)",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {phase === "hero" && (
-        <Hero
-          onPrimary={() => {
-            hapticImpact("medium");
-            setPhase("slides");
-          }}
-          onSecondary={() => {
-            hapticSelection();
-            finish(onSkipToCreate);
-          }}
-        />
-      )}
+      {/* spacer — прижимает весь контент вниз, к кнопке */}
+      <div style={{ flex: 1 }} />
 
-      {phase === "slides" && (
-        <div
-          onPointerDown={onDown}
-          onPointerUp={onUp}
-          onPointerCancel={() => (startX.current = null)}
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            touchAction: "pan-y",
-            userSelect: "none",
-          }}
-        >
-          <SlideView slide={SLIDES[slide]} index={slide} />
+      {/* Заголовок */}
+      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.18, textAlign: "center", color: INK }}>
+        Превращай{" "}
+        <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          вирусные Reels
+        </span>
+        <br />
+        в сценарии под свой стиль
+      </h1>
+      <p style={{ margin: "8px auto 64px", fontSize: 12.5, color: MUTED, lineHeight: 1.45, textAlign: "center", maxWidth: 320 }}>
+        AI анализирует любой Reels и переписывает его под твою нишу и тон.
+      </p>
 
-          {/* dots */}
+      {/* Демо-карточка */}
+      <div style={{
+        background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18,
+        padding: 12, marginBottom: 12,
+        boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+          <Pill text="Залетевший Reels" color={PURPLE} bg={TINT_PURPLE} />
+          <Pill text="Под тебя" color={PINK} bg={TINT_PINK} />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
           <div
+            id="lex-welcome-photo"
             style={{
-              display: "flex",
-              gap: 6,
-              justifyContent: "center",
-              margin: "8px 0 22px",
+              flexShrink: 0, width: 96, aspectRatio: "9 / 16",
+              borderRadius: 11, background: SOFT,
+              border: `1px solid ${CARD_BORDER}`,
+              position: "relative", overflow: "hidden",
             }}
           >
-            {SLIDES.map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  width: i === slide ? 22 : 6,
-                  height: 6,
-                  borderRadius: 999,
-                  background: i === slide ? YELLOW : "rgba(255,255,255,0.25)",
-                  transition: "width 320ms ease, background 320ms ease",
-                }}
-              />
-            ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/welcome-hero.jpg"
+              alt=""
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </div>
 
-          <PrimaryButton
-            label={slide < SLIDES.length - 1 ? "Дальше" : "Почти готово"}
-            onClick={nextSlide}
-          />
+          <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+            <div style={{
+              minWidth: 44, height: 26, padding: "0 7px 0 9px", borderRadius: 999,
+              background: IG_GRADIENT,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+              fontSize: 9, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em",
+              boxShadow: `0 6px 16px ${PINK}55`,
+            }}>
+              AI
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+            <AnalysisBlock icon={<TargetIcon size={11} color={PURPLE} />} label="Hook" body="Почему ты устаёшь, даже когда ничего не делаешь?" accent={PURPLE} />
+            <AnalysisBlock icon={<ScriptIcon size={11} color={PINK} />} label="Сценарий" body="1. Большинство думают… 2. Но проблема…" accent={PINK} />
+            <AnalysisBlock icon={<BoltIcon size={11} color="#F0944E" />} label="CTA" body="Сохрани и напиши «Хочу больше»" accent="#F0944E" />
+          </div>
         </div>
-      )}
-
-      {phase === "final" && (
-        <Final
-          onStart={() => {
-            hapticImpact("medium");
-            finish(onStart);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function Hero({
-  onPrimary,
-  onSecondary,
-}: {
-  onPrimary: () => void;
-  onSecondary: () => void;
-}) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          gap: 22,
-        }}
-      >
-        <LexLogo height={72} />
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 27,
-            lineHeight: 1.15,
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Преврати любой Reels в готовый сценарий для своего блога
-        </h1>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: MUTED,
-            maxWidth: 320,
-          }}
-        >
-          Вставь ссылку — LEX найдёт рабочую механику ролика, адаптирует её под
-          твою нишу и подготовит сценарий для съёмки.
-        </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <PrimaryButton label="Разобрать первый Reels" onClick={onPrimary} />
-        <button
-          onClick={onSecondary}
-          style={{
-            appearance: "none",
-            background: "transparent",
-            border: "none",
-            color: MUTED,
-            fontFamily: "inherit",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-            padding: "6px 0",
-          }}
-        >
-          Создать сценарий без референса
-        </button>
+      {/* 3 фичи */}
+      <div style={{
+        background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18,
+        padding: "14px 10px", marginBottom: 14,
+        boxShadow: "0 8px 28px rgba(0,0,0,0.25)",
+      }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          <Feature icon={<FlameIcon size={18} color="#F0944E" />} accent="#F0944E" title="Анализ хука" body="Почему ролик залетел" />
+          <Feature icon={<WandIcon size={18} color="#F3A9CE" />} accent={PINK} title="Готовый сценарий" body="Текст под тебя" />
+          <Feature icon={<TargetIcon size={18} color="#C78BEB" />} accent={PURPLE} title="Под твой стиль" body="AI учтёт нишу" />
+        </div>
+      </div>
+
+      {/* spacer под фичами — поднимает контент над кнопкой */}
+      <div style={{ height: 72 }} />
+
+      {/* CTA */}
+      <button
+        onClick={go}
+        style={{
+          appearance: "none", width: "100%", padding: "14px 0", border: "none", borderRadius: 16,
+          background: IG_GRADIENT, color: "#FFFFFF", fontSize: 14.5, fontWeight: 800,
+          letterSpacing: "0.01em", fontFamily: "inherit", cursor: "pointer",
+          boxShadow: `0 14px 32px ${PINK}50`,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        }}
+      >
+        Настроить AI под себя <ArrowIcon size={16} />
+      </button>
+
+      <div style={{
+        marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        color: MUTED, fontSize: 11, fontWeight: 600,
+      }}>
+        <AvatarStack />
+        360+ блогеров уже работают с LEX
       </div>
     </div>
   );
 }
 
-function SlideView({
-  slide,
-  index,
-}: {
-  slide: { icon: string; text: string };
-  index: number;
-}) {
+// ───────── Подкомпоненты ─────────
+
+function Pill({ text, color, bg }: { text: string; color: string; bg: string }) {
   return (
-    <div
-      key={index}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        textAlign: "center",
-        gap: 26,
-        animation: "lex-welcome-in 420ms cubic-bezier(0.16,1,0.3,1) both",
-      }}
-    >
-      <div
-        style={{
-          width: 116,
-          height: 116,
-          borderRadius: 32,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 52,
-          background: "rgba(245,231,10,0.08)",
-          border: `1px solid ${YELLOW}33`,
-          boxShadow: `0 0 60px ${YELLOW}22`,
-        }}
-      >
-        {slide.icon}
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 999,
+      background: bg, border: `1px solid ${color}33`, color,
+      letterSpacing: "0.02em",
+    }}>
+      {text}
+    </span>
+  );
+}
+
+function AnalysisBlock({ icon, label, body, accent }: { icon: React.ReactNode; label: string; body: string; accent: string }) {
+  return (
+    <div style={{
+      background: SOFT, border: `1px solid ${CARD_BORDER}`, borderRadius: 9, padding: "6px 8px",
+      borderLeft: `2px solid ${accent}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+        {icon}
+        <span style={{ fontSize: 9, fontWeight: 800, color: accent, letterSpacing: "0.04em", textTransform: "uppercase" }}>{label}</span>
       </div>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 19,
-          lineHeight: 1.4,
-          fontWeight: 700,
-          maxWidth: 300,
-        }}
-      >
-        {slide.text}
-      </p>
-      <style>{`
-        @keyframes lex-welcome-in {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <div style={{ fontSize: 10, color: INK, lineHeight: 1.3, fontWeight: 500 }}>{body}</div>
     </div>
   );
 }
 
-function Final({ onStart }: { onStart: () => void }) {
+function Feature({ icon, accent, title, body }: { icon: React.ReactNode; accent: string; title: string; body: string }) {
   return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          gap: 22,
-        }}
-      >
-        <LexLogo height={64} />
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 26,
-            lineHeight: 1.15,
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Создадим твой первый проект
-        </h1>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: MUTED,
-            maxWidth: 300,
-          }}
-        >
-          Подключи Instagram-аккаунт — и LEX начнёт собирать для тебя разборы и
-          сценарии.
-        </p>
+    <div style={{ flex: 1, textAlign: "center", padding: "0 2px" }}>
+      <div style={{ width: 38, height: 38, margin: "0 auto 6px", borderRadius: 11, ...iconTile(accent), display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {icon}
       </div>
-      <PrimaryButton label="Начать работу" onClick={onStart} />
+      <div style={{ fontSize: 11, fontWeight: 800, color: INK, lineHeight: 1.2, marginBottom: 3 }}>{title}</div>
+      <div style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.3 }}>{body}</div>
     </div>
   );
 }
 
-function PrimaryButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
+function AvatarStack() {
+  const dots = [PURPLE, PINK, "#F0944E"];
   return (
-    <button
-      onClick={onClick}
-      style={{
-        appearance: "none",
-        width: "100%",
-        minHeight: 56,
-        border: "none",
-        borderRadius: 999,
-        background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 45%, #E5C500 100%)`,
-        color: "#0A0608",
-        fontFamily: "inherit",
-        fontSize: 15,
-        fontWeight: 800,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-        cursor: "pointer",
-        boxShadow: `0 18px 44px ${YELLOW}40, 0 4px 14px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.20) inset`,
-      }}
-    >
-      {label}
-    </button>
+    <div style={{ display: "flex" }}>
+      {dots.map((c, i) => (
+        <div key={i} style={{
+          width: 22, height: 22, borderRadius: 999,
+          background: c, border: `2px solid ${BG}`,
+          marginLeft: i === 0 ? 0 : -8,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ───────── Иконки ─────────
+type IconProps = { size?: number; color?: string };
+
+function TargetIcon({ size = 16, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="10.5" cy="13.5" r="7.5" stroke={color} strokeWidth="1.7" />
+      <circle cx="10.5" cy="13.5" r="3.6" stroke={color} strokeWidth="1.7" />
+      <circle cx="10.5" cy="13.5" r="0.9" fill={color} />
+      <path d="M10.5 13.5L19.5 4.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M15.5 4.5h4v4" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ScriptIcon({ size = 16, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="1.7" />
+      <path d="M8 9h8M8 13h8M8 17h5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BoltIcon({ size = 16, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M13 2L4.5 13.2c-.4.5 0 1.3.7 1.3H11l-1 7.5 8.5-11.2c.4-.5 0-1.3-.7-1.3H12l1-7.5z" fill={color} />
+    </svg>
+  );
+}
+
+function FlameIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12.5 2c.4 2.8 2.3 4.3 3.6 5.9C17.6 9.7 18.5 11.6 18.5 14a6.5 6.5 0 11-13 0c0-2.3 1.1-4 2.3-5.4.3 1.1.9 1.9 1.8 2.4C8.7 8 10 5.4 12.5 2z" fill={color} />
+    </svg>
+  );
+}
+
+function WandIcon({ size = 22, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 20l9-9" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 2.5l1.1 2.9 2.9 1.1-2.9 1.1L16 10.5l-1.1-2.9L12 6.5l2.9-1.1L16 2.5z" fill={color} />
+      <path d="M19.5 12.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5z" fill={color} />
+    </svg>
+  );
+}
+
+function ArrowIcon({ size = 18, color = "#FFFFFF" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12h14M13 6l6 6-6 6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

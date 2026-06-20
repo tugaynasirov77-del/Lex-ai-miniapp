@@ -414,6 +414,21 @@ export function generateCaptions(
   return postJSON(`/api/projects/${projectId}/ig/caption`, { topic });
 }
 
+// ───────────── Идеи для Reels на сегодня (под нишу проекта) ─────────────
+
+export type DailyIdeaDTO = {
+  title: string;
+  category: string;
+  tag: string;
+  hook: string;
+};
+
+export function getDailyIdeas(
+  projectId: string,
+): Promise<{ ok: true; ideas: DailyIdeaDTO[]; cached: boolean }> {
+  return getJSON(`/api/projects/${projectId}/ideas`);
+}
+
 // ───────────── Адаптация разбора под проект (3 темы) ─────────────
 
 export function adaptDecodeToTopics(

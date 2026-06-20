@@ -12,6 +12,7 @@ export type ScreenKey =
   | "welcome"
   | "dashboard"
   | "create-project"
+  | "onboarding-wizard"
   | "add-competitors"
   | "project"
   | "billing"

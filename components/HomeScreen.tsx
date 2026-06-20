@@ -8,38 +8,62 @@ import {
   getWeekPlan,
   listProjectDrafts,
   listReelDecodes,
+  getDailyIdeas,
   type ProjectDTO,
   type WeekPlanDTO,
   type ContentDraftDTO,
   type ReelQuotaDTO,
+  type DailyIdeaDTO,
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 
-// ─── Светлая тема (по референсу) ───
-const BG = "#FFFFFF";
-const INK = "#15151E";          // основной текст
-const MUTED = "#6B6B7B";        // вторичный текст
-const SUB_MUTED = "#9A9AAB";    // третичный
-const CARD_BG = "#FFFFFF";
-const CARD_BORDER = "#EEEEF2";
-const SOFT = "#F6F6F9";         // мягкий фон карточек/полей
-const IG_GRADIENT = "linear-gradient(95deg, #833AB4 0%, #DD2A7B 50%, #F77737 100%)";
-const PINK = "#DD2A7B";
+// ─── Тёмная тема ───
+const BG = "#0B0B11";
+const INK = "#F4F4F8";          // основной текст
+const MUTED = "#9A9AAB";        // вторичный текст
+const SUB_MUTED = "#6B6B7B";    // третичный
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const SOFT = "#1C1C26";         // мягкий фон карточек/полей
+const IG_GRADIENT = "linear-gradient(95deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const PINK = "#E84B91";
+// Акцентные цвета иконок
+const ACC_PURPLE = "#A24FD6";
+const ACC_PINK = "#E84B91";
+const ACC_ORANGE = "#F0944E";
+const ACC_GREEN = "#4FD489";
+const TINT_PINK = "rgba(232,75,145,0.16)";
+
+// Плашка иконки: лёгкий градиент + цветное кольцо + мягкое свечение (premium-вид)
+function iconTile(hex: string): React.CSSProperties {
+  return {
+    background: `linear-gradient(150deg, ${hex}30, ${hex}12)`,
+    border: `1px solid ${hex}3D`,
+    boxShadow: `0 6px 16px ${hex}26, inset 0 1px 0 ${hex}24`,
+  };
+}
 const PREFILL_URL_KEY = "lex_prefill_reel_url";
 const PREFILL_IDEA_KEY = "lex_prefill_script_idea";
 
-const TYPE_ICON: Record<string, string> = {
-  reel: "🎬", carousel: "🖼", caption: "✏️", idea: "💡", post: "📝",
-};
 
 type HomeScreenProps = { onStart?: () => void };
 
-// Идеи дня — стартовый набор готовых входов (бриф: не оставлять пустое поле).
-type IdeaDef = { tag: string; tagColor: string; tagBg: string; icon: "target" | "flame" | "clock"; title: string; category: string };
-const DAILY_IDEAS: IdeaDef[] = [
-  { tag: "Популярно", tagColor: "#9B30C9", tagBg: "#F3E6FA", icon: "target", title: "Расскажи ошибку, которая стоила тебе денег", category: "Бизнес" },
-  { tag: "Тренд", tagColor: "#E0641B", tagBg: "#FCEEE2", icon: "flame", title: "Покажи свой рабочий процесс от начала до конца", category: "Личный бренд" },
-  { tag: "Высокий охват", tagColor: "#2E9E5B", tagBg: "#E4F6EC", icon: "clock", title: "3 совета, которые сэкономят время каждому", category: "Лайфстайл" },
+// Визуальные пресеты карточек идей (цикл по индексу).
+type IdeaVisual = { tag: string; tagColor: string; accent: string; icon: "target" | "flame" | "clock" };
+const IDEA_VISUALS: IdeaVisual[] = [
+  { tag: "Популярно", tagColor: "#C78BEB", accent: ACC_PURPLE, icon: "target" },
+  { tag: "Тренд", tagColor: "#F0944E", accent: ACC_ORANGE, icon: "flame" },
+  { tag: "Высокий охват", tagColor: "#4FD489", accent: ACC_GREEN, icon: "clock" },
+];
+
+// Контент карточки идеи (текст). hook — seed для генератора сценария.
+type IdeaDef = { title: string; category: string; hook?: string };
+
+// Фолбэк, когда проекта/AI-идей ещё нет (бриф: не оставлять пустое поле).
+const FALLBACK_IDEAS: IdeaDef[] = [
+  { title: "Расскажи ошибку, которая стоила тебе денег", category: "Бизнес" },
+  { title: "Покажи свой рабочий процесс от начала до конца", category: "Личный бренд" },
+  { title: "3 совета, которые сэкономят время каждому", category: "Лайфстайл" },
 ];
 
 export default function HomeScreen(_props: HomeScreenProps = {}) {
@@ -55,6 +79,8 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   const [plan, setPlan] = useState<WeekPlanDTO | null>(null);
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
+  const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
+  const [ideasLoading, setIdeasLoading] = useState(false);
   const [url, setUrl] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -78,6 +104,11 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     getWeekPlan(activeId).then((p) => alive && setPlan(p)).catch(() => {});
     listProjectDrafts(activeId).then((r) => alive && setDrafts(r.drafts)).catch(() => alive && setDrafts([]));
     listReelDecodes(activeId).then((r) => alive && r.quota && setQuota(r.quota)).catch(() => {});
+    setIdeasLoading(true);
+    getDailyIdeas(activeId)
+      .then((r) => { if (alive) setIdeas(r.ideas); })
+      .catch(() => {})
+      .finally(() => { if (alive) setIdeasLoading(false); });
     return () => { alive = false; };
   }, [activeId]);
 
@@ -100,9 +131,9 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     actions.navigate("tools");
   };
 
-  const useIdea = (title: string) => {
+  const useIdea = (idea: IdeaDef) => {
     hapticImpact("light");
-    try { localStorage.setItem(PREFILL_IDEA_KEY, title); } catch {}
+    try { localStorage.setItem(PREFILL_IDEA_KEY, idea.hook || idea.title); } catch {}
     goToTool("script");
   };
 
@@ -116,12 +147,13 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   return (
     <ScreenWrap>
       {/* Мини-хедер: лого + переключатель проекта */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-start", marginBottom: 22, minHeight: 30 }}>
         <LexLogo height={26} />
         {activeProject && (
           <button
             onClick={() => { if (projects.length > 1) { hapticSelection(); setSwitcherOpen((v) => !v); } }}
             style={{
+              position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
               appearance: "none", background: SOFT, border: `1px solid ${CARD_BORDER}`,
               borderRadius: 999, padding: "6px 12px", color: INK, fontFamily: "inherit",
               fontSize: 13, fontWeight: 600, cursor: projects.length > 1 ? "pointer" : "default",
@@ -145,7 +177,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
               style={{
                 appearance: "none", textAlign: "left", padding: "12px 14px", borderRadius: 12,
                 border: `1px solid ${p.id === activeId ? PINK : CARD_BORDER}`,
-                background: p.id === activeId ? "#FCEAF2" : CARD_BG,
+                background: p.id === activeId ? TINT_PINK : CARD_BG,
                 color: INK, fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer",
               }}
             >
@@ -156,13 +188,14 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       )}
 
       {/* Заголовок */}
-      <h1 style={{ margin: "4px 0 0", fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.12, textAlign: "center", color: INK }}>
+      <h1 style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.12, textAlign: "center", color: INK }}>
         Превращайте вирусные Reels
-        <br />
-        <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          в готовые сценарии
-        </span>{" "}
-        ⚡
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" }}>
+          <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            в готовые сценарии
+          </span>
+          <BoltIcon size={24} />
+        </span>
       </h1>
       <p style={{ margin: "12px auto 22px", fontSize: 14, color: MUTED, lineHeight: 1.5, textAlign: "center", maxWidth: 320 }}>
         Вставьте ссылку на Reels — мы разберём видео и создадим сценарий, который работает.
@@ -171,7 +204,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* Карточка ввода + градиентная кнопка */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 4px 14px" }}>
-          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, background: "#FCEAF2", display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
+          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, ...iconTile(ACC_PINK), display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 2 }}>Вставьте ссылку на Reels</div>
             <input
@@ -179,12 +212,22 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://www.instagram.com/reel/..."
               style={{
-                appearance: "none", width: "100%", border: "none", outline: "none",
-                background: "transparent", color: INK, fontFamily: "inherit", fontSize: 13,
-                padding: 0,
+                appearance: "none", width: "100%", outline: "none",
+                background: SOFT, color: INK, fontFamily: "inherit", fontSize: 13,
+                border: `1px solid ${CARD_BORDER}`, borderRadius: 10, padding: "9px 12px",
               }}
             />
           </div>
+          <button
+            onClick={async () => {
+              hapticSelection();
+              try { const t = await navigator.clipboard.readText(); if (t) setUrl(t.trim()); } catch {}
+            }}
+            aria-label="Вставить из буфера"
+            style={{ appearance: "none", alignSelf: "flex-end", flexShrink: 0, width: 38, height: 38, borderRadius: 10, border: `1px solid ${CARD_BORDER}`, background: SOFT, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+          >
+            <CopyIcon color={MUTED} />
+          </button>
         </div>
         <button
           onClick={runDecode}
@@ -201,8 +244,8 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         >
           <SparkleIcon /> Создать свой сценарий
         </button>
-        <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10 }}>
-          🔥 340+ блогеров уже разбирают Reels с LEX
+        <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+          <FlameIcon size={13} color="#F0944E" /> 340+ блогеров уже разбирают Reels с LEX
           {quota && quota.tier === "free" && (
             <> · осталось {Math.max(0, quota.limit - quota.used)} из {quota.limit}</>
           )}
@@ -212,9 +255,9 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* 3 фичи */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: "20px 14px", marginBottom: 24, boxShadow: "0 8px 28px rgba(20,20,40,0.05)" }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <Feature icon={<VideoIcon color="#9B30C9" />} bg="#F3E6FA" title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
-          <Feature icon={<WandIcon color={PINK} />} bg="#FCEAF2" title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
-          <Feature icon={<TrendIcon color="#E0641B" />} bg="#FCEEE2" title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
+          <Feature icon={<VideoIcon color="#C78BEB" />} accent={ACC_PURPLE} title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
+          <Feature icon={<WandIcon color="#F3A9CE" />} accent={ACC_PINK} title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
+          <Feature icon={<TrendIcon color="#F0944E" />} accent={ACC_ORANGE} title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
         </div>
       </div>
 
@@ -224,15 +267,14 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           <InstagramIcon color={PINK} />
           <span style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
         </div>
-        <button onClick={goLibrary} style={{ appearance: "none", background: "none", border: "none", color: PINK, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-          Смотреть все
-        </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {DAILY_IDEAS.map((idea, i) => (
-          <IdeaCard key={i} idea={idea} onUse={() => useIdea(idea.title)} />
-        ))}
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "0 -18px", padding: "0 18px 4px", scrollbarWidth: "none" }}>
+        {ideasLoading && !ideas
+          ? [0, 1, 2].map((i) => <IdeaSkeleton key={i} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} />)
+          : (ideas && ideas.length > 0 ? ideas : FALLBACK_IDEAS).map((idea, i) => (
+              <IdeaCard key={i} idea={idea} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} onUse={() => useIdea(idea)} />
+            ))}
       </div>
 
       {/* Прогресс недели — для существующих юзеров (под референс-блоками) */}
@@ -247,7 +289,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
               {plan.summary.ready + plan.summary.published} из {plan.summary.total} готовы
             </span>
           </div>
-          <div style={{ height: 8, borderRadius: 4, background: "#EAEAF0", overflow: "hidden" }}>
+          <div style={{ height: 8, borderRadius: 4, background: "#262630", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${plan.summary.progress_pct}%`, background: IG_GRADIENT }} />
           </div>
         </button>
@@ -273,10 +315,8 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
 function LexLogo({ height = 26 }: { height?: number }) {
   return (
-    <div aria-label="LEX AI" style={{ display: "inline-flex", alignItems: "center", gap: height * 0.34, height, lineHeight: 1 }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.jpg" alt="" style={{ height: height * 1.15, width: height * 1.15, objectFit: "cover", display: "block", borderRadius: height * 0.32 }} />
-      <div style={{ fontSize: height * 0.66, fontWeight: 800, letterSpacing: "0.04em" }}>
+    <div aria-label="LEX AI" style={{ display: "inline-flex", alignItems: "center", height, lineHeight: 1 }}>
+      <div style={{ fontSize: height * 0.72, fontWeight: 800, letterSpacing: "0.06em" }}>
         <span style={{ color: INK }}>LEX </span>
         <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>AI</span>
       </div>
@@ -284,34 +324,50 @@ function LexLogo({ height = 26 }: { height?: number }) {
   );
 }
 
-function Feature({ icon, bg, title, body }: { icon: React.ReactNode; bg: string; title: string; body: string }) {
+function Feature({ icon, accent, title, body }: { icon: React.ReactNode; accent: string; title: string; body: string }) {
   return (
     <div style={{ flex: 1, textAlign: "center", padding: "0 4px" }}>
-      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
+      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, ...iconTile(accent), display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
       <div style={{ fontSize: 12, fontWeight: 800, color: INK, lineHeight: 1.25, marginBottom: 6 }}>{title}</div>
       <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35 }}>{body}</div>
     </div>
   );
 }
 
-function IdeaCard({ idea, onUse }: { idea: IdeaDef; onUse: () => void }) {
-  const icon =
-    idea.icon === "target" ? <TargetIcon color={idea.tagColor} />
-    : idea.icon === "flame" ? <FlameIcon color={idea.tagColor} />
-    : <ClockIcon color={idea.tagColor} />;
+function IdeaSkeleton({ visual }: { visual: IdeaVisual }) {
   return (
-    <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18, padding: 16, boxShadow: "0 6px 20px rgba(20,20,40,0.04)" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, background: idea.tagBg, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 9px", borderRadius: 999, background: idea.tagBg, color: idea.tagColor }}>{idea.tag}</span>
+    <div style={{ flexShrink: 0, width: 168, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18, padding: 14 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 13, ...iconTile(visual.accent) }} />
+        <span style={{ width: 50, height: 18, borderRadius: 999, background: SOFT }} />
       </div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: INK, lineHeight: 1.3, marginBottom: 6 }}>{idea.title}</div>
+      <div style={{ height: 13, borderRadius: 5, background: SOFT, marginBottom: 7 }} />
+      <div style={{ height: 13, width: "75%", borderRadius: 5, background: SOFT, marginBottom: 14 }} />
+      <div style={{ height: 11, width: "45%", borderRadius: 5, background: SOFT, marginBottom: 16 }} />
+      <div style={{ height: 38, borderRadius: 12, background: SOFT }} />
+    </div>
+  );
+}
+
+function IdeaCard({ idea, visual, onUse }: { idea: IdeaDef; visual: IdeaVisual; onUse: () => void }) {
+  const icon =
+    visual.icon === "target" ? <TargetIcon color={visual.tagColor} />
+    : visual.icon === "flame" ? <FlameIcon color={visual.tagColor} />
+    : <ClockIcon color={visual.tagColor} />;
+  return (
+    <div style={{ flexShrink: 0, width: 168, display: "flex", flexDirection: "column", background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18, padding: 14, boxShadow: "0 6px 20px rgba(20,20,40,0.04)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 13, ...iconTile(visual.accent), display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
+        <span style={{ fontSize: 9.5, fontWeight: 700, padding: "4px 8px", borderRadius: 999, background: `${visual.accent}22`, border: `1px solid ${visual.accent}33`, color: visual.tagColor, whiteSpace: "nowrap" }}>{visual.tag}</span>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: INK, lineHeight: 1.3, marginBottom: 6 }}>{idea.title}</div>
       <div style={{ fontSize: 12, color: SUB_MUTED, marginBottom: 14 }}>{idea.category}</div>
+      <div style={{ flex: 1 }} />
       <button
         onClick={onUse}
         style={{
           appearance: "none", width: "100%", padding: "11px 0", borderRadius: 12,
-          border: `1.5px solid ${PINK}`, background: "transparent", color: PINK,
+          border: `1px solid ${PINK}33`, background: `${PINK}1F`, color: "#F6B6D3",
           fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
         }}
       >
@@ -340,7 +396,7 @@ function MaterialRow({ draft, onClick }: { draft: ContentDraftDTO; onClick: () =
         cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
       }}
     >
-      <span style={{ fontSize: 16, flexShrink: 0 }}>{TYPE_ICON[draft.content_type] || "📄"}</span>
+      <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: SOFT, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED }}><TypeIcon type={draft.content_type} /></span>
       <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
       <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: sl.color }}>{sl.label}</span>
     </button>
@@ -361,8 +417,10 @@ function LinkIcon({ size = 22, color = "currentColor" }: IconProps) {
 function VideoIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="5" width="18" height="14" rx="3.5" stroke={color} strokeWidth="1.8" />
-      <path d="M10.5 9.2l4 2.8-4 2.8V9.2z" fill={color} />
+      <rect x="3" y="4" width="18" height="16" rx="4.5" stroke={color} strokeWidth="1.7" />
+      <path d="M3.5 8.5h17" stroke={color} strokeWidth="1.5" />
+      <path d="M7.5 4.2l2 4.3M13 4.2l2 4.3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M10.5 11.8l3.8 2.4-3.8 2.4v-4.8z" fill={color} />
     </svg>
   );
 }
@@ -370,8 +428,9 @@ function VideoIcon({ size = 22, color = "currentColor" }: IconProps) {
 function WandIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M5 19l9-9" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M14.5 6.5l1.2 1.2M17 4l.6 1.4L19 6l-1.4.6L17 8l-.6-1.4L15 6l1.4-.6L17 4zM7 13l.5 1.1L8.6 14.6l-1.1.5L7 16.2l-.5-1.1L5.4 14.6l1.1-.5L7 13z" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill={color} />
+      <path d="M4 20l9-9" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 2.5l1.1 2.9 2.9 1.1-2.9 1.1L16 10.5l-1.1-2.9L12 6.5l2.9-1.1L16 2.5z" fill={color} />
+      <path d="M19.5 12.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5z" fill={color} />
     </svg>
   );
 }
@@ -379,8 +438,8 @@ function WandIcon({ size = 22, color = "currentColor" }: IconProps) {
 function TrendIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M4 16l5-5 3 3 5-6" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 8h4v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 15l5-5 3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 6h4v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -388,9 +447,11 @@ function TrendIcon({ size = 22, color = "currentColor" }: IconProps) {
 function TargetIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
-      <circle cx="12" cy="12" r="4" stroke={color} strokeWidth="1.7" />
-      <circle cx="12" cy="12" r="1.2" fill={color} />
+      <circle cx="10.5" cy="13.5" r="7.5" stroke={color} strokeWidth="1.7" />
+      <circle cx="10.5" cy="13.5" r="3.6" stroke={color} strokeWidth="1.7" />
+      <circle cx="10.5" cy="13.5" r="0.9" fill={color} />
+      <path d="M10.5 13.5L19.5 4.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M15.5 4.5h4v4" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -398,7 +459,7 @@ function TargetIcon({ size = 22, color = "currentColor" }: IconProps) {
 function FlameIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 3c1 2.5-.5 4-1.8 5.3C8.6 9.8 7 11.4 7 14a5 5 0 0010 0c0-2-1-3.7-2-5-.4 1-1 1.6-1.8 2 .3-2.5-.7-5.5-1.2-8z" stroke={color} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12.5 2c.4 2.8 2.3 4.3 3.6 5.9C17.6 9.7 18.5 11.6 18.5 14a6.5 6.5 0 11-13 0c0-2.3 1.1-4 2.3-5.4.3 1.1.9 1.9 1.8 2.4C8.7 8 10 5.4 12.5 2z" fill={color} />
     </svg>
   );
 }
@@ -407,7 +468,54 @@ function ClockIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
-      <path d="M12 8v4l2.5 2" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 7.5V12l3 1.8" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BoltIcon({ size = 24 }: IconProps) {
+  const id = "lex-bolt-grad";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "-0.16em" }}>
+      <defs>
+        <linearGradient id={id} x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#A24FD6" />
+          <stop offset="0.5" stopColor="#E84B91" />
+          <stop offset="1" stopColor="#F88A4A" />
+        </linearGradient>
+      </defs>
+      <path d="M13 2L4.5 13.2c-.4.5 0 1.3.7 1.3H11l-1 7.5 8.5-11.2c.4-.5 0-1.3-.7-1.3H12l1-7.5z" fill={`url(#${id})`} />
+    </svg>
+  );
+}
+
+function TypeIcon({ type, size = 16, color = "currentColor" }: IconProps & { type: string }) {
+  if (type === "reel") return <VideoIcon size={size} color={color} />;
+  if (type === "carousel") return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" />
+      <path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+  if (type === "idea") return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M9 17h6M10 20h4M12 3a6 6 0 014 10.5c-.6.6-1 1.2-1 2H9c0-.8-.4-1.4-1-2A6 6 0 0112 3z" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+  // caption / post / прочее — текстовые строки
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="1.7" />
+      <path d="M8 9h8M8 13h8M8 17h5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CopyIcon({ size = 18, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="9" y="9" width="11" height="11" rx="2.5" stroke={color} strokeWidth="1.7" />
+      <path d="M5 15V6.5A1.5 1.5 0 016.5 5H15" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

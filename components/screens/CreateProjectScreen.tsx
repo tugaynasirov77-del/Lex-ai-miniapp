@@ -287,11 +287,11 @@ function PlatformStep({
           letterSpacing: "-0.02em",
         }}
       >
-        Расскажите немного о вашем блоге
+        Настроим LEX под твой блог
       </h1>
       <p style={{ margin: "10px 0 0", fontSize: 13, color: MUTED, lineHeight: 1.45 }}>
-        LEX использует эти ответы, чтобы создавать контент именно под вашу тему,
-        аудиторию и стиль.
+        Ответь на пару вопросов — и LEX будет писать сценарии и идеи под твою
+        нишу и стиль, а не шаблонные. Это займёт минуту.
       </p>
 
       <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 20 }}>
