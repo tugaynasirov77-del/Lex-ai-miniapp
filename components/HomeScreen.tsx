@@ -549,7 +549,7 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
-          "max(calc(env(safe-area-inset-top) + 56px), 80px) 18px " +
+          "max(calc(env(safe-area-inset-top) + 68px), 100px) 18px " +
           "max(calc(env(safe-area-inset-bottom) + 96px), 110px)",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",

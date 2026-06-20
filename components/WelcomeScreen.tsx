@@ -49,7 +49,7 @@ export default function WelcomeScreen({ onStart, onComplete }: Props) {
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
-          "max(calc(env(safe-area-inset-top) + 18px), 32px) 16px " +
+          "max(calc(env(safe-area-inset-top) + 56px), 88px) 16px " +
           "max(calc(env(safe-area-inset-bottom) + 16px), 22px)",
         overflow: "hidden",
         display: "flex",

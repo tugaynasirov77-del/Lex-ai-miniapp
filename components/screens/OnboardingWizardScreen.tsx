@@ -111,7 +111,7 @@ export default function OnboardingWizardScreen() {
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
-          "max(calc(env(safe-area-inset-top) + 10px), 22px) 18px " +
+          "max(calc(env(safe-area-inset-top) + 56px), 88px) 18px " +
           "max(calc(env(safe-area-inset-bottom) + 12px), 18px)",
         overflow: "hidden",
         display: "flex",
