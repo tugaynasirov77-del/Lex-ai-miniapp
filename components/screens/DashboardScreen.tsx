@@ -14,7 +14,6 @@ import {
   type StreakDTO,
 } from "../../lib/api";
 import { hapticImpact } from "../../lib/telegram";
-import * as P from "../icons/PremiumIcons";
 
 // ─── Гамма главной ───
 const BG = "#0B0B11";
@@ -90,7 +89,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
         onCreate={goCreate}
       />
 
-      <Row label="Настройки" icon={<P.PremiumGearIcon size={40} />} onTap={goSettings} />
+      <Row label="Настройки" icon={<GearIcon />} onTap={goSettings} />
 
       <Footer />
     </ScreenWrap>
@@ -114,7 +113,14 @@ function TierCard({ billing, onUpgrade }: { billing: BillingSummary | null; onUp
       boxShadow: `0 12px 32px rgba(0,0,0,0.3)`,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isFree ? 14 : 4 }}>
-        <P.PremiumCrownIcon size={44} />
+        <div style={{
+          width: 42, height: 42, borderRadius: 13,
+          background: IG_GRADIENT,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 8px 20px ${PINK}40`,
+        }}>
+          <CrownIcon />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 10.5, color: SUB_MUTED, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Тариф
@@ -151,10 +157,10 @@ function TierCard({ billing, onUpgrade }: { billing: BillingSummary | null; onUp
 
 function AIProfileCard({ project, onEdit }: { project: ProjectDTO | null; onEdit: () => void }) {
   const rows: { label: string; value: string; icon: React.ReactNode }[] = [
-    { label: "Ниша", value: project?.niche || "—", icon: <P.PremiumBriefcaseIcon size={40} /> },
-    { label: "Аудитория", value: project?.audience || "—", icon: <P.PremiumUsersIcon size={40} /> },
-    { label: "Стиль подачи", value: project?.content_style || "—", icon: <P.PremiumChatIcon size={40} /> },
-    { label: "Главная цель", value: project?.content_goal || "—", icon: <P.PremiumTargetIcon size={40} /> },
+    { label: "Ниша", value: project?.niche || "—", icon: <BriefcaseIcon /> },
+    { label: "Аудитория", value: project?.audience || "—", icon: <UsersIcon /> },
+    { label: "Стиль подачи", value: project?.content_style || "—", icon: <ChatIcon /> },
+    { label: "Главная цель", value: project?.content_goal || "—", icon: <TargetIcon /> },
   ];
 
   return (
@@ -181,7 +187,15 @@ function AIProfileCard({ project, onEdit }: { project: ProjectDTO | null; onEdit
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {rows.map((r, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: i < rows.length - 1 ? `1px solid ${CARD_BORDER}` : "none" }}>
-            <div style={{ flexShrink: 0 }}>{r.icon}</div>
+            <div style={{
+              width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+              background: `linear-gradient(150deg, ${PURPLE}30, ${PURPLE}12)`,
+              border: `1px solid ${PURPLE}3D`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#C78BEB",
+            }}>
+              {r.icon}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10, color: SUB_MUTED, fontWeight: 600, letterSpacing: "0.02em" }}>{r.label}</div>
               <div style={{ fontSize: 13, color: INK, fontWeight: 700, lineHeight: 1.25, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.value}</div>
@@ -201,7 +215,15 @@ function StreakCard({ streak }: { streak: StreakDTO }) {
       background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18,
       padding: 14, marginBottom: 12, display: "flex", alignItems: "center", gap: 12,
     }}>
-      <P.PremiumFlameIcon size={44} />
+      <div style={{
+        width: 42, height: 42, borderRadius: 13,
+        background: `linear-gradient(150deg, ${ORANGE}30, ${ORANGE}12)`,
+        border: `1px solid ${ORANGE}3D`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: ORANGE,
+      }}>
+        <FlameIcon />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: INK, lineHeight: 1.25 }}>
           {streak.current} {pluralDay(streak.current)} подряд
@@ -321,7 +343,14 @@ function Row({ label, icon, onTap }: { label: string; icon: React.ReactNode; onT
         padding: "12px 14px", color: INK, fontFamily: "inherit", cursor: "pointer", marginBottom: 12,
       }}
     >
-      <div style={{ flexShrink: 0 }}>{icon}</div>
+      <div style={{
+        width: 32, height: 32, borderRadius: 10,
+        background: SOFT, border: `1px solid ${CARD_BORDER}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: MUTED,
+      }}>
+        {icon}
+      </div>
       <span style={{ flex: 1, textAlign: "left", fontSize: 13.5, fontWeight: 700 }}>{label}</span>
       <span style={{ color: SUB_MUTED, fontSize: 18 }}>›</span>
     </button>

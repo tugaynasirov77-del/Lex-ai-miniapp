@@ -6,7 +6,6 @@ import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram"
 import { createProject } from "../../lib/api";
 import { markOnboardingDone } from "../../lib/api";
 import { ONBOARDING_LS_KEY } from "../../hooks/useWelcomeGate";
-import * as P from "../icons/PremiumIcons";
 
 // ─── Гамма главной ───
 const BG = "#0B0B11";
@@ -26,43 +25,43 @@ type NicheKey = "business" | "marketing" | "fitness" | "psychology" | "lifestyle
 
 type NicheOpt = { key: NicheKey; label: string; icon: React.ReactNode };
 const NICHE_OPTIONS: NicheOpt[] = [
-  { key: "business", label: "Бизнес", icon: <P.PremiumBriefcaseIcon size={56} /> },
-  { key: "marketing", label: "Маркетинг", icon: <P.PremiumMegaphoneIcon size={56} /> },
-  { key: "fitness", label: "Фитнес", icon: <P.PremiumDumbbellIcon size={56} /> },
-  { key: "psychology", label: "Психология", icon: <P.PremiumBrainIcon size={56} /> },
-  { key: "lifestyle", label: "Lifestyle", icon: <P.PremiumPalmIcon size={56} /> },
-  { key: "other", label: "Другое", icon: <P.PremiumDotsIcon size={56} /> },
+  { key: "business", label: "Бизнес", icon: <BriefcaseIcon /> },
+  { key: "marketing", label: "Маркетинг", icon: <MegaphoneIcon /> },
+  { key: "fitness", label: "Фитнес", icon: <DumbbellIcon /> },
+  { key: "psychology", label: "Психология", icon: <BrainIcon /> },
+  { key: "lifestyle", label: "Lifestyle", icon: <PalmIcon /> },
+  { key: "other", label: "Другое", icon: <DotsIcon /> },
 ];
 
 type AudienceKey = "entrepreneurs" | "experts" | "beginners" | "bloggers" | "men_20_35" | "women_20_35";
 type AudienceOpt = { key: AudienceKey; label: string; icon: React.ReactNode };
 const AUDIENCE_OPTIONS: AudienceOpt[] = [
-  { key: "entrepreneurs", label: "Предприниматели", icon: <P.PremiumBriefcaseIcon size={56} /> },
-  { key: "experts", label: "Эксперты", icon: <P.PremiumGradCapIcon size={56} /> },
-  { key: "beginners", label: "Новички", icon: <P.PremiumRocketIcon size={56} /> },
-  { key: "bloggers", label: "Блогеры", icon: <P.PremiumReelIcon size={56} /> },
-  { key: "men_20_35", label: "Мужчины 20–35", icon: <P.PremiumManIcon size={56} /> },
-  { key: "women_20_35", label: "Женщины 20–35", icon: <P.PremiumWomanIcon size={56} /> },
+  { key: "entrepreneurs", label: "Предприниматели", icon: <BriefcaseIcon /> },
+  { key: "experts", label: "Эксперты", icon: <GradCapIcon /> },
+  { key: "beginners", label: "Новички", icon: <RocketIcon /> },
+  { key: "bloggers", label: "Блогеры", icon: <ReelIcon /> },
+  { key: "men_20_35", label: "Мужчины 20–35", icon: <ManIcon /> },
+  { key: "women_20_35", label: "Женщины 20–35", icon: <WomanIcon /> },
 ];
 
 type GoalKey = "views" | "subscribers" | "sales" | "personal_brand";
 type GoalOpt = { key: GoalKey; label: string; description: string; icon: React.ReactNode };
 const GOAL_OPTIONS: GoalOpt[] = [
-  { key: "views", label: "Просмотры", description: "Максимальный viral potential", icon: <P.PremiumBarChartIcon size={56} /> },
-  { key: "subscribers", label: "Подписчики", description: "Конвертация зрителей в аудиторию", icon: <P.PremiumUsersIcon size={56} /> },
-  { key: "sales", label: "Продажи", description: "Контент, который продаёт", icon: <P.PremiumBagIcon size={56} /> },
-  { key: "personal_brand", label: "Личный бренд", description: "Рост доверия и узнаваемости", icon: <P.PremiumStarIcon size={56} /> },
+  { key: "views", label: "Просмотры", description: "Максимальный viral potential", icon: <BarChartIcon /> },
+  { key: "subscribers", label: "Подписчики", description: "Конвертация зрителей в аудиторию", icon: <UsersIcon /> },
+  { key: "sales", label: "Продажи", description: "Контент, который продаёт", icon: <BagIcon /> },
+  { key: "personal_brand", label: "Личный бренд", description: "Рост доверия и узнаваемости", icon: <StarIcon /> },
 ];
 
 type StyleKey = "provocative" | "expert" | "friendly" | "premium" | "analytical" | "mix";
 type StyleOpt = { key: StyleKey; label: string; description: string; icon: React.ReactNode };
 const STYLE_OPTIONS: StyleOpt[] = [
-  { key: "provocative", label: "Провокационный", description: "Ломаешь шаблоны, цепляешь с первых секунд", icon: <P.PremiumFlameIcon size={56} /> },
-  { key: "expert", label: "Экспертный", description: "Умный, структурный, с авторитетом", icon: <P.PremiumGradCapIcon size={56} /> },
-  { key: "friendly", label: "Дружелюбный", description: "Лёгкий, живой, conversational", icon: <P.PremiumSmileIcon size={56} /> },
-  { key: "premium", label: "Premium", description: "Дорогой, уверенный, статусный", icon: <P.PremiumDiamondIcon size={56} /> },
-  { key: "analytical", label: "Аналитический", description: "Через факты, логику и инсайты", icon: <P.PremiumBrainIcon size={56} /> },
-  { key: "mix", label: "Микс", description: "AI комбинирует стили для лучшего результата", icon: <P.PremiumMasksIcon size={56} /> },
+  { key: "provocative", label: "Провокационный", description: "Ломаешь шаблоны, цепляешь с первых секунд", icon: <FlameIcon /> },
+  { key: "expert", label: "Экспертный", description: "Умный, структурный, с авторитетом", icon: <GradCapIcon /> },
+  { key: "friendly", label: "Дружелюбный", description: "Лёгкий, живой, conversational", icon: <SmileIcon /> },
+  { key: "premium", label: "Premium", description: "Дорогой, уверенный, статусный", icon: <DiamondIcon /> },
+  { key: "analytical", label: "Аналитический", description: "Через факты, логику и инсайты", icon: <BrainIcon /> },
+  { key: "mix", label: "Микс", description: "AI комбинирует стили для лучшего результата", icon: <MasksIcon /> },
 ];
 
 export default function OnboardingWizardScreen() {
@@ -321,10 +320,10 @@ function GoalStep({ goal, onPick }: { goal: GoalKey | null; onPick: (k: GoalKey)
 // ───────── Шаг 5: сборка AI-профиля (loading) ─────────
 
 const PROFILE_TASKS: { icon: React.ReactNode; title: string; body: string }[] = [
-  { icon: <P.PremiumTargetIcon size={40} />, title: "Анализируем нишу", body: "Понимаем твой рынок и контекст" },
-  { icon: <P.PremiumUsersIcon size={40} />, title: "Изучаем аудиторию", body: "Определяем, кто твоя целевая аудитория" },
-  { icon: <P.PremiumChatIcon size={40} />, title: "Настраиваем стиль и тон", body: "Обучаем AI твоему стилю подачи" },
-  { icon: <P.PremiumBrainIcon size={40} />, title: "Подготавливаем AI-модель", body: "Адаптируем алгоритмы под твои цели" },
+  { icon: <TargetIcon />, title: "Анализируем нишу", body: "Понимаем твой рынок и контекст" },
+  { icon: <UsersIcon />, title: "Изучаем аудиторию", body: "Определяем, кто твоя целевая аудитория" },
+  { icon: <ChatIcon />, title: "Настраиваем стиль и тон", body: "Обучаем AI твоему стилю подачи" },
+  { icon: <BrainIcon />, title: "Подготавливаем AI-модель", body: "Адаптируем алгоритмы под твои цели" },
 ];
 
 function BuildingProfileStep({ onDone }: { onDone: () => void }) {
@@ -469,10 +468,10 @@ function SuccessStep({
 }) {
   const [busy, setBusy] = useState(false);
   const rows: { label: string; value: string; icon: React.ReactNode }[] = [
-    { label: "Ниша", value: niche ? NICHE_LABEL[niche] : "—", icon: <P.PremiumBriefcaseIcon size={40} /> },
-    { label: "Аудитория", value: audience ? AUDIENCE_LABEL[audience] : "—", icon: <P.PremiumUsersIcon size={40} /> },
-    { label: "Стиль подачи", value: styleVoice ? STYLE_LABEL[styleVoice] : "—", icon: <P.PremiumChatIcon size={40} /> },
-    { label: "Главная цель", value: goal ? GOAL_LABEL[goal] : "—", icon: <P.PremiumTargetIcon size={40} /> },
+    { label: "Ниша", value: niche ? NICHE_LABEL[niche] : "—", icon: <BriefcaseIcon /> },
+    { label: "Аудитория", value: audience ? AUDIENCE_LABEL[audience] : "—", icon: <UsersIcon /> },
+    { label: "Стиль подачи", value: styleVoice ? STYLE_LABEL[styleVoice] : "—", icon: <ChatIcon /> },
+    { label: "Главная цель", value: goal ? GOAL_LABEL[goal] : "—", icon: <TargetIcon /> },
   ];
 
   return (
@@ -512,7 +511,15 @@ function SuccessStep({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {rows.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: i < rows.length - 1 ? `1px solid ${CARD_BORDER}` : "none" }}>
-              <div style={{ flexShrink: 0 }}>{r.icon}</div>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                background: `linear-gradient(150deg, ${PURPLE}30, ${PURPLE}12)`,
+                border: `1px solid ${PURPLE}3D`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#C78BEB",
+              }}>
+                {r.icon}
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10.5, color: MUTED, fontWeight: 600, letterSpacing: "0.02em" }}>{r.label}</div>
                 <div style={{ fontSize: 13, color: INK, fontWeight: 700, lineHeight: 1.25, marginTop: 1 }}>{r.value}</div>
@@ -592,7 +599,13 @@ function ProfileTaskRow({ task, state }: { task: typeof PROFILE_TASKS[number]; s
       opacity: state === "wait" ? 0.55 : 1,
       transition: "background 240ms, border-color 240ms, opacity 240ms",
     }}>
-      <div style={{ flexShrink: 0, filter: state === "running" ? `drop-shadow(0 6px 16px ${PURPLE}55)` : "none", transition: "filter 200ms" }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+        background: `linear-gradient(150deg, ${PURPLE}30, ${PURPLE}12)`,
+        border: `1px solid ${PURPLE}3D`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: state === "done" ? "#C78BEB" : "#C78BEB",
+      }}>
         {task.icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -672,7 +685,14 @@ function ChoiceGrid<K extends string>({
                   <CheckIcon />
                 </div>
               )}
-              <div style={{ margin: "0 auto 8px", display: "flex", justifyContent: "center", filter: active ? `drop-shadow(0 8px 20px ${PURPLE}55)` : "none", transition: "filter 200ms" }}>
+              <div style={{
+                width: 36, height: 36, margin: "0 auto 6px", borderRadius: 11,
+                background: `linear-gradient(150deg, ${PURPLE}30, ${PURPLE}12)`,
+                border: `1px solid ${PURPLE}3D`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: active ? "#D9B4F0" : "#C78BEB",
+                boxShadow: active ? `0 6px 16px ${PURPLE}40` : "none",
+              }}>
                 {opt.icon}
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: opt.description ? 3 : 0 }}>{opt.label}</div>

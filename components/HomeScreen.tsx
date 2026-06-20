@@ -16,7 +16,6 @@ import {
   type DailyIdeaDTO,
 } from "../lib/api";
 import { hapticImpact, hapticSelection } from "../lib/telegram";
-import * as P from "./icons/PremiumIcons";
 
 // ─── Тёмная тема ───
 const BG = "#0B0B11";
@@ -205,7 +204,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* Карточка ввода + градиентная кнопка */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 4px 14px" }}>
-          <div style={{ flexShrink: 0, display: "flex" }}><P.PremiumLinkIcon size={44} /></div>
+          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, ...iconTile(ACC_PINK), display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 2 }}>Вставьте ссылку на Reels</div>
             <input
@@ -256,9 +255,9 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* 3 фичи */}
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: "20px 14px", marginBottom: 24, boxShadow: "0 8px 28px rgba(20,20,40,0.05)" }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <Feature icon={<P.PremiumVideoIcon size={48} />} accent={ACC_PURPLE} title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
-          <Feature icon={<P.PremiumWandIcon size={48} />} accent={ACC_PINK} title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
-          <Feature icon={<P.PremiumTrendIcon size={48} />} accent={ACC_ORANGE} title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
+          <Feature icon={<VideoIcon color="#C78BEB" />} accent={ACC_PURPLE} title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
+          <Feature icon={<WandIcon color="#F3A9CE" />} accent={ACC_PINK} title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
+          <Feature icon={<TrendIcon color="#F0944E" />} accent={ACC_ORANGE} title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
         </div>
       </div>
 
@@ -325,10 +324,10 @@ function LexLogo({ height = 26 }: { height?: number }) {
   );
 }
 
-function Feature({ icon, accent: _accent, title, body }: { icon: React.ReactNode; accent: string; title: string; body: string }) {
+function Feature({ icon, accent, title, body }: { icon: React.ReactNode; accent: string; title: string; body: string }) {
   return (
     <div style={{ flex: 1, textAlign: "center", padding: "0 4px" }}>
-      <div style={{ margin: "0 auto 10px", display: "flex", justifyContent: "center" }}>{icon}</div>
+      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, ...iconTile(accent), display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
       <div style={{ fontSize: 12, fontWeight: 800, color: INK, lineHeight: 1.25, marginBottom: 6 }}>{title}</div>
       <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35 }}>{body}</div>
     </div>
@@ -352,13 +351,13 @@ function IdeaSkeleton({ visual }: { visual: IdeaVisual }) {
 
 function IdeaCard({ idea, visual, onUse }: { idea: IdeaDef; visual: IdeaVisual; onUse: () => void }) {
   const icon =
-    visual.icon === "target" ? <P.PremiumTargetIcon size={44} />
-    : visual.icon === "flame" ? <P.PremiumFlameIcon size={44} />
-    : <P.PremiumClockIcon size={44} />;
+    visual.icon === "target" ? <TargetIcon color={visual.tagColor} />
+    : visual.icon === "flame" ? <FlameIcon color={visual.tagColor} />
+    : <ClockIcon color={visual.tagColor} />;
   return (
     <div style={{ flexShrink: 0, width: 168, display: "flex", flexDirection: "column", background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 18, padding: 14, boxShadow: "0 6px 20px rgba(20,20,40,0.04)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-        <div>{icon}</div>
+        <div style={{ width: 42, height: 42, borderRadius: 13, ...iconTile(visual.accent), display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
         <span style={{ fontSize: 9.5, fontWeight: 700, padding: "4px 8px", borderRadius: 999, background: `${visual.accent}22`, border: `1px solid ${visual.accent}33`, color: visual.tagColor, whiteSpace: "nowrap" }}>{visual.tag}</span>
       </div>
       <div style={{ fontSize: 14, fontWeight: 800, color: INK, lineHeight: 1.3, marginBottom: 6 }}>{idea.title}</div>
