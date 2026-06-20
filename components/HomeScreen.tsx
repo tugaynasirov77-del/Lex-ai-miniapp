@@ -235,14 +235,15 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           style={{
             appearance: "none", width: "100%", padding: "16px 0", border: "none", borderRadius: 16,
             background: IG_GRADIENT, color: "#FFFFFF", fontSize: 16, fontWeight: 800,
-            letterSpacing: "0.01em", fontFamily: "inherit",
+            letterSpacing: "0.01em", fontFamily: "inherit", lineHeight: 1,
             cursor: url.trim() ? "pointer" : "not-allowed",
             opacity: url.trim() ? 1 : 0.55,
             boxShadow: url.trim() ? "0 12px 28px rgba(221,42,123,0.35)" : "none",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          <SparkleIcon /> Создать свой сценарий
+          <span style={{ display: "inline-flex", alignItems: "center" }}><SparkleIcon /></span>
+          <span style={{ lineHeight: 1, display: "inline-block" }}>Создать свой сценарий</span>
         </button>
         <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
           <FlameIcon size={13} color="#F0944E" /> 340+ блогеров уже разбирают Reels с LEX
