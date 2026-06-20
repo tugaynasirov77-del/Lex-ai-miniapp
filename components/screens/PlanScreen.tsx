@@ -333,10 +333,10 @@ function PostPublishSheet({
           </div>
         </div>
 
-        <SheetBtn label="🎬 Создать продолжение темы" onClick={onCreateNext} />
-        <SheetBtn label="🪝 Попробовать другой хук" onClick={onCreateNext} />
-        <SheetBtn label="🔁 Повторить рабочую механику" onClick={onCreateNext} />
-        <SheetBtn label="🔍 Разобрать новый Reels" onClick={onAnalyzeNew} />
+        <SheetBtn label="Создать продолжение темы" onClick={onCreateNext} />
+        <SheetBtn label="Попробовать другой хук" onClick={onCreateNext} />
+        <SheetBtn label="Повторить рабочую механику" onClick={onCreateNext} />
+        <SheetBtn label="Разобрать новый Reels" onClick={onAnalyzeNew} />
         <SheetBtn label="Закрыть" onClick={onClose} subtle />
       </div>
     </div>
@@ -532,11 +532,11 @@ function ActionSheet({
           </span>
         </div>
 
-        <SheetBtn label="📂 Открыть материал" onClick={onOpen} />
-        <SheetBtn label="✅ Отметить готовым к съёмке" onClick={() => onStatus(item, "ready_to_shoot")} />
-        <SheetBtn label="🚀 Отметить опубликованным" onClick={() => onStatus(item, "published")} />
-        <SheetBtn label="↩️ Вернуть в черновики" onClick={() => onStatus(item, "scenario_ready")} />
-        <SheetBtn label="🗑 Убрать из плана" onClick={() => onRemove(item)} danger />
+        <SheetBtn label="Открыть материал" onClick={onOpen} />
+        <SheetBtn label="Отметить готовым к съёмке" onClick={() => onStatus(item, "ready_to_shoot")} />
+        <SheetBtn label="Отметить опубликованным" onClick={() => onStatus(item, "published")} />
+        <SheetBtn label="Вернуть в черновики" onClick={() => onStatus(item, "scenario_ready")} />
+        <SheetBtn label="Убрать из плана" onClick={() => onRemove(item)} danger />
         <SheetBtn label="Отмена" onClick={onClose} subtle />
       </div>
     </div>
