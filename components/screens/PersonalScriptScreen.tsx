@@ -16,12 +16,14 @@ import { hapticImpact, hapticNotify, hapticSelection } from "../../lib/telegram"
 import { track } from "../../lib/analytics";
 import StateBlock from "../StateBlock";
 
-const YELLOW = "#F5E70A";
-const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const SUB_MUTED = "rgba(255,255,255,0.42)";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.10)";
+const INK = "#F4F4F8";
+const MUTED = "#9A9AAB";
+const SUB_MUTED = "#6B6B7B";
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const PINK = "#E84B91";
+const IG_GRADIENT = "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const ORANGE = "#F0944E";
 const DANGER = "#FF8B8B";
 
 type Props = {
@@ -261,7 +263,7 @@ export default function PersonalScriptScreen({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: YELLOW }}>Сцена {s.scene}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: PINK }}>Сцена {s.scene}</span>
                   <input
                     value={s.seconds}
                     onChange={(e) => updateScene(i, "seconds", e.target.value)}
@@ -349,12 +351,12 @@ export default function PersonalScriptScreen({
           style={{
             padding: 16,
             borderRadius: 16,
-            background: "rgba(245,231,10,0.06)",
-            border: `1px solid rgba(245,231,10,0.28)`,
+            background: "rgba(240,148,78,0.07)",
+            border: `1px solid rgba(240,148,78,0.28)`,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 800, color: YELLOW, marginBottom: 10 }}>
-            ⚠️ Что может пойти не так
+          <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE, marginBottom: 10 }}>
+            Что может пойти не так
           </div>
           <ArrayField
             items={scenario.risks}
@@ -432,8 +434,8 @@ function TopHeader({
           ← Назад
         </button>
       )}
-      <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 800, color: YELLOW }}>
-        🎬 Персональный сценарий
+      <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 800, color: PINK }}>
+        Персональный сценарий
       </div>
       <h1 style={{ margin: "8px 0 6px", fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.12 }}>
         Ваш Reels готов
@@ -474,6 +476,7 @@ function Wrap({ children }: { children: React.ReactNode }) {
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
+        background: "#0B0B11",
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
@@ -655,7 +658,7 @@ function AiActions({
       }}
     >
       {busy && (
-        <span style={{ fontSize: 11, color: YELLOW, alignSelf: "center", whiteSpace: "nowrap", paddingRight: 4 }}>
+        <span style={{ fontSize: 11, color: PINK, alignSelf: "center", whiteSpace: "nowrap", paddingRight: 4 }}>
           LEX переписывает…
         </span>
       )}
@@ -735,7 +738,7 @@ function StickyBar({
         zIndex: 40,
         padding: 12,
         borderRadius: 22,
-        background: "rgba(18,14,12,0.82)",
+        background: "rgba(21,21,30,0.82)",
         backdropFilter: "blur(28px) saturate(160%)",
         WebkitBackdropFilter: "blur(28px) saturate(160%)",
         border: "1px solid rgba(255,255,255,0.10)",
@@ -752,14 +755,14 @@ function StickyBar({
             minHeight: 50,
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: IG_GRADIENT,
+            color: "#FFFFFF",
             fontFamily: "inherit",
             fontSize: 14,
             fontWeight: 800,
             letterSpacing: "0.02em",
             cursor: saving ? "wait" : "pointer",
-            boxShadow: `0 12px 28px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.16) inset`,
+            boxShadow: `0 12px 28px rgba(232,75,145,0.33), 0 0 0 1px rgba(255,255,255,0.16) inset`,
           }}
         >
           {saving ? "Сохраняю…" : saved ? "✓ Сохранено" : "Сохранить в проект"}
@@ -800,7 +803,7 @@ function StickyBar({
           padding: "2px 0",
         }}
       >
-        📋 Скопировать сценарий
+        Скопировать сценарий
       </button>
     </div>
   );
@@ -837,7 +840,7 @@ function PlanModal({
         style={{
           width: "100%",
           maxWidth: 480,
-          background: "#13100E",
+          background: "#15151E",
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           border: "1px solid rgba(255,255,255,0.10)",
@@ -919,7 +922,7 @@ function scenarioToText(s: ReelScenarioData): string {
     .map((sc) => `[${sc.seconds}] ${sc.action}${sc.on_screen ? `\n   на экране: ${sc.on_screen}` : ""}`)
     .join("\n");
   return [
-    `🎬 ${s.title}`,
+    `${s.title}`,
     `Цель: ${s.goal}`,
     "",
     `ХУК: ${s.hook}`,
@@ -976,11 +979,11 @@ const primaryBtn: React.CSSProperties = {
   minHeight: 52,
   border: "none",
   borderRadius: 999,
-  background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-  color: "#0A0608",
+  background: IG_GRADIENT,
+  color: "#FFFFFF",
   fontFamily: "inherit",
   fontSize: 15,
   fontWeight: 800,
   cursor: "pointer",
-  boxShadow: `0 12px 28px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.16) inset`,
+  boxShadow: `0 12px 28px rgba(232,75,145,0.33), 0 0 0 1px rgba(255,255,255,0.16) inset`,
 };
