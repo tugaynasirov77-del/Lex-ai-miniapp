@@ -23,6 +23,11 @@ tags:
 
 ## Подтверждено по репозиторию
 
+### 2026-06-20
+- Hard paywall на 402 во всех 4 генераторах: `ReelScriptGeneratorCard`, `CarouselGeneratorCard`, `CaptionGeneratorCard`, `ContentPackCard`. При `ApiError.status === 402` открывается `PaywallSheet` вместо текстовой ошибки (паттерн как в `ReelDecoderCard`).
+- В `ReelDecoderCard` добавлен `QuotaDots` — визуальный прогресс ●○○ для Free-тарифа над текстовой строкой квоты.
+- `PlanScreen`: inline-ошибка «не удалось обновить план» переведена с текстовой плашки на compact `StateBlock` с action «Обновить» — DoD по empty/error states закрыт.
+
 ### 2026-06-19
 - Merge: PR #14 — реорганизация «Создать» → `ToolsScreen` с табами (Decoder/Сценарий/Карусель/Подпись/Пакет). С «Обзора» проекта генераторы убраны.
 - Merge: PR #13 — финальная полировка UI Этапа 3 (StateBlock везде, IG-копи в DashboardScreen).

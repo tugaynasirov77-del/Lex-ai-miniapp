@@ -201,8 +201,15 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
         />
       )}
       {err && plan && (
-        <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,115,115,0.08)", border: "1px solid rgba(255,115,115,0.30)", fontSize: 12, color: "#FF8B8B", marginBottom: 12 }}>
-          Не удалось обновить план. Показаны последние данные.
+        <div style={{ marginBottom: 12 }}>
+          <StateBlock
+            tone="error"
+            compact
+            emoji="⚠️"
+            title="Не удалось обновить план"
+            body="Показаны последние данные."
+            action={{ label: "Обновить", onClick: () => void load() }}
+          />
         </div>
       )}
 

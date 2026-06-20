@@ -8,6 +8,7 @@ import {
   type CaptionVariantDTO,
 } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import PaywallSheet from "./PaywallSheet";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -25,6 +26,7 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
   const [result, setResult] = useState<CaptionGenResultDTO | null>(null);
   const [quota, setQuota] = useState<CaptionQuotaDTO | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -40,6 +42,10 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
       hapticNotify("success");
     } catch (e: any) {
       hapticNotify("error");
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        return;
+      }
       setErr(e?.message || "Не получилось сгенерировать");
     } finally {
       setBusy(false);
@@ -179,6 +185,10 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
           activeIdx={activeIdx}
           setActiveIdx={setActiveIdx}
         />
+      )}
+
+      {paywallOpen && (
+        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
       )}
     </div>
   );

@@ -200,12 +200,16 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
         <div
           style={{
             marginTop: 10,
-            fontSize: 11,
-            color: SUB_MUTED,
-            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          Осталось разборов: {Math.max(0, quota.limit - quota.used)}/{quota.limit} · тариф {quota.tier.toUpperCase()}
+          {quota.tier === "free" && <QuotaDots used={quota.used} limit={quota.limit} />}
+          <div style={{ fontSize: 11, color: SUB_MUTED }}>
+            Осталось разборов: {Math.max(0, quota.limit - quota.used)}/{quota.limit} · тариф {quota.tier.toUpperCase()}
+          </div>
         </div>
       )}
 
@@ -1146,6 +1150,30 @@ function clean(s: string): string {
   // Снимаем висящие точку или запятую в самом начале (если AI странно вернул)
   r = r.replace(/^[.,;:]\s*/, "");
   return r;
+}
+
+function QuotaDots({ used, limit }: { used: number; limit: number }) {
+  const total = Math.max(1, limit);
+  const filled = Math.min(total, Math.max(0, used));
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "center" }} aria-label={`${filled}/${total}`}>
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: i < filled ? YELLOW : "rgba(255,255,255,0.18)",
+            boxShadow: i < filled ? `0 0 8px ${YELLOW}66` : "none",
+          }}
+        />
+      ))}
+      <span style={{ fontSize: 10, color: SUB_MUTED, marginLeft: 4, letterSpacing: "0.06em" }}>
+        {filled}/{total} FREE
+      </span>
+    </div>
+  );
 }
 
 function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
