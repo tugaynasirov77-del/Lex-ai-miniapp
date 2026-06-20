@@ -91,11 +91,12 @@ async function activateSubscription(payment: {
 
   const sb = getSupabase();
 
-  // Idempotence: если уже активировали по этому payment_id — выходим.
+  // Идемпотентность: если уже зафиксировали этот payment_id — выходим.
+  // (subscription_purchases.payment_id — единственное место с привязкой к платежу.)
   const { data: existing } = await sb
-    .from("subscriptions")
+    .from("subscription_purchases")
     .select("id")
-    .eq("yookassa_payment_id", payment.id)
+    .eq("payment_id", payment.id)
     .maybeSingle();
   if (existing) return;
 
@@ -105,35 +106,56 @@ async function activateSubscription(payment: {
   const durationDays = period === "yearly" ? 365 : 30;
   const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-  await sb.from("subscriptions").insert({
-    tg_id: tgId,
-    plan: tier,
-    status: "active",
-    started_at: now.toISOString(),
-    expires_at: expiresAt.toISOString(),
-    provider: "yookassa",
-    yookassa_payment_id: payment.id,
-    amount_rub: Number(payment.amount.value),
-    amount_stars: cfg.priceStars, // справочно, для аналитики
-  });
-
-  // Если есть project_budget для юзера — обновляем tier синхронно.
-  await sb
-    .from("project_budget")
-    .update({ tier })
-    .eq("tg_id", tgId);
-
-  // billing_event для аудита.
-  await sb.from("billing_events").insert({
-    tg_id: tgId,
-    event: "payment_success",
-    provider: "yookassa",
-    payload: {
-      payment_id: payment.id,
-      tier,
-      amount_rub: Number(payment.amount.value),
+  // Подписки: PK = tg_id, у юзера уже есть free-строка → upsert, а не insert.
+  const { error: upErr } = await sb.from("subscriptions").upsert(
+    {
+      tg_id: tgId,
+      plan: tier,
+      status: "active",
+      started_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      provider: "yookassa",
+      invoice_payload: payment.id, // храним payment_id (отдельной колонки нет)
+      amount_stars: cfg.priceStars, // справочно
+      updated_at: now.toISOString(),
     },
-  });
+    { onConflict: "tg_id" },
+  );
+  if (upErr) {
+    console.error("[yookassa-webhook] subscription upsert failed:", upErr.message);
+    throw new Error(upErr.message);
+  }
+
+  // Фиксируем покупку (идемпотентность + аудит).
+  await sb
+    .from("subscription_purchases")
+    .insert({ tg_id: tgId, plan_id: tier, payment_id: payment.id });
+
+  // project_budget привязан к project_id, не к tg_id — обновляем все проекты юзера.
+  const { data: projs } = await sb.from("projects").select("id").eq("tg_id", tgId);
+  const projectIds = (projs || []).map((p: any) => p.id);
+  if (projectIds.length) {
+    await sb.from("project_budget").update({ tier }).in("project_id", projectIds);
+  }
+
+  // billing_events для аудита (best-effort, не блокирует активацию).
+  try {
+    await sb.from("billing_events").insert({
+      project_id: projectIds[0] ?? null,
+      type: "payment_success",
+      tier,
+      amount_stars: cfg.priceStars,
+      meta: {
+        provider: "yookassa",
+        payment_id: payment.id,
+        tg_id: tgId,
+        amount_rub: Number(payment.amount.value),
+        period,
+      },
+    });
+  } catch (e: any) {
+    console.warn("[yookassa-webhook] billing_events insert skipped:", e?.message);
+  }
 }
 
 /** GET — health check для ручного теста curl'ом. */
