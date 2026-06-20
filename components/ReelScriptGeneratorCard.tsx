@@ -23,6 +23,13 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
   const [script, setScript] = useState<LexReelScript | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
+  // §14: доп. стиль подачи (мульти-выбор, дописывается в тему-промпт).
+  const [styles, setStyles] = useState<string[]>([]);
+  function toggleStyle(s: string) {
+    hapticImpact("light");
+    setStyles((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  }
+
   // §14: вилка «есть тема / подскажи идею».
   const [mode, setMode] = useState<"own" | "suggest">("own");
   const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
@@ -54,7 +61,10 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
     setScript(null);
     hapticImpact("medium");
     try {
-      const r = await lexWriteReel(projectId, topic.trim(), duration);
+      const enriched = styles.length
+        ? `${topic.trim()} (формат: ${styles.join(", ")})`
+        : topic.trim();
+      const r = await lexWriteReel(projectId, enriched, duration);
       setScript(r.script);
       hapticNotify("success");
     } catch (e: any) {
@@ -224,6 +234,29 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
               {d} сек
             </button>
           ))}
+        </div>
+
+        {/* §14: доп. формат подачи (опционально) */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {["разговорное", "voice-over", "без лица", "тренд", "экспертно", "storytelling"].map((s) => {
+            const on = styles.includes(s);
+            return (
+              <button
+                key={s}
+                onClick={() => toggleStyle(s)}
+                disabled={busy}
+                style={{
+                  appearance: "none", padding: "7px 12px", borderRadius: 999,
+                  border: `1px solid ${on ? ORANGE : CARD_BORDER}`,
+                  background: on ? "rgba(240,160,48,0.12)" : "rgba(255,255,255,0.04)",
+                  color: on ? ORANGE : MUTED, fontFamily: "inherit",
+                  fontSize: 12, fontWeight: on ? 800 : 600, cursor: busy ? "wait" : "pointer",
+                }}
+              >
+                {s}
+              </button>
+            );
+          })}
         </div>
 
         <button
