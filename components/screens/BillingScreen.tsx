@@ -38,8 +38,10 @@ type BillingState = {
   payments_enabled: boolean;
 };
 
-const YELLOW = "#F5E70A";
-const YELLOW_DEEP = "#E5C500";
+const YELLOW = "#E84B91";
+const YELLOW_DEEP = "#A24FD6";
+const IG_GRADIENT = "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const PINK_RGBA = (a: number) => `rgba(232,75,145,${a})`;
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.62)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";
@@ -104,8 +106,8 @@ export default function BillingScreen({ onBack: _onBack }: Props) {
           inset: 0,
           zIndex: 0,
           background:
-            `radial-gradient(circle 500px at 50% 5%, ${YELLOW}30 0%, transparent 60%),` +
-            `radial-gradient(circle 400px at 100% 60%, rgba(178,30,60,0.20) 0%, transparent 60%)`,
+            `radial-gradient(circle 500px at 50% 5%, ${PINK_RGBA(0.18)} 0%, transparent 60%),` +
+            `radial-gradient(circle 400px at 100% 60%, rgba(162,79,214,0.18) 0%, transparent 60%)`,
           pointerEvents: "none",
         }}
       />
@@ -145,8 +147,6 @@ export default function BillingScreen({ onBack: _onBack }: Props) {
           </div>
 
           <FaqBlock />
-
-          <TrustRow />
         </>
       )}
     </div>
@@ -312,8 +312,8 @@ function CurrentPlanCard({ state }: { state: BillingState }) {
             textTransform: "uppercase",
             padding: "4px 10px",
             borderRadius: 999,
-            background: cfg.tier === "free" ? "rgba(255,255,255,0.08)" : YELLOW,
-            color: cfg.tier === "free" ? MUTED : "#0A0608",
+            background: cfg.tier === "free" ? "rgba(255,255,255,0.08)" : IG_GRADIENT,
+            color: cfg.tier === "free" ? MUTED : "#FFFFFF",
           }}
         >
           {cfg.label}
@@ -466,13 +466,13 @@ function TierCard({
         borderRadius: 24,
         padding: 22,
         background: highlight
-          ? `linear-gradient(135deg, rgba(245,231,10,0.14) 0%, rgba(245,231,10,0.04) 60%, rgba(255,255,255,0.02) 100%)`
+          ? `linear-gradient(135deg, ${PINK_RGBA(0.14)} 0%, rgba(162,79,214,0.08) 60%, rgba(255,255,255,0.02) 100%)`
           : `linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)`,
         border: highlight
-          ? `1.5px solid rgba(245,231,10,0.45)`
+          ? `1.5px solid ${PINK_RGBA(0.45)}`
           : `1px solid ${CARD_BORDER}`,
         boxShadow: highlight
-          ? `0 24px 60px rgba(245,231,10,0.20), 0 0 0 1px rgba(255,255,255,0.04) inset`
+          ? `0 24px 60px ${PINK_RGBA(0.22)}, 0 0 0 1px rgba(255,255,255,0.04) inset`
           : "0 18px 40px rgba(0,0,0,0.30)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
@@ -484,15 +484,15 @@ function TierCard({
             position: "absolute",
             top: -12,
             left: 18,
-            background: `linear-gradient(135deg, ${YELLOW} 0%, ${YELLOW_DEEP} 100%)`,
-            color: "#0A0608",
+            background: IG_GRADIENT,
+            color: "#FFFFFF",
             padding: "5px 12px",
             borderRadius: 999,
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: "0.10em",
             textTransform: "uppercase",
-            boxShadow: `0 8px 22px ${YELLOW}55`,
+            boxShadow: `0 8px 22px ${PINK_RGBA(0.4)}`,
           }}
         >
           ⭐ Популярный
@@ -524,7 +524,7 @@ function TierCard({
                 borderRadius: 10,
                 border: `1px solid ${period === p ? YELLOW : CARD_BORDER}`,
                 background:
-                  period === p ? "rgba(245,231,10,0.10)" : "rgba(255,255,255,0.04)",
+                  period === p ? PINK_RGBA(0.12) : "rgba(255,255,255,0.04)",
                 color: period === p ? YELLOW : MUTED,
                 fontFamily: "inherit",
                 fontSize: 12,
@@ -620,10 +620,8 @@ function TierCard({
               padding: "16px 0",
               border: "none",
               borderRadius: 999,
-              background: highlight
-                ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, ${YELLOW_DEEP} 100%)`
-                : "rgba(255,255,255,0.10)",
-              color: highlight ? "#0A0608" : INK,
+              background: highlight ? IG_GRADIENT : "rgba(255,255,255,0.10)",
+              color: "#FFFFFF",
               fontSize: 15,
               fontWeight: 800,
               fontFamily: "inherit",
@@ -631,7 +629,7 @@ function TierCard({
               letterSpacing: "0.02em",
               opacity: loading ? 0.7 : 1,
               boxShadow: highlight
-                ? `0 20px 48px ${YELLOW}50, 0 4px 14px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.2) inset`
+                ? `0 20px 48px ${PINK_RGBA(0.35)}, 0 4px 14px ${PINK_RGBA(0.25)}, 0 0 0 1px rgba(255,255,255,0.2) inset`
                 : "0 0 0 1px rgba(255,255,255,0.12) inset",
             }}
           >
@@ -674,20 +672,18 @@ function FeatureRow({ text, highlight }: { text: string; highlight: boolean }) {
           width: 20,
           height: 20,
           borderRadius: 999,
-          background: highlight
-            ? `linear-gradient(135deg, ${YELLOW} 0%, ${YELLOW_DEEP} 100%)`
-            : "rgba(255,255,255,0.10)",
+          background: highlight ? IG_GRADIENT : "rgba(255,255,255,0.10)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           marginTop: 1,
-          boxShadow: highlight ? `0 4px 10px ${YELLOW}55` : "none",
+          boxShadow: highlight ? `0 4px 10px ${PINK_RGBA(0.35)}` : "none",
         }}
       >
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
           <path
             d="M5 12l4 4 10-10"
-            stroke={highlight ? "#0A0608" : INK}
+            stroke={INK}
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -715,49 +711,6 @@ function LegalLink({ path, children }: { path: string; children: React.ReactNode
     >
       {children}
     </a>
-  );
-}
-
-// ===== Trust row =====
-
-function TrustRow() {
-  const items = [
-    { icon: "💳", text: "Картой ₽" },
-    { icon: "🛡️", text: "ЮKassa" },
-    { icon: "✕", text: "Без автопродления" },
-    { icon: "↩", text: "Возврат 14 дн" },
-  ];
-  return (
-    <div
-      style={{
-        marginTop: 22,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 8,
-        justifyContent: "center",
-      }}
-    >
-      {items.map((it, i) => (
-        <div
-          key={i}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "7px 12px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.04)",
-            border: `1px solid ${CARD_BORDER}`,
-            fontSize: 11,
-            color: MUTED,
-            fontWeight: 600,
-          }}
-        >
-          <span>{it.icon}</span>
-          {it.text}
-        </div>
-      ))}
-    </div>
   );
 }
 

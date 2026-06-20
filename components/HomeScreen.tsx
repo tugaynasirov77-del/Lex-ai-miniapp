@@ -247,9 +247,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         </button>
         <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
           <FlameIcon size={13} color="#F0944E" /> 340+ блогеров уже разбирают Reels с LEX
-          {quota && quota.tier === "free" && (
-            <> · осталось {Math.max(0, quota.limit - quota.used)} из {quota.limit}</>
-          )}
         </div>
       </div>
 
