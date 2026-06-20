@@ -7,15 +7,19 @@ import {
   listProjects,
   getWeekPlan,
   listProjectDrafts,
-  listReelDecodes,
   getDailyIdeas,
   type ProjectDTO,
   type WeekPlanDTO,
   type ContentDraftDTO,
-  type ReelQuotaDTO,
   type DailyIdeaDTO,
 } from "../lib/api";
-import { hapticImpact, hapticSelection } from "../lib/telegram";
+import { hapticImpact, hapticSelection, getTgUser } from "../lib/telegram";
+
+// Локальная YYYY-MM-DD (без UTC-сдвига) — для поиска «сегодня» в плане.
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 // ─── Тёмная тема ───
 const BG = "#0B0B11";
@@ -78,7 +82,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   );
   const [plan, setPlan] = useState<WeekPlanDTO | null>(null);
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
-  const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
   const [url, setUrl] = useState("");
@@ -103,7 +106,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     let alive = true;
     getWeekPlan(activeId).then((p) => alive && setPlan(p)).catch(() => {});
     listProjectDrafts(activeId).then((r) => alive && setDrafts(r.drafts)).catch(() => alive && setDrafts([]));
-    listReelDecodes(activeId).then((r) => alive && r.quota && setQuota(r.quota)).catch(() => {});
     setIdeasLoading(true);
     getDailyIdeas(activeId)
       .then((r) => { if (alive) setIdeas(r.ideas); })
@@ -113,6 +115,15 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   }, [activeId]);
 
   const activeProject = projects.find((p) => p.id === activeId) || null;
+  const userName = getTgUser()?.first_name?.trim() || "";
+
+  // Воронка-возврат: незавершённые материалы (не опубликованы/не в архиве).
+  const unfinished = (drafts ?? []).filter(
+    (d) => !["published", "archived", "scheduled"].includes(d.status),
+  );
+  // Триггер действия: что по плану сегодня.
+  const todayDay = plan?.days.find((d) => d.date === todayISO()) || null;
+  const todayItems = todayDay?.items ?? [];
 
   const runDecode = () => {
     if (!url.trim()) return;
@@ -146,24 +157,30 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
   return (
     <ScreenWrap>
-      {/* Мини-хедер: лого + переключатель проекта */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-start", marginBottom: 22, minHeight: 30 }}>
-        <LexLogo height={26} />
-        {activeProject && (
+      {/* Шапка: приветствие + переключатель проекта */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 22, minHeight: 34 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: INK, lineHeight: 1.1 }}>
+            Привет{userName ? `, ${userName}` : ""} 👋
+          </div>
+          {activeProject && (
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Проект: {activeProject.title}
+            </div>
+          )}
+        </div>
+        {activeProject && projects.length > 1 && (
           <button
-            onClick={() => { if (projects.length > 1) { hapticSelection(); setSwitcherOpen((v) => !v); } }}
+            onClick={() => { hapticSelection(); setSwitcherOpen((v) => !v); }}
             style={{
-              position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
-              appearance: "none", background: SOFT, border: `1px solid ${CARD_BORDER}`,
-              borderRadius: 999, padding: "6px 12px", color: INK, fontFamily: "inherit",
-              fontSize: 13, fontWeight: 600, cursor: projects.length > 1 ? "pointer" : "default",
-              display: "flex", alignItems: "center", gap: 6, maxWidth: 160,
+              flexShrink: 0, appearance: "none", background: SOFT, border: `1px solid ${CARD_BORDER}`,
+              borderRadius: 999, padding: "7px 12px", color: INK, fontFamily: "inherit",
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, maxWidth: 150,
             }}
           >
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {activeProject.title}
-            </span>
-            {projects.length > 1 && <span style={{ color: MUTED, fontSize: 11 }}>▾</span>}
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeProject.title}</span>
+            <span style={{ color: MUTED, fontSize: 11 }}>▾</span>
           </button>
         )}
       </div>
@@ -187,22 +204,11 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         </div>
       )}
 
-      {/* Заголовок */}
-      <h1 style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.12, textAlign: "center", color: INK }}>
-        Превращайте вирусные Reels
-        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" }}>
-          <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            в готовые сценарии
-          </span>
-          <BoltIcon size={24} />
-        </span>
-      </h1>
-      <p style={{ margin: "12px auto 22px", fontSize: 14, color: MUTED, lineHeight: 1.5, textAlign: "center", maxWidth: 320 }}>
-        Вставьте ссылку на Reels — мы разберём видео и создадим сценарий, который работает.
-      </p>
-
-      {/* Карточка ввода + градиентная кнопка */}
-      <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 18 }}>
+      {/* 1. Что создаём сегодня — вход в воронку (новый разбор) */}
+      <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
+        Что создаём сегодня?
+      </div>
+      <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 26 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 4px 14px" }}>
           <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, ...iconTile(ACC_PINK), display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -243,43 +249,29 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center" }}><SparkleIcon /></span>
-          <span style={{ lineHeight: 1, display: "inline-block" }}>Создать свой сценарий</span>
+          <span style={{ lineHeight: 1, display: "inline-block" }}>Разобрать и адаптировать</span>
         </button>
-        <div style={{ fontSize: 11, color: SUB_MUTED, textAlign: "center", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-          <FlameIcon size={13} color="#F0944E" /> 340+ блогеров уже разбирают Reels с LEX
-        </div>
       </div>
 
-      {/* 3 фичи */}
-      <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: "20px 14px", marginBottom: 24, boxShadow: "0 8px 28px rgba(20,20,40,0.05)" }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          <Feature icon={<VideoIcon color="#C78BEB" />} accent={ACC_PURPLE} title="Разбор вирусного контента" body="Анализируем структуру, крючки и посыл видео" />
-          <Feature icon={<WandIcon color="#F3A9CE" />} accent={ACC_PINK} title="Готовый сценарий под вас" body="Получите текст, который можно сразу снимать" />
-          <Feature icon={<TrendIcon color="#F0944E" />} accent={ACC_ORANGE} title="Больше охватов и подписчиков" body="Используйте рабочие форматы и приёмы" />
-        </div>
-      </div>
-
-      {/* Идеи для Reels на сегодня */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <InstagramIcon color={PINK} />
-          <span style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "0 -18px", padding: "0 18px 4px", scrollbarWidth: "none" }}>
-        {ideasLoading && !ideas
-          ? [0, 1, 2].map((i) => <IdeaSkeleton key={i} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} />)
-          : (ideas && ideas.length > 0 ? ideas : FALLBACK_IDEAS).map((idea, i) => (
-              <IdeaCard key={i} idea={idea} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} onUse={() => useIdea(idea)} />
+      {/* 2. Продолжить работу — возврат в воронку (незавершённые материалы) */}
+      {unfinished.length > 0 && (
+        <div style={{ marginBottom: 26 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
+            Продолжить работу
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {unfinished.slice(0, 3).map((d) => (
+              <ContinueRow key={d.id} draft={d} onClick={goLibrary} />
             ))}
-      </div>
+          </div>
+        </div>
+      )}
 
-      {/* Прогресс недели — для существующих юзеров (под референс-блоками) */}
+      {/* 3. План на неделю — компактная сводка + сегодня (триггер) */}
       {plan && plan.summary.total > 0 && (
         <button
           onClick={() => { hapticImpact("light"); actions.navigate("plan"); }}
-          style={{ appearance: "none", width: "100%", textAlign: "left", marginTop: 24, padding: 16, borderRadius: 18, border: `1px solid ${CARD_BORDER}`, background: SOFT, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ appearance: "none", width: "100%", textAlign: "left", marginBottom: 26, padding: 16, borderRadius: 18, border: `1px solid ${CARD_BORDER}`, background: SOFT, cursor: "pointer", fontFamily: "inherit" }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>План на неделю</span>
@@ -290,12 +282,18 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           <div style={{ height: 8, borderRadius: 4, background: "#262630", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${plan.summary.progress_pct}%`, background: IG_GRADIENT }} />
           </div>
+          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 12, display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: todayItems.length > 0 ? ACC_GREEN : SUB_MUTED, flexShrink: 0 }} />
+            {todayItems.length > 0
+              ? <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Сегодня: {todayItems[0].title}</span>
+              : <span>Сегодня по плану ничего</span>}
+          </div>
         </button>
       )}
 
-      {/* Последние материалы */}
+      {/* 4. Последние материалы */}
       {drafts && drafts.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+        <div style={{ marginBottom: 26 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
             <span style={{ fontSize: 12, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>Последние материалы</span>
             <button onClick={goLibrary} style={{ appearance: "none", background: "none", border: "none", color: PINK, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Все →</button>
@@ -307,27 +305,48 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
           </div>
         </div>
       )}
+
+      {/* 5. Идеи для Reels на сегодня — вдохновение (низ экрана) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <InstagramIcon color={PINK} />
+        <span style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
+      </div>
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "0 -18px", padding: "0 18px 4px", scrollbarWidth: "none" }}>
+        {ideasLoading && !ideas
+          ? [0, 1, 2].map((i) => <IdeaSkeleton key={i} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} />)
+          : (ideas && ideas.length > 0 ? ideas : FALLBACK_IDEAS).map((idea, i) => (
+              <IdeaCard key={i} idea={idea} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} onUse={() => useIdea(idea)} />
+            ))}
+      </div>
     </ScreenWrap>
   );
 }
 
-function LexLogo({ height = 26 }: { height?: number }) {
+// Строка незавершённого материала с акцентной кнопкой «Продолжить».
+function ContinueRow({ draft, onClick }: { draft: ContentDraftDTO; onClick: () => void }) {
+  const sl = statusLabel(draft.status);
+  const title = draft.title || draft.source_topic || draft.idea_text || "Без названия";
   return (
-    <div aria-label="LEX AI" style={{ display: "inline-flex", alignItems: "center", height, lineHeight: 1 }}>
-      <div style={{ fontSize: height * 0.72, fontWeight: 800, letterSpacing: "0.06em" }}>
-        <span style={{ color: INK }}>LEX </span>
-        <span style={{ background: IG_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>AI</span>
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 14,
+        border: `1px solid ${CARD_BORDER}`, background: CARD_BG,
+      }}
+    >
+      <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, ...iconTile(ACC_PINK), display: "flex", alignItems: "center", justifyContent: "center", color: PINK }}><TypeIcon type={draft.content_type} /></span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: sl.color, marginTop: 2 }}>{sl.label}</div>
       </div>
-    </div>
-  );
-}
-
-function Feature({ icon, accent, title, body }: { icon: React.ReactNode; accent: string; title: string; body: string }) {
-  return (
-    <div style={{ flex: 1, textAlign: "center", padding: "0 4px" }}>
-      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, ...iconTile(accent), display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
-      <div style={{ fontSize: 12, fontWeight: 800, color: INK, lineHeight: 1.25, marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.35 }}>{body}</div>
+      <button
+        onClick={onClick}
+        style={{
+          flexShrink: 0, appearance: "none", padding: "8px 14px", borderRadius: 999, border: "none",
+          background: IG_GRADIENT, color: "#FFFFFF", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+        }}
+      >
+        Продолжить
+      </button>
     </div>
   );
 }
@@ -423,25 +442,6 @@ function VideoIcon({ size = 22, color = "currentColor" }: IconProps) {
   );
 }
 
-function WandIcon({ size = 22, color = "currentColor" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M4 20l9-9" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M16 2.5l1.1 2.9 2.9 1.1-2.9 1.1L16 10.5l-1.1-2.9L12 6.5l2.9-1.1L16 2.5z" fill={color} />
-      <path d="M19.5 12.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5z" fill={color} />
-    </svg>
-  );
-}
-
-function TrendIcon({ size = 22, color = "currentColor" }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M4 15l5-5 3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 6h4v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function TargetIcon({ size = 22, color = "currentColor" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -467,22 +467,6 @@ function ClockIcon({ size = 22, color = "currentColor" }: IconProps) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
       <path d="M12 7.5V12l3 1.8" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function BoltIcon({ size = 24 }: IconProps) {
-  const id = "lex-bolt-grad";
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "-0.16em" }}>
-      <defs>
-        <linearGradient id={id} x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#A24FD6" />
-          <stop offset="0.5" stopColor="#E84B91" />
-          <stop offset="1" stopColor="#F88A4A" />
-        </linearGradient>
-      </defs>
-      <path d="M13 2L4.5 13.2c-.4.5 0 1.3.7 1.3H11l-1 7.5 8.5-11.2c.4-.5 0-1.3-.7-1.3H12l1-7.5z" fill={`url(#${id})`} />
     </svg>
   );
 }
