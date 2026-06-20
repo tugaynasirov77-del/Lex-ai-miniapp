@@ -160,8 +160,11 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     <ScreenWrap>
       {/* Шапка: имя слева, проект-переключатель справа (одна строка, без дублей) */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 28, minHeight: 36 }}>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          Привет{firstName ? `, ${firstName}` : ""} 👋
+        <div style={{ flex: 1, minWidth: 0, fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", color: INK, display: "flex", alignItems: "center", gap: 7, overflow: "hidden" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Привет{firstName ? `, ${firstName}` : ""}
+          </span>
+          <WaveIcon size={22} />
         </div>
         {activeProject && (
           <button
@@ -461,6 +464,31 @@ function ClockIcon({ size = 22, color = "currentColor" }: IconProps) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
       <path d="M12 7.5V12l3 1.8" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Машущая рука в IG-градиенте — фирменная замена эмодзи 👋.
+function WaveIcon({ size = 22 }: IconProps) {
+  const id = "lex-wave-grad";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, verticalAlign: "-0.14em" }}>
+      <defs>
+        <linearGradient id={id} x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#A24FD6" />
+          <stop offset="0.5" stopColor="#E84B91" />
+          <stop offset="1" stopColor="#F88A4A" />
+        </linearGradient>
+      </defs>
+      <g stroke={`url(#${id})`} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        {/* ладонь + 4 пальца */}
+        <path d="M8.5 11V6.4a1.3 1.3 0 012.6 0V10" />
+        <path d="M11.1 9.6V5.3a1.3 1.3 0 012.6 0V10" />
+        <path d="M13.7 9.9V6.2a1.3 1.3 0 012.6 0v5.1" />
+        <path d="M16.3 11.3V8.4a1.3 1.3 0 012.5 0v4.4c0 3.5-2.5 6.2-6 6.2-2.1 0-3.6-.8-4.8-2.4l-2.4-3.3a1.3 1.3 0 012-1.6l1.4 1.4V8.3a1.3 1.3 0 012.6 0v2.7" />
+        {/* линии движения */}
+        <path d="M6 5.2L5 4.2M4.6 8.2l-1.3-.4" />
+      </g>
     </svg>
   );
 }
