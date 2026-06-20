@@ -115,7 +115,8 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   }, [activeId]);
 
   const activeProject = projects.find((p) => p.id === activeId) || null;
-  const userName = getTgUser()?.first_name?.trim() || "";
+  // Только имя (первое слово) — как в Instagram: «Привет, Даниил».
+  const firstName = (getTgUser()?.first_name?.trim() || "").split(/\s+/)[0] || "";
 
   // Воронка-возврат: незавершённые материалы (не опубликованы/не в архиве).
   const unfinished = (drafts ?? []).filter(
@@ -157,30 +158,23 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
   return (
     <ScreenWrap>
-      {/* Шапка: приветствие + переключатель проекта */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 22, minHeight: 34 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: INK, lineHeight: 1.1 }}>
-            Привет{userName ? `, ${userName}` : ""} 👋
-          </div>
-          {activeProject && (
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              Проект: {activeProject.title}
-            </div>
-          )}
+      {/* Шапка: имя слева, проект-переключатель справа (одна строка, без дублей) */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 28, minHeight: 36 }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          Привет{firstName ? `, ${firstName}` : ""} 👋
         </div>
-        {activeProject && projects.length > 1 && (
+        {activeProject && (
           <button
-            onClick={() => { hapticSelection(); setSwitcherOpen((v) => !v); }}
+            onClick={() => { if (projects.length > 1) { hapticSelection(); setSwitcherOpen((v) => !v); } }}
             style={{
               flexShrink: 0, appearance: "none", background: SOFT, border: `1px solid ${CARD_BORDER}`,
-              borderRadius: 999, padding: "7px 12px", color: INK, fontFamily: "inherit",
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6, maxWidth: 150,
+              borderRadius: 999, padding: "8px 14px", color: INK, fontFamily: "inherit",
+              fontSize: 13, fontWeight: 600, cursor: projects.length > 1 ? "pointer" : "default",
+              display: "flex", alignItems: "center", gap: 6, maxWidth: 168,
             }}
           >
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeProject.title}</span>
-            <span style={{ color: MUTED, fontSize: 11 }}>▾</span>
+            {projects.length > 1 && <span style={{ color: MUTED, fontSize: 11 }}>▾</span>}
           </button>
         )}
       </div>
@@ -205,7 +199,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       )}
 
       {/* 1. Что создаём сегодня — вход в воронку (новый разбор) */}
-      <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
         Что создаём сегодня?
       </div>
       <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 26 }}>
@@ -256,7 +250,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* 2. Продолжить работу — возврат в воронку (незавершённые материалы) */}
       {unfinished.length > 0 && (
         <div style={{ marginBottom: 26 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
             Продолжить работу
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -309,7 +303,7 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
       {/* 5. Идеи для Reels на сегодня — вдохновение (низ экрана) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <InstagramIcon color={PINK} />
-        <span style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
       </div>
       <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "0 -18px", padding: "0 18px 4px", scrollbarWidth: "none" }}>
         {ideasLoading && !ideas
