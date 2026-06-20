@@ -9,12 +9,16 @@ import {
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { track } from "../lib/analytics";
 
-const YELLOW = "#F5E70A";
-const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const SUB_MUTED = "rgba(255,255,255,0.42)";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.10)";
+const INK = "#F4F4F8";
+const MUTED = "#9A9AAB";
+const SUB_MUTED = "#6B6B7B";
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const PINK = "#E84B91";
+const IG_GRADIENT = "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const TINT_PINK = "rgba(232,75,145,0.12)";
+
+type IconProps = { size?: number; color?: string };
 
 type Props = {
   projectId: string;
@@ -96,22 +100,25 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
         padding: 18,
         borderRadius: 20,
         background:
-          "radial-gradient(circle 220px at 0% 0%, rgba(245,231,10,0.10), transparent 60%)," +
-          "linear-gradient(135deg, #1A1305 0%, #0A0805 100%)",
-        border: "1px solid rgba(245,231,10,0.20)",
-        boxShadow: "0 18px 44px rgba(245,231,10,0.08)",
+          "radial-gradient(circle 220px at 0% 0%, rgba(232,75,145,0.12), transparent 60%)," +
+          "linear-gradient(135deg, #16101C 0%, #0B0911 100%)",
+        border: "1px solid rgba(232,75,145,0.20)",
+        boxShadow: "0 18px 44px rgba(232,75,145,0.10)",
       }}
     >
       <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           fontSize: 10,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
           fontWeight: 800,
-          color: YELLOW,
+          color: PINK,
         }}
       >
-        ⚡ Адаптация под ваш блог
+        <BoltIcon size={13} /> Адаптация под ваш блог
       </div>
       <h2
         style={{
@@ -206,7 +213,7 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
                 textAlign: "center",
               }}
             >
-              ✏️ У меня есть своя идея — LEX её усилит
+              У меня есть своя идея — LEX её усилит
             </button>
           ) : (
             <div
@@ -277,16 +284,16 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
                     background:
                       refining || userIdea.trim().length < 5
                         ? "rgba(255,255,255,0.08)"
-                        : `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 100%)`,
+                        : IG_GRADIENT,
                     color:
-                      refining || userIdea.trim().length < 5 ? MUTED : "#0A0608",
+                      refining || userIdea.trim().length < 5 ? MUTED : "#FFFFFF",
                     fontFamily: "inherit",
                     fontSize: 13,
                     fontWeight: 800,
                     cursor: refining ? "wait" : "pointer",
                   }}
                 >
-                  {refining ? "Усиливаю…" : "✨ Усилить идею"}
+                  {refining ? "Усиливаю…" : "Усилить идею"}
                 </button>
               </div>
               {refineErr && (
@@ -318,19 +325,22 @@ export default function AdaptedTopicsBlock({ projectId, decodeId, onCreateScript
             padding: "16px 0",
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: IG_GRADIENT,
+            color: "#FFFFFF",
             fontSize: 15,
             fontWeight: 800,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
+            letterSpacing: "0.03em",
             fontFamily: "inherit",
             cursor: "pointer",
-            boxShadow: `0 16px 36px rgba(245,231,10,0.45), 0 0 0 1px rgba(255,255,255,0.18) inset`,
+            boxShadow: `0 16px 36px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.18) inset`,
             zIndex: 5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
           }}
         >
-          🎬 Создать мой Reels
+          <SparkleIcon size={17} color="#FFFFFF" /> Создать мой Reels
         </button>
       )}
 
@@ -360,10 +370,8 @@ function TopicCard({
         width: "100%",
         padding: 14,
         borderRadius: 16,
-        border: `1.5px solid ${isSelected ? YELLOW : CARD_BORDER}`,
-        background: isSelected
-          ? "rgba(245,231,10,0.08)"
-          : CARD_BG,
+        border: `1.5px solid ${isSelected ? PINK : CARD_BORDER}`,
+        background: isSelected ? TINT_PINK : CARD_BG,
         color: INK,
         fontFamily: "inherit",
         cursor: "pointer",
@@ -371,7 +379,7 @@ function TopicCard({
         flexDirection: "column",
         gap: 8,
         boxShadow: isSelected
-          ? "0 12px 32px rgba(245,231,10,0.18), 0 0 0 1px rgba(255,255,255,0.06) inset"
+          ? "0 12px 32px rgba(232,75,145,0.18), 0 0 0 1px rgba(255,255,255,0.06) inset"
           : "none",
         transition: "border-color 200ms, background 200ms",
       }}
@@ -385,8 +393,8 @@ function TopicCard({
               letterSpacing: "0.08em",
               padding: "2px 6px",
               borderRadius: 6,
-              background: "rgba(245,231,10,0.18)",
-              color: YELLOW,
+              background: TINT_PINK,
+              color: PINK,
             }}
           >
             ВАША ИДЕЯ
@@ -415,7 +423,7 @@ function TopicCard({
             marginBottom: 4,
           }}
         >
-          🎯 Хук
+          Хук
         </div>
         <div style={{ fontSize: 13, fontWeight: 600, color: INK, lineHeight: 1.4 }}>
           «{topic.hook}»
@@ -424,10 +432,10 @@ function TopicCard({
 
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{topic.rationale}</div>
 
-      <div style={{ display: "flex", gap: 10, fontSize: 11, color: SUB_MUTED }}>
-        <span>📹 {topic.format}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: SUB_MUTED }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><FilmIcon size={12} /> {topic.format}</span>
         <span>·</span>
-        <span>⏱ ~{topic.duration_sec} сек</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><ClockIcon size={12} /> ~{topic.duration_sec} сек</span>
       </div>
 
       <div
@@ -437,11 +445,47 @@ function TopicCard({
           fontWeight: 800,
           letterSpacing: "0.04em",
           textTransform: "uppercase",
-          color: isSelected ? YELLOW : MUTED,
+          color: isSelected ? PINK : MUTED,
         }}
       >
         {isSelected ? "✓ Выбрано" : "Выбрать эту тему →"}
       </div>
     </button>
+  );
+}
+
+// ─── Line-иконки (единый стиль с Home/Create/Plan) ───
+function BoltIcon({ size = 14, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M13 2L4.5 13.2c-.4.5 0 1.3.7 1.3H11l-1 7.5 8.5-11.2c.4-.5 0-1.3-.7-1.3H12l1-7.5z" fill={color} />
+    </svg>
+  );
+}
+
+function SparkleIcon({ size = 18, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3l1.7 4.7L18.5 9.5l-4.8 1.8L12 16l-1.7-4.7L5.5 9.5l4.8-1.8L12 3z" fill={color} />
+      <path d="M18.5 14.5l.7 1.9 1.8.7-1.8.7-.7 1.9-.7-1.9-1.8-.7 1.8-.7.7-1.9z" fill={color} />
+    </svg>
+  );
+}
+
+function FilmIcon({ size = 12, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="4" width="18" height="16" rx="3.5" stroke={color} strokeWidth="1.7" />
+      <path d="M3.5 9h17" stroke={color} strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function ClockIcon({ size = 12, color = "currentColor" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8" stroke={color} strokeWidth="1.7" />
+      <path d="M12 7.5V12l3 1.8" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
