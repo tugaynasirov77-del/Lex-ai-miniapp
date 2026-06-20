@@ -23,6 +23,30 @@ tags:
 
 ## Подтверждено по репозиторию
 
+### 2026-06-21
+**Визуальная унификация (вся жёлтая палитра вычищена → IG-гамма, эмодзи → line-иконки):**
+- Единая палитра везде: BG `#0B0B11`, карточки `#15151E`, бордер `#262630`, текст `#F4F4F8`, MUTED `#9A9AAB`, SUB_MUTED `#6B6B7B`. Бренд-акцент — IG-градиент `#A24FD6→#E84B91→#F88A4A`. ORANGE `#F0944E` = warning/«готово к съёмке», GREEN `#4FD489` = успех. Жёлтый `#F5E70A` и кремовые градиенты (`#FFF382`/`#E5C500`) удалены.
+- Эмодзи в UI заменены на line-иконки (stroke 1.7-1.8, currentColor) в: `ReelDecoderCard`, `AdaptedTopicsBlock`, `PersonalScriptScreen`, `PlanScreen`, `CreateHubScreen`, `ProjectScreen`, `ContentLibrary`, `ReelArchive`, `ToolsScreen`, `BillingScreen`, генераторы, `PaywallSheet`. Исключения: `emoji=` пропсы `StateBlock` (emoji-based by design) + редкие декоративные глифы пустых состояний.
+- `HomeScreen` перестроен по воронке: приветствие+проект, «Что создаём сегодня?» (CTA «Разобрать и адаптировать»), новый блок «Продолжить работу» (незавершённые), компактная план-сводка с «сегодня», последние материалы, идеи дня внизу. Удалены лендинг-заголовок, «3 фичи», соцпруф «340+ блогеров».
+
+**Функционал:**
+- §18 Перенос материала на другой день — `PlanScreen` ActionSheet → инлайн-выбор из 14 дней (`updateDraft` planned_for_date).
+- §14 «Сценарий с нуля» (`ReelScriptGeneratorCard`): вилка «есть тема / подскажи идею» (`getDailyIdeas`), мульти-чипы стиля (дописываются в тему-промпт), «Усилить идею» (панель было/стало).
+- §20 После публикации (`PostPublishSheet`): ввод ссылки на опубликованный Reels + ручные метрики (просмотры/лайки/комменты).
+- §19 Уведомления: тогл в `SettingsScreen` синхронизирован с `user_prefs.reminder_frequency` (раньше только localStorage → крон его не видел).
+
+**Бэкенд:**
+- `app/api/billing/yookassa-webhook/route.ts` — ПОЧИНЕН критический баг: `activateSubscription` писал в несуществующие колонки (`yookassa_payment_id`, `amount_rub`) и делал `insert` в `subscriptions` (PK `tg_id`, у юзера уже есть free-строка) → 0 активаций. Теперь: `upsert` по `tg_id`, идемпотентность через `subscription_purchases.payment_id`, `project_budget` по `project_id`, `billing_events` колонки `type/tier/amount_stars/meta`. payment_id хранится в `invoice_payload`.
+- `app/api/projects/[id]/ig/refine-idea/route.ts` — НОВЫЙ: усиление сырой идеи без `decode_id` (`lib/topicAdapter.refineIdeaStandalone`).
+- `app/api/user/prefs/reminders/route.ts` — НОВЫЙ: GET/POST `reminder_frequency`.
+- `app/api/drafts/[id]/route.ts` — PATCH whitelist `ig_post_url` + `published_metrics` (колонки уже были в `content_drafts`).
+- `lib/api.ts`: `refineIdeaStandalone`, `getReminderFrequency`/`setReminderFrequency`, `updateDraft` расширен (`ig_post_url`, `published_metrics`).
+
+**Открытые OPS-вопросы (не код):**
+- ЮKassa webhook-URL в дашборде должен быть `…/api/billing/yookassa-webhook` (события `payment.succeeded`).
+- Покупатель 19.06 (payment `31c72bcf-000f-5000-b000-15d7fe2ef2f2`, Pro 490₽) НЕ активирован старым багом — нужен `tg_id` из metadata, активировать вручную.
+- `/api/cron/tick` НЕ в `vercel.json` (рассчитан на внешний планировщик, hourly) — проверить что он настроен, иначе reminders молчат.
+
 ### 2026-06-20
 - Hard paywall на 402 во всех 4 генераторах: `ReelScriptGeneratorCard`, `CarouselGeneratorCard`, `CaptionGeneratorCard`, `ContentPackCard`. При `ApiError.status === 402` открывается `PaywallSheet` вместо текстовой ошибки (паттерн как в `ReelDecoderCard`).
 - В `ReelDecoderCard` добавлен `QuotaDots` — визуальный прогресс ●○○ для Free-тарифа над текстовой строкой квоты.
