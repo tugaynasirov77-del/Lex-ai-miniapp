@@ -76,13 +76,6 @@ function statusBadge(group: StatusGroup): { label: string; color: string } {
   }
 }
 
-const TYPE_ICON: Record<string, string> = {
-  reel: "🎬",
-  carousel: "🖼",
-  caption: "✏️",
-  idea: "💡",
-  post: "📝",
-};
 
 function formatDate(iso?: string): string {
   if (!iso) return "";
@@ -247,7 +240,6 @@ function LibraryCard({
   item: ContentDraftDTO;
   onOpen: () => void;
 }) {
-  const icon = TYPE_ICON[item.content_type] || "📄";
   const title =
     (item.title && item.title.trim()) ||
     (item.source_topic && item.source_topic.trim()) ||
@@ -274,7 +266,7 @@ function LibraryCard({
         alignItems: "flex-start",
       }}
     >
-      <div style={{ fontSize: 22, lineHeight: 1.2, flexShrink: 0 }}>{icon}</div>
+      <div style={{ display: "inline-flex", color: MUTED, flexShrink: 0 }}><TypeIcon type={item.content_type} size={22} /></div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -311,7 +303,7 @@ function LibraryCard({
               padding: "3px 10px",
             }}
           >
-            📅 запланировано на {formatDate(item.planned_for_date)}
+            запланировано на {formatDate(item.planned_for_date)}
           </div>
         )}
       </div>
@@ -383,4 +375,16 @@ function NoMatch() {
       body="По выбранным фильтрам материалов нет. Попробуй сбросить фильтры."
     />
   );
+}
+
+
+type _IconProps = { size?: number; color?: string };
+function TypeIcon({ type, size = 16, color = "currentColor" }: _IconProps & { type: string }) {
+  if (type === "reel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="4.5" stroke={color} strokeWidth="1.7" /><path d="M3.5 8.5h17" stroke={color} strokeWidth="1.5" /><path d="M10.5 11.8l3.8 2.4-3.8 2.4v-4.8z" fill={color} /></svg>);
+  if (type === "carousel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" /><path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
+  if (type === "idea")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M9 17h6M10 20h4M12 3a6 6 0 014 10.5c-.6.6-1 1.2-1 2H9c0-.8-.4-1.4-1-2A6 6 0 0112 3z" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="1.7" /><path d="M8 9h8M8 13h8M8 17h5" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
 }

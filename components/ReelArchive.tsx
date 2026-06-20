@@ -137,7 +137,7 @@ export default function ReelArchive({ projectId, refreshKey = 0, onReuse }: Prop
             paddingLeft: 4,
           }}
         >
-          ✨ Пример разбора · посмотри что получишь
+          Пример разбора · посмотри что получишь
         </div>
         <ArchiveCard
           item={DEMO_REEL_DECODE as unknown as ArchiveItem}
@@ -270,9 +270,9 @@ function ArchiveCard({
             )}
           </div>
           <div style={{ display: "flex", gap: 10, fontSize: 11, color: MUTED }}>
-            <span>👁 {fmtCount(item.view_count)}</span>
-            <span>❤ {fmtCount(item.like_count)}</span>
-            <span>💬 {fmtCount(item.comment_count)}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><EyeIcon /> {fmtCount(item.view_count)}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><HeartIcon /> {fmtCount(item.like_count)}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><CommentIcon /> {fmtCount(item.comment_count)}</span>
             <span style={{ marginLeft: "auto", color: SUB_MUTED }}>{dateStr}</span>
           </div>
           {/* Теги механики (бриф раздел 13) */}
@@ -317,7 +317,7 @@ function ArchiveCard({
             }}
           >
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#F58AC0", marginBottom: 8 }}>
-              🎯 Hook · {item.analysis.hook.type}
+              Hook · {item.analysis.hook.type}
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <div
@@ -336,7 +336,7 @@ function ArchiveCard({
 
           {/* Storyboard или structure */}
           {item.analysis.storyboard && item.analysis.storyboard.length > 0 ? (
-            <Section title="🎬 Раскадровка" accent="cyan">
+            <Section title="Раскадровка" accent="cyan">
               {item.analysis.storyboard.map((s) => (
                 <div key={s.scene} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
                   <div style={{ flexShrink: 0, width: 52, paddingTop: 2 }}>
@@ -364,7 +364,7 @@ function ArchiveCard({
               ))}
             </Section>
           ) : (
-            <Section title="📐 Структура" accent="cyan">
+            <Section title="Структура" accent="cyan">
               {item.analysis.structure.map((s, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, marginBottom: 6 }}>
                   <div style={{ flexShrink: 0, fontSize: 10, color: "#7AC8FF", fontWeight: 700, width: 56, paddingTop: 2 }}>
@@ -381,7 +381,7 @@ function ArchiveCard({
 
           {/* Triggers */}
           {item.analysis.engagement_triggers && item.analysis.engagement_triggers.length > 0 && (
-            <Section title="🧲 Психологические триггеры" accent="orange">
+            <Section title="Психологические триггеры" accent="orange">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {item.analysis.engagement_triggers.map((t, i) => (
                   <span
@@ -403,7 +403,7 @@ function ArchiveCard({
             </Section>
           )}
 
-          <Section title="🔥 Почему сработало" accent="orange">
+          <Section title="Почему сработало" accent="orange">
             {item.analysis.why_works.map((w, i) => (
               <div key={i} style={{ fontSize: 12, lineHeight: 1.45, paddingLeft: 14, position: "relative", marginBottom: 4 }}>
                 <span style={{ position: "absolute", left: 0, color: "#FFC480" }}>·</span>
@@ -413,7 +413,7 @@ function ArchiveCard({
           </Section>
 
           {item.analysis.takeaways && item.analysis.takeaways.length > 0 && (
-            <Section title="🎯 Что забрать" accent="green">
+            <Section title="Что забрать" accent="green">
               {item.analysis.takeaways.map((t, i) => (
                 <div key={i} style={{ fontSize: 12, lineHeight: 1.45, paddingLeft: 20, position: "relative", marginBottom: 6 }}>
                   <span style={{ position: "absolute", left: 0, color: "#5BD66B", fontWeight: 800 }}>{i + 1}.</span>
@@ -424,7 +424,7 @@ function ArchiveCard({
           )}
 
           {item.analysis.shoot_yourself && item.analysis.shoot_yourself.length > 0 && (
-            <Section title="🎬 Как снять такой же" accent="cyan">
+            <Section title="Как снять такой же" accent="cyan">
               <ol style={{ margin: 0, paddingLeft: 18 }}>
                 {item.analysis.shoot_yourself.map((s, i) => (
                   <li key={i} style={{ fontSize: 12, lineHeight: 1.45, marginBottom: 4 }}>
@@ -435,7 +435,7 @@ function ArchiveCard({
             </Section>
           )}
 
-          <Section title="✨ Сценарий под твою нишу" highlight>
+          <Section title="Сценарий под твою нишу" highlight>
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
               {item.analysis.adapt_to_brand}
             </p>
@@ -443,7 +443,7 @@ function ArchiveCard({
           </Section>
 
           {item.analysis.cta && (
-            <Section title="📣 CTA в оригинале">
+            <Section title="CTA в оригинале">
               <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.45 }}>{item.analysis.cta}</p>
             </Section>
           )}
@@ -471,7 +471,7 @@ function ArchiveCard({
                 cursor: "pointer",
               }}
             >
-              🎬 Сделать ещё сценарий по этому разбору
+              Сделать ещё сценарий по этому разбору
             </button>
           )}
         </div>
@@ -567,7 +567,7 @@ function CopyButton({ text }: { text: string }) {
         cursor: "pointer",
       }}
     >
-      {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
+      {done ? "✓ Скопировано" : "Скопировать сценарий"}
     </button>
   );
 }
@@ -623,4 +623,16 @@ function mechanicTags(analysis: ReelAnalysisDTO): string[] {
     if (match.test(haystack)) tags.add(tag);
   }
   return Array.from(tags).slice(0, 4);
+}
+
+
+type _IconProps = { size?: number; color?: string };
+function EyeIcon({ size = 12, color = "currentColor" }: _IconProps) {
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke={color} strokeWidth="1.7" /><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.7" /></svg>);
+}
+function HeartIcon({ size = 12, color = "currentColor" }: _IconProps) {
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.3-9.3-8.5C1.3 8.8 2.8 5.5 6 5.5c2 0 3.2 1.3 4 2.5.8-1.2 2-2.5 4-2.5 3.2 0 4.7 3.3 3.3 6C19 15.7 12 20 12 20z" stroke={color} strokeWidth="1.7" strokeLinejoin="round" /></svg>);
+}
+function CommentIcon({ size = 12, color = "currentColor" }: _IconProps) {
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 3.5V5z" stroke={color} strokeWidth="1.7" strokeLinejoin="round" /></svg>);
 }
