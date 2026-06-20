@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useFlow, useFlowActions } from "../flow";
-import { hapticSelection } from "../lib/telegram";
 import type { ScreenKey } from "../flow/types";
 
 const ACTIVE = "#FFFFFF";
@@ -80,7 +79,7 @@ export default function BottomTabBar() {
     >
       {TABS.map((t) => {
         const isActive = active === t.key;
-        const onTap = () => { hapticSelection(); actions.navigate(t.screen); };
+        const onTap = () => { actions.navigate(t.screen); };
 
         return (
           <button
@@ -108,7 +107,7 @@ export default function BottomTabBar() {
               key={isActive ? "on" : "off"}
               style={{
                 width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-                animation: isActive ? "lex-tab-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1)" : "none",
+                animation: isActive ? "lex-tab-fade 220ms ease-out" : "none",
               }}
             >
               <t.Icon active={isActive} />
@@ -118,10 +117,9 @@ export default function BottomTabBar() {
         );
       })}
       <style>{`
-        @keyframes lex-tab-pop {
-          0% { transform: scale(0.82); }
-          55% { transform: scale(1.14); }
-          100% { transform: scale(1); }
+        @keyframes lex-tab-fade {
+          0% { transform: scale(0.92); opacity: 0.55; }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>
