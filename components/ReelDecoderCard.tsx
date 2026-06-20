@@ -18,12 +18,14 @@ type DecodeError = {
 
 const HINT_DISMISS_KEY = "lex_decode_hint_dismissed";
 
-const YELLOW = "#F5E70A";
-const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const SUB_MUTED = "rgba(255,255,255,0.42)";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.10)";
+const INK = "#F4F4F8";
+const MUTED = "#9A9AAB";
+const SUB_MUTED = "#6B6B7B";
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const PINK = "#E84B91";
+const IG_GRADIENT = "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const TINT_PINK = "rgba(232,75,145,0.12)";
 
 type Props = {
   projectId: string;
@@ -116,7 +118,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       <div
         style={{
           fontSize: 10,
-          color: YELLOW,
+          color: PINK,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
           fontWeight: 800,
@@ -176,22 +178,21 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
             padding: "14px 0",
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: IG_GRADIENT,
+            color: "#FFFFFF",
             fontSize: 14,
             fontWeight: 800,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
+            letterSpacing: "0.03em",
             fontFamily: "inherit",
             cursor: busy || !url.trim() ? "wait" : "pointer",
             opacity: busy || !url.trim() ? 0.55 : 1,
             boxShadow:
               busy || !url.trim()
                 ? "none"
-                : `0 14px 32px rgba(245,231,10,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
+                : `0 14px 32px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
           }}
         >
-          {busy ? "Разбираю…" : "🔍 Разобрать Reels"}
+          {busy ? "Разбираю…" : "Разобрать Reels"}
         </button>
       </div>
 
@@ -215,10 +216,10 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
 
       {/* Loading state */}
       {busy && (
-        <div style={{ marginTop: 14, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
-          📥 Скачиваю видео из Instagram…<br />
-          🎙 Транскрибирую речь…<br />
-          🧠 Анализирую структуру…
+        <div style={{ marginTop: 14, fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
+          Скачиваю видео из Instagram…<br />
+          Транскрибирую речь…<br />
+          Анализирую структуру…
         </div>
       )}
 
@@ -327,7 +328,7 @@ function ResultBlock({
     <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       {cached && (
         <div style={{ fontSize: 10, color: SUB_MUTED, textAlign: "center" }}>
-          📦 из кэша — этот ролик уже разбирали недавно
+          из кэша — этот ролик уже разбирали недавно
         </div>
       )}
 
@@ -342,7 +343,7 @@ function ResultBlock({
             color: INK,
           }}
         >
-          ✅ Разбор готов
+          Разбор готов
         </h3>
       </div>
 
@@ -352,7 +353,7 @@ function ResultBlock({
       {/* 3. Почему этот Reels цепляет */}
       {shortSummary && (
         <ResultSection
-          title="🎯 Почему этот Reels цепляет"
+          title="Почему этот Reels цепляет"
           accent="pink"
         >
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: INK }}>
@@ -363,7 +364,7 @@ function ResultBlock({
 
       {/* 4. Главная механика ролика */}
       {mainMechanic.length > 0 && (
-        <ResultSection title="⚙️ Главная механика ролика" accent="cyan">
+        <ResultSection title="Главная механика ролика" accent="cyan">
           <ul
             style={{
               margin: 0,
@@ -399,7 +400,7 @@ function ResultBlock({
 
       {/* 5. Что стоит взять в свой контент */}
       {recommendations.length > 0 && (
-        <ResultSection title="🎁 Что стоит взять в свой контент" accent="green">
+        <ResultSection title="Что стоит взять в свой контент" accent="green">
           <ul
             style={{
               margin: 0,
@@ -473,7 +474,7 @@ function SourceReelsCard({ decode }: { decode: ReelDecodeDTO }) {
     hasViews ? ((m.like_count + m.comment_count) / m.view_count) * 100 : 0;
   const erLabel =
     engagementRate >= 6
-      ? "🔥 топ"
+      ? "топ"
       : engagementRate >= 3
       ? "сильно"
       : engagementRate >= 1
@@ -531,7 +532,7 @@ function SourceReelsCard({ decode }: { decode: ReelDecodeDTO }) {
                 style={{
                   fontSize: 26,
                   fontWeight: 800,
-                  color: YELLOW,
+                  color: PINK,
                   letterSpacing: "-0.02em",
                 }}
               >
@@ -619,16 +620,16 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
         Подробный анализ
       </div>
 
-      <Accordion title="🎯 Хук и первые секунды">
+      <Accordion title="Хук и первые секунды">
         <HookQuote hook={a.hook} />
       </Accordion>
 
       {a.storyboard && a.storyboard.length > 0 ? (
-        <Accordion title="🎬 Раскадровка по сценам">
+        <Accordion title="Раскадровка по сценам">
           <Storyboard scenes={a.storyboard} />
         </Accordion>
       ) : (
-        <Accordion title="📐 Структура ролика">
+        <Accordion title="Структура ролика">
           <Section title="" accent="cyan">
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {a.structure.map((s, i) => (
@@ -661,7 +662,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
       )}
 
       {a.engagement_triggers && a.engagement_triggers.length > 0 && (
-        <Accordion title="🧲 Психологические триггеры">
+        <Accordion title="Психологические триггеры">
           <Section title="" accent="orange">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {a.engagement_triggers.map((t, i) => (
@@ -685,7 +686,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
         </Accordion>
       )}
 
-      <Accordion title="🔥 Почему ролик сработал">
+      <Accordion title="Почему ролик сработал">
         <Section title="" accent="orange">
           <ul
             style={{
@@ -716,7 +717,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
       </Accordion>
 
       {a.takeaways && a.takeaways.length > 0 && (
-        <Accordion title="🎯 Что взять в свой контент (полностью)">
+        <Accordion title="Что взять в свой контент (полностью)">
           <Section title="" accent="green">
             <ul
               style={{
@@ -752,7 +753,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
       )}
 
       {a.shoot_yourself && a.shoot_yourself.length > 0 && (
-        <Accordion title="🎬 Как снять похожий формат">
+        <Accordion title="Как снять похожий формат">
           <Section title="" accent="cyan">
             <ol
               style={{
@@ -774,7 +775,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
       )}
 
       {a.adapt_to_brand && (
-        <Accordion title="✨ Старый сценарий под нишу (legacy)">
+        <Accordion title="Старый сценарий под нишу (legacy)">
           <Section title="" highlight>
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
               {a.adapt_to_brand}
@@ -785,7 +786,7 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
       )}
 
       {decode.transcript && (
-        <Accordion title="📝 Оригинальный транскрипт">
+        <Accordion title="Оригинальный транскрипт">
           <div
             style={{
               fontSize: 12,
@@ -887,7 +888,7 @@ function HookQuote({ hook }: { hook: ReelDecodeDTO["analysis"]["hook"] }) {
           marginBottom: 10,
         }}
       >
-        🎯 Hook · {hook.type}
+        Hook · {hook.type}
       </div>
       <div style={{ display: "flex", gap: 12 }}>
         <div
@@ -927,7 +928,7 @@ function HookQuote({ hook }: { hook: ReelDecodeDTO["analysis"]["hook"] }) {
 
 function Storyboard({ scenes }: { scenes: NonNullable<ReelDecodeDTO["analysis"]["storyboard"]> }) {
   return (
-    <Section title="🎬 Раскадровка" accent="cyan">
+    <Section title="Раскадровка" accent="cyan">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {scenes.map((s) => (
           <div key={s.scene} style={{ display: "flex", gap: 12 }}>
@@ -997,7 +998,7 @@ function Stat({ label, value, dim }: { label: string; value: string; dim?: boole
 type Accent = "yellow" | "cyan" | "orange" | "green" | "pink";
 
 const ACCENT_COLORS: Record<Accent, { bg: string; border: string; title: string }> = {
-  yellow: { bg: "rgba(245,231,10,0.08)", border: "rgba(245,231,10,0.30)", title: "#F5E70A" },
+  yellow: { bg: "rgba(232,75,145,0.08)", border: "rgba(232,75,145,0.30)", title: "#F58AC0" },
   cyan: { bg: "rgba(122,200,255,0.06)", border: "rgba(122,200,255,0.28)", title: "#7AC8FF" },
   orange: { bg: "rgba(240,160,48,0.06)", border: "rgba(240,160,48,0.28)", title: "#FFC480" },
   green: { bg: "rgba(91,214,107,0.06)", border: "rgba(91,214,107,0.28)", title: "#5BD66B" },
@@ -1021,12 +1022,12 @@ function Section({
     <div
       style={{
         background: isHighlight
-          ? `linear-gradient(135deg, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0.02) 100%)`
+          ? `linear-gradient(135deg, ${TINT_PINK} 0%, rgba(232,75,145,0.03) 100%)`
           : palette
           ? palette.bg
           : CARD_BG,
         border: isHighlight
-          ? `1px solid rgba(245,231,10,0.30)`
+          ? `1px solid rgba(232,75,145,0.30)`
           : palette
           ? `1px solid ${palette.border}`
           : `1px solid ${CARD_BORDER}`,
@@ -1040,7 +1041,7 @@ function Section({
           fontWeight: 800,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: isHighlight ? YELLOW : palette ? palette.title : MUTED,
+          color: isHighlight ? PINK : palette ? palette.title : MUTED,
           marginBottom: 8,
         }}
       >
@@ -1113,8 +1114,8 @@ function CopyButton({ text }: { text: string }) {
         padding: "10px 14px",
         border: "none",
         borderRadius: 12,
-        background: done ? "rgba(91,214,107,0.18)" : "rgba(245,231,10,0.16)",
-        color: done ? "#5BD66B" : YELLOW,
+        background: done ? "rgba(79,212,137,0.18)" : "rgba(232,75,145,0.16)",
+        color: done ? "#4FD489" : PINK,
         fontFamily: "inherit",
         fontSize: 12,
         fontWeight: 800,
@@ -1123,7 +1124,7 @@ function CopyButton({ text }: { text: string }) {
         cursor: "pointer",
       }}
     >
-      {done ? "✓ Скопировано" : "📋 Скопировать сценарий"}
+      {done ? "✓ Скопировано" : "Скопировать сценарий"}
     </button>
   );
 }
@@ -1164,8 +1165,8 @@ function QuotaDots({ used, limit }: { used: number; limit: number }) {
             width: 8,
             height: 8,
             borderRadius: 999,
-            background: i < filled ? YELLOW : "rgba(255,255,255,0.18)",
-            boxShadow: i < filled ? `0 0 8px ${YELLOW}66` : "none",
+            background: i < filled ? PINK : "rgba(255,255,255,0.18)",
+            boxShadow: i < filled ? `0 0 8px ${PINK}66` : "none",
           }}
         />
       ))}
@@ -1193,8 +1194,8 @@ function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
         padding: 18,
         borderRadius: 18,
         background:
-          "linear-gradient(135deg, rgba(221,42,123,0.16) 0%, rgba(245,133,41,0.14) 50%, rgba(245,231,10,0.10) 100%)",
-        border: "1px solid rgba(245,231,10,0.30)",
+          "linear-gradient(135deg, rgba(162,79,214,0.16) 0%, rgba(232,75,145,0.14) 50%, rgba(248,138,74,0.12) 100%)",
+        border: "1px solid rgba(232,75,145,0.30)",
         position: "relative",
         overflow: "hidden",
       }}
@@ -1205,11 +1206,11 @@ function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
           letterSpacing: "0.14em",
           textTransform: "uppercase",
           fontWeight: 800,
-          color: YELLOW,
+          color: PINK,
           marginBottom: 8,
         }}
       >
-        🚀 Прокачайся до Pro
+        Прокачайся до Pro
       </div>
       <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.25, marginBottom: 6 }}>
         {headline}
@@ -1218,7 +1219,7 @@ function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
         {sub}
       </p>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 30, fontWeight: 800, color: YELLOW, letterSpacing: "-0.02em" }}>
+        <span style={{ fontSize: 30, fontWeight: 800, color: PINK, letterSpacing: "-0.02em" }}>
           490 ₽
         </span>
         <span style={{ fontSize: 12, color: SUB_MUTED }}>/ мес · отмена в один клик</span>
@@ -1231,14 +1232,14 @@ function UpsellCard({ quota }: { quota: ReelQuotaDTO }) {
           textAlign: "center",
           padding: "14px 0",
           borderRadius: 999,
-          background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-          color: "#0A0608",
+          background: IG_GRADIENT,
+          color: "#FFFFFF",
           fontSize: 14,
           fontWeight: 800,
           letterSpacing: "0.04em",
           textTransform: "uppercase",
           textDecoration: "none",
-          boxShadow: `0 14px 32px rgba(245,231,10,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
+          boxShadow: `0 14px 32px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
         }}
       >
         Получить 30 разборов →
@@ -1285,7 +1286,11 @@ function HowToGetLink() {
           fontSize: 12,
         }}
       >
-        <span style={{ fontSize: 14 }}>🎬</span>
+        <span style={{ display: "inline-flex", color: PINK }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M9 15l6-6M10.5 6.5l1.2-1.2a4 4 0 015.7 5.7l-1.2 1.2M13.5 17.5l-1.2 1.2a4 4 0 01-5.7-5.7l1.2-1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
         <span style={{ flex: 1, fontWeight: 600 }}>
           Как взять ссылку на Reels
         </span>
@@ -1300,7 +1305,7 @@ function HowToGetLink() {
             <li>Вставь её в поле ниже</li>
           </ol>
           <div style={{ fontSize: 11, color: SUB_MUTED, marginBottom: 8 }}>
-            💡 Подойдёт любой Reels: конкурента, лидера ниши, вирусный — LEX покажет почему он работает.
+            Подойдёт любой Reels: конкурента, лидера ниши, вирусный — LEX покажет почему он работает.
           </div>
           <button
             onClick={() => {
