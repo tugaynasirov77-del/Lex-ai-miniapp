@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import { track } from "../lib/analytics";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.60)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";
@@ -83,7 +83,7 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
           background: "linear-gradient(180deg, #1A1305 0%, #0A0608 100%)",
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          border: "1px solid rgba(245,231,10,0.20)",
+          border: "1px solid rgba(232,75,145,0.20)",
           padding: "18px 18px max(calc(env(safe-area-inset-bottom) + 18px), 28px)",
           maxHeight: "88vh",
           overflowY: "auto",
@@ -136,7 +136,7 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
                 padding: "9px 6px",
                 borderRadius: 10,
                 border: `1px solid ${period === p ? YELLOW : CARD_BORDER}`,
-                background: period === p ? "rgba(245,231,10,0.10)" : "rgba(255,255,255,0.04)",
+                background: period === p ? "rgba(232,75,145,0.10)" : "rgba(255,255,255,0.04)",
                 color: period === p ? YELLOW : MUTED,
                 fontFamily: "inherit",
                 fontSize: 12,
@@ -164,8 +164,8 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
             padding: "16px 0",
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+            color: "#FFFFFF",
             fontSize: 15,
             fontWeight: 800,
             letterSpacing: "0.03em",
@@ -173,7 +173,7 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
             fontFamily: "inherit",
             cursor: busy ? "wait" : "pointer",
             opacity: busy ? 0.7 : 1,
-            boxShadow: `0 16px 36px rgba(245,231,10,0.40), 0 0 0 1px rgba(255,255,255,0.18) inset`,
+            boxShadow: `0 16px 36px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.18) inset`,
           }}
         >
           {busy ? "Открываю оплату…" : "Получить Pro"}

@@ -11,7 +11,7 @@ import { hapticImpact, hapticNotify } from "../lib/telegram";
 import StateBlock from "./StateBlock";
 import PaywallSheet from "./PaywallSheet";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
@@ -83,11 +83,11 @@ export default function ContentPackCard({ projectId }: Props) {
         marginTop: 18,
         overflow: "hidden",
         background:
-          "radial-gradient(circle 200px at 0% 0%, rgba(245,231,10,0.16), transparent 60%)," +
+          "radial-gradient(circle 200px at 0% 0%, rgba(232,75,145,0.16), transparent 60%)," +
           "radial-gradient(circle 220px at 100% 100%, rgba(221,42,123,0.16), transparent 60%)," +
           "linear-gradient(135deg, #16110A 0%, #0A0808 100%)",
         border: "1px solid rgba(255,255,255,0.10)",
-        boxShadow: "0 18px 44px rgba(245,231,10,0.08)",
+        boxShadow: "0 18px 44px rgba(232,75,145,0.08)",
       }}
     >
       <div
@@ -152,8 +152,8 @@ export default function ContentPackCard({ projectId }: Props) {
             padding: "14px 0",
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+            color: "#FFFFFF",
             fontSize: 14,
             fontWeight: 800,
             letterSpacing: "0.04em",
@@ -164,7 +164,7 @@ export default function ContentPackCard({ projectId }: Props) {
             boxShadow:
               busy || topic.trim().length < 5
                 ? "none"
-                : `0 14px 32px rgba(245,231,10,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
+                : `0 14px 32px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
           }}
         >
           {busy ? "Собираю пакет…" : "📦 Собрать контент-пакет"}
@@ -334,7 +334,7 @@ function PackSection({
           padding: "9px 14px",
           border: "none",
           borderRadius: 10,
-          background: done ? "rgba(91,214,107,0.18)" : "rgba(245,231,10,0.14)",
+          background: done ? "rgba(91,214,107,0.18)" : "rgba(232,75,145,0.14)",
           color: done ? "#5BD66B" : YELLOW,
           fontFamily: "inherit",
           fontSize: 12,

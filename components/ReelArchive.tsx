@@ -8,7 +8,7 @@ import StateBlock from "./StateBlock";
 
 const DEMO_DISMISS_KEY = "lex_demo_decode_dismissed";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";
@@ -225,9 +225,9 @@ function ArchiveCard({
     <div
       style={{
         background: isDemo
-          ? "linear-gradient(135deg, rgba(245,231,10,0.06) 0%, rgba(245,231,10,0.02) 100%)"
+          ? "linear-gradient(135deg, rgba(232,75,145,0.06) 0%, rgba(232,75,145,0.02) 100%)"
           : CARD_BG,
-        border: `1px solid ${open || isDemo ? "rgba(245,231,10,0.30)" : CARD_BORDER}`,
+        border: `1px solid ${open || isDemo ? "rgba(232,75,145,0.30)" : CARD_BORDER}`,
         borderRadius: 14,
         overflow: "hidden",
         transition: "border-color 200ms",
@@ -261,7 +261,7 @@ function ArchiveCard({
                   letterSpacing: "0.08em",
                   padding: "2px 6px",
                   borderRadius: 6,
-                  background: "rgba(245,231,10,0.18)",
+                  background: "rgba(232,75,145,0.18)",
                   color: YELLOW,
                 }}
               >
@@ -461,8 +461,8 @@ function ArchiveCard({
                 padding: "12px 0",
                 border: "none",
                 borderRadius: 12,
-                background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-                color: "#0A0608",
+                background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+                color: "#FFFFFF",
                 fontFamily: "inherit",
                 fontSize: 13,
                 fontWeight: 800,
@@ -483,7 +483,7 @@ function ArchiveCard({
 type Accent = "yellow" | "cyan" | "orange" | "green" | "pink";
 
 const ACCENT: Record<Accent, { bg: string; border: string; title: string }> = {
-  yellow: { bg: "rgba(245,231,10,0.08)", border: "rgba(245,231,10,0.30)", title: YELLOW },
+  yellow: { bg: "rgba(232,75,145,0.08)", border: "rgba(232,75,145,0.30)", title: YELLOW },
   cyan: { bg: "rgba(122,200,255,0.06)", border: "rgba(122,200,255,0.28)", title: "#7AC8FF" },
   orange: { bg: "rgba(240,160,48,0.06)", border: "rgba(240,160,48,0.28)", title: "#FFC480" },
   green: { bg: "rgba(91,214,107,0.06)", border: "rgba(91,214,107,0.28)", title: "#5BD66B" },
@@ -507,12 +507,12 @@ function Section({
     <div
       style={{
         background: isHighlight
-          ? `linear-gradient(135deg, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0.02) 100%)`
+          ? `linear-gradient(135deg, rgba(232,75,145,0.08) 0%, rgba(232,75,145,0.02) 100%)`
           : palette
           ? palette.bg
           : "rgba(255,255,255,0.03)",
         border: isHighlight
-          ? `1px solid rgba(245,231,10,0.30)`
+          ? `1px solid rgba(232,75,145,0.30)`
           : palette
           ? `1px solid ${palette.border}`
           : `1px solid rgba(255,255,255,0.06)`,
@@ -557,7 +557,7 @@ function CopyButton({ text }: { text: string }) {
         padding: "10px 14px",
         border: "none",
         borderRadius: 12,
-        background: done ? "rgba(91,214,107,0.18)" : "rgba(245,231,10,0.16)",
+        background: done ? "rgba(91,214,107,0.18)" : "rgba(232,75,145,0.16)",
         color: done ? "#5BD66B" : YELLOW,
         fontFamily: "inherit",
         fontSize: 12,

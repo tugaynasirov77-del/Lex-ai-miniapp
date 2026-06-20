@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { hapticImpact, hapticNotify } from "../../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.62)";
 const BG = "#0A0608";
@@ -71,9 +71,9 @@ export default function OnboardingSuccessScreen({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "radial-gradient(circle at 50% 35%, #FFF382 0%, " + YELLOW + " 55%, #E5C500 100%)",
+            background: "radial-gradient(circle at 50% 35%, #A24FD6 0%, #E84B91 55%, #F88A4A 100%)",
             // Glow: мягкое жёлтое свечение в радиусе иконки.
-            boxShadow: `0 0 0 10px rgba(245,231,10,0.08), 0 0 48px 8px rgba(245,231,10,0.40), 0 22px 60px rgba(245,231,10,0.35)`,
+            boxShadow: `0 0 0 10px rgba(232,75,145,0.08), 0 0 48px 8px rgba(232,75,145,0.40), 0 22px 60px rgba(232,75,145,0.35)`,
             // fade-in 0→1 (300ms ease-out) + scale 0.85→1 (300ms spring).
             animation:
               "lex-success-fadein 300ms ease-out 120ms both, " +
@@ -131,8 +131,8 @@ export default function OnboardingSuccessScreen({
                 marginTop: 4,
                 padding: "10px 16px",
                 borderRadius: 999,
-                background: "rgba(245,231,10,0.08)",
-                border: "1px solid rgba(245,231,10,0.28)",
+                background: "rgba(232,75,145,0.08)",
+                border: "1px solid rgba(232,75,145,0.28)",
                 fontSize: 13,
                 color: YELLOW,
                 fontWeight: 600,
@@ -161,8 +161,8 @@ export default function OnboardingSuccessScreen({
           minHeight: 56,
           border: "none",
           borderRadius: 999,
-          background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 45%, #E5C500 100%)`,
-          color: "#0A0608",
+          background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+          color: "#FFFFFF",
           fontSize: 15,
           fontWeight: 800,
           letterSpacing: "0.04em",

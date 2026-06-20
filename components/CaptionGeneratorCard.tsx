@@ -10,7 +10,7 @@ import {
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import PaywallSheet from "./PaywallSheet";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";

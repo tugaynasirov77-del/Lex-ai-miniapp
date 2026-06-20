@@ -11,7 +11,7 @@ import ContentPackCard from "../ContentPackCard";
 import StateBlock from "../StateBlock";
 import type { ToolId } from "./CreateHubScreen";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 
@@ -101,9 +101,9 @@ export default function ToolsScreen({ onBack: _onBack }: Props) {
                 borderRadius: 999,
                 border: "none",
                 background: on
-                  ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`
+                  ? `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`
                   : "transparent",
-                color: on ? "#0A0608" : MUTED,
+                color: on ? "#FFFFFF" : MUTED,
                 fontFamily: "inherit",
                 fontSize: 12,
                 fontWeight: on ? 800 : 600,

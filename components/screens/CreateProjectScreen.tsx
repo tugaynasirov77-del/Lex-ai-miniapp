@@ -22,7 +22,7 @@ import {
 } from "../../lib/telegramBot";
 import TapToCopy from "../TapToCopy";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const WARN = "#F39B40";
@@ -463,7 +463,7 @@ function ChipGroup<T extends string>({
               padding: "8px 14px",
               borderRadius: 999,
               border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
-              background: active ? "rgba(245,231,10,0.10)" : "transparent",
+              background: active ? "rgba(232,75,145,0.10)" : "transparent",
               color: active ? YELLOW : INK,
               fontFamily: "inherit",
               fontSize: 13,
@@ -856,7 +856,7 @@ function IgAttachInline({
                 padding: "8px 14px",
                 borderRadius: 999,
                 border: `1px solid ${active ? YELLOW : "rgba(255,255,255,0.10)"}`,
-                background: active ? "rgba(245,231,10,0.10)" : "transparent",
+                background: active ? "rgba(232,75,145,0.10)" : "transparent",
                 color: active ? YELLOW : INK,
                 fontFamily: "inherit",
                 fontSize: 13,
@@ -993,7 +993,7 @@ const primaryBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 999,
   background: YELLOW,
-  color: "#0A0608",
+  color: "#FFFFFF",
   fontSize: 16,
   fontWeight: 800,
   letterSpacing: "0.06em",

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { hapticImpact } from "../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 
 export default function Splash() {
   const pathname = usePathname();

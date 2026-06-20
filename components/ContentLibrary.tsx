@@ -9,7 +9,7 @@ import {
 import { hapticImpact, hapticSelection } from "../lib/telegram";
 import StateBlock from "./StateBlock";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";
@@ -222,7 +222,7 @@ function ChipRow<T extends string>({
               padding: "7px 14px",
               borderRadius: 999,
               border: `1px solid ${active ? YELLOW : CARD_BORDER}`,
-              background: active ? "rgba(245,231,10,0.10)" : "transparent",
+              background: active ? "rgba(232,75,145,0.10)" : "transparent",
               color: active ? YELLOW : INK,
               fontFamily: "inherit",
               fontSize: 13,
@@ -305,8 +305,8 @@ function LibraryCard({
               alignItems: "center",
               fontSize: 11,
               color: YELLOW,
-              background: "rgba(245,231,10,0.08)",
-              border: "1px solid rgba(245,231,10,0.26)",
+              background: "rgba(232,75,145,0.08)",
+              border: "1px solid rgba(232,75,145,0.26)",
               borderRadius: 999,
               padding: "3px 10px",
             }}

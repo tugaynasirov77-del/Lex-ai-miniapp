@@ -2,7 +2,7 @@
 
 import { hapticImpact } from "../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BG = "rgba(255,255,255,0.04)";
@@ -85,8 +85,8 @@ export default function StateBlock({
             padding: "11px 22px",
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+            color: "#FFFFFF",
             fontFamily: "inherit",
             fontSize: 13,
             fontWeight: 800,

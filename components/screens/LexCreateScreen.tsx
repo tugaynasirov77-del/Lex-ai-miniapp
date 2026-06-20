@@ -18,7 +18,7 @@ import {
 } from "../../lib/api";
 import { hapticImpact, hapticNotify } from "../../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BG = "rgba(255,255,255,0.04)";
@@ -742,7 +742,7 @@ function DoneBlock({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#0A0608",
+          color: "#FFFFFF",
           fontSize: 36,
           fontWeight: 900,
         }}
@@ -1008,9 +1008,9 @@ function PostActions({
                     border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: 12,
                     background: busy
-                      ? "rgba(245,231,10,0.10)"
+                      ? "rgba(232,75,145,0.10)"
                       : "rgba(255,255,255,0.04)",
-                    color: busy ? "#F5E70A" : "#FFFFFF",
+                    color: busy ? "#E84B91" : "#FFFFFF",
                     fontFamily: "inherit",
                     fontSize: 13,
                     fontWeight: 600,
@@ -1413,7 +1413,7 @@ function CopyBlock({
           }}
           style={{
             background: copied ? YELLOW : "transparent",
-            color: copied ? "#0A0608" : YELLOW,
+            color: copied ? "#FFFFFF" : YELLOW,
             border: `1px solid ${YELLOW}`,
             borderRadius: 999,
             fontSize: 11,
@@ -1452,7 +1452,7 @@ function btnPrimary(disabled: boolean): React.CSSProperties {
     border: "none",
     borderRadius: 999,
     background: disabled ? "rgba(255,255,255,0.12)" : YELLOW,
-    color: disabled ? MUTED : "#0A0608",
+    color: disabled ? MUTED : "#FFFFFF",
     fontSize: 15,
     fontWeight: 800,
     letterSpacing: "0.06em",

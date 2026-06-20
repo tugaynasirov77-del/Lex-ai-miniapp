@@ -30,7 +30,7 @@ import BrandSetupCard from "../BrandSetupCard";
 import ReelArchive from "../ReelArchive";
 import ContentLibrary from "../ContentLibrary";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BG = "rgba(255,255,255,0.04)";
@@ -453,8 +453,8 @@ export default function ProjectScreen({ onBack }: Props) {
             minHeight: 56,
             border: "none",
             borderRadius: 999,
-            background: `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 45%, #E5C500 100%)`,
-            color: "#0A0608",
+            background: `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`,
+            color: "#FFFFFF",
             fontSize: 15,
             fontWeight: 800,
             letterSpacing: "0.04em",
@@ -500,9 +500,9 @@ export default function ProjectScreen({ onBack }: Props) {
                 borderRadius: 999,
                 border: "none",
                 background: on
-                  ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`
+                  ? `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`
                   : "transparent",
-                color: on ? "#0A0608" : MUTED,
+                color: on ? "#FFFFFF" : MUTED,
                 fontFamily: "inherit",
                 fontSize: 13,
                 fontWeight: on ? 800 : 600,
@@ -685,9 +685,9 @@ function IgTabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               borderRadius: 999,
               border: "none",
               background: on
-                ? `linear-gradient(135deg, #FFF382 0%, ${YELLOW} 50%, #E5C500 100%)`
+                ? `linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)`
                 : "transparent",
-              color: on ? "#0A0608" : MUTED,
+              color: on ? "#FFFFFF" : MUTED,
               fontFamily: "inherit",
               fontSize: 13,
               fontWeight: on ? 800 : 600,
@@ -763,8 +763,8 @@ function IgOverviewTab({
           padding: 14,
           borderRadius: 16,
           background:
-            "linear-gradient(135deg, rgba(245,231,10,0.08) 0%, rgba(245,231,10,0.02) 100%)",
-          border: "1px solid rgba(245,231,10,0.22)",
+            "linear-gradient(135deg, rgba(232,75,145,0.08) 0%, rgba(232,75,145,0.02) 100%)",
+          border: "1px solid rgba(232,75,145,0.22)",
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -869,10 +869,10 @@ function IgOverviewTab({
           width: "100%",
           padding: "16px 18px",
           borderRadius: 18,
-          border: `1px solid rgba(245,231,10,0.32)`,
+          border: `1px solid rgba(232,75,145,0.32)`,
           background:
             "radial-gradient(circle 200px at 100% 0%, rgba(245,133,41,0.20), transparent 60%)," +
-            "linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(245,231,10,0.03) 100%)",
+            "linear-gradient(135deg, rgba(232,75,145,0.10) 0%, rgba(232,75,145,0.03) 100%)",
           color: INK,
           fontFamily: "inherit",
           textAlign: "left",
@@ -880,7 +880,7 @@ function IgOverviewTab({
           display: "flex",
           alignItems: "center",
           gap: 14,
-          boxShadow: `0 12px 28px rgba(245,231,10,0.10)`,
+          boxShadow: `0 12px 28px rgba(232,75,145,0.10)`,
         }}
       >
         <div style={{ fontSize: 30 }}>🛠</div>
@@ -1283,7 +1283,7 @@ function PlanIdeaCard({
             border: "none",
             borderRadius: 999,
             background: YELLOW,
-            color: "#0A0608",
+            color: "#FFFFFF",
             fontFamily: "inherit",
             fontSize: 13,
             fontWeight: 800,
@@ -1435,8 +1435,8 @@ function AutoStartBanner({
         marginTop: 14,
         padding: 12,
         borderRadius: 14,
-        background: "rgba(245,231,10,0.06)",
-        border: `1px solid rgba(245,231,10,0.3)`,
+        background: "rgba(232,75,145,0.06)",
+        border: `1px solid rgba(232,75,145,0.3)`,
       }}
     >
       <div
@@ -1497,7 +1497,7 @@ function AutoStartBanner({
               border: "none",
               borderRadius: 999,
               background: YELLOW,
-              color: "#0A0608",
+              color: "#FFFFFF",
               fontFamily: "inherit",
               fontSize: 12,
               fontWeight: 800,
@@ -1620,8 +1620,8 @@ function QuickHub({
         marginTop: 14,
         padding: emphasized ? 12 : 10,
         borderRadius: 14,
-        background: emphasized ? "rgba(245,231,10,0.05)" : "rgba(255,255,255,0.03)",
-        border: `1px solid ${emphasized ? "rgba(245,231,10,0.25)" : CARD_BORDER}`,
+        background: emphasized ? "rgba(232,75,145,0.05)" : "rgba(255,255,255,0.03)",
+        border: `1px solid ${emphasized ? "rgba(232,75,145,0.25)" : CARD_BORDER}`,
       }}
     >
       <div
@@ -1666,7 +1666,7 @@ function QuickHub({
                   ? "none"
                   : `1px solid ${CARD_BORDER}`,
                 background: primary ? YELLOW : "rgba(255,255,255,0.04)",
-                color: primary ? "#0A0608" : INK,
+                color: primary ? "#FFFFFF" : INK,
                 fontFamily: "inherit",
                 fontSize: 13,
                 fontWeight: primary ? 800 : 600,
@@ -1805,7 +1805,7 @@ function FeedCard({
                 borderRadius: 999,
                 background: YELLOW,
                 border: "none",
-                color: "#0A0608",
+                color: "#FFFFFF",
                 cursor: "pointer",
                 fontFamily: "inherit",
               }}
@@ -1876,7 +1876,7 @@ function PublishedToggle({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#0A0608",
+          color: "#FFFFFF",
           fontSize: 11,
           fontWeight: 900,
         }}
@@ -2381,7 +2381,7 @@ function IgIdeasTab({
           style={{
             ...miniBtn,
             background: YELLOW,
-            color: "#0A0608",
+            color: "#FFFFFF",
           }}
         >
           ОТКРЫТЬ НАСТРОЙКИ →
@@ -2687,7 +2687,7 @@ function CompetitorsCard({
           style={{
             padding: "0 16px",
             background: YELLOW,
-            color: "#0A0608",
+            color: "#FFFFFF",
             border: "none",
             borderRadius: 10,
             fontSize: 13,
@@ -2915,7 +2915,7 @@ function FinishSetupCard({
         style={{
           ...miniBtn,
           background: YELLOW,
-          color: "#0A0608",
+          color: "#FFFFFF",
         }}
       >
         {isIg ? "ПОДКЛЮЧИТЬ INSTAGRAM →" : "ЗАВЕРШИТЬ ПОДКЛЮЧЕНИЕ →"}
@@ -3438,7 +3438,7 @@ const miniBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 999,
   background: YELLOW,
-  color: "#0A0608",
+  color: "#FFFFFF",
   fontSize: 13,
   fontWeight: 800,
   letterSpacing: "0.06em",
@@ -3454,7 +3454,7 @@ const primaryBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 999,
   background: YELLOW,
-  color: "#0A0608",
+  color: "#FFFFFF",
   fontSize: 16,
   fontWeight: 800,
   letterSpacing: "0.06em",

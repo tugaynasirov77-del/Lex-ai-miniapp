@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getBrandKit, saveBrandSetup, type BrandKit } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const CARD_BG = "rgba(255,255,255,0.04)";
@@ -277,7 +277,7 @@ export default function BrandSetupCard({ projectId, onSaved }: Props) {
           width: "100%",
           minHeight: 48,
           background: !dirty && hasSavedKit ? "rgba(255,255,255,0.08)" : YELLOW,
-          color: !dirty && hasSavedKit ? MUTED : "#0A0608",
+          color: !dirty && hasSavedKit ? MUTED : "#FFFFFF",
           border: "none",
           borderRadius: 12,
           fontSize: 14,

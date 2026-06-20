@@ -15,7 +15,7 @@ import {
   hapticSelection,
 } from "../../lib/telegram";
 
-const YELLOW = "#F5E70A";
+const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const WARN = "#F39B40";
@@ -224,7 +224,7 @@ export default function AddCompetitorsScreen({ onBack: _onBack }: Props) {
               padding: "0 18px",
               borderRadius: 14,
               border: `1px solid ${YELLOW}`,
-              background: "rgba(245,231,10,0.1)",
+              background: "rgba(232,75,145,0.1)",
               color: YELLOW,
               fontFamily: "inherit",
               fontSize: 14,
@@ -256,8 +256,8 @@ export default function AddCompetitorsScreen({ onBack: _onBack }: Props) {
                   gap: 8,
                   padding: "8px 12px",
                   borderRadius: 999,
-                  background: "rgba(245,231,10,0.1)",
-                  border: `1px solid rgba(245,231,10,0.35)`,
+                  background: "rgba(232,75,145,0.1)",
+                  border: `1px solid rgba(232,75,145,0.35)`,
                   color: INK,
                   fontSize: 13,
                   fontWeight: 600,
@@ -392,7 +392,7 @@ const primaryBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 999,
   background: YELLOW,
-  color: "#0A0608",
+  color: "#FFFFFF",
   fontSize: 16,
   fontWeight: 800,
   letterSpacing: "0.06em",
