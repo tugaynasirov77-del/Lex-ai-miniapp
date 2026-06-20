@@ -14,30 +14,28 @@ import { hapticImpact, hapticNotify } from "../../lib/telegram";
 import { track } from "../../lib/analytics";
 import StateBlock from "../StateBlock";
 
-const YELLOW = "#F5E70A";
-const INK = "#FFFFFF";
-const MUTED = "rgba(255,255,255,0.58)";
-const SUB_MUTED = "rgba(255,255,255,0.42)";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.10)";
-const OK = "#5BD66B";
+const BG = "#0B0B11";
+const INK = "#F4F4F8";
+const MUTED = "#9A9AAB";
+const SUB_MUTED = "#6B6B7B";
+const CARD_BG = "#15151E";
+const CARD_BORDER = "#262630";
+const PINK = "#E84B91";
+const IG_GRADIENT = "linear-gradient(95deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)";
+const TINT_PINK = "rgba(232,75,145,0.12)";
+const OK = "#4FD489";
+const ORANGE = "#F0944E";
 
 type Props = { onBack: () => void };
 
-const TYPE_ICON: Record<string, string> = {
-  reel: "🎬",
-  carousel: "🖼",
-  caption: "✏️",
-  idea: "💡",
-  post: "📝",
-};
+type IconProps = { size?: number; color?: string };
 
-// Группы статусов → бейдж
+// Группы статусов → бейдж (зелёный — опубликовано, оранжевый — готово, серый — черновик)
 function statusBadge(status: ContentStatus): { label: string; color: string; bg: string } {
   if (status === "published")
-    return { label: "Опубликовано", color: OK, bg: "rgba(91,214,107,0.14)" };
+    return { label: "Опубликовано", color: OK, bg: "rgba(79,212,137,0.14)" };
   if (["ready_to_shoot", "shot", "ready_to_publish", "scheduled", "approved"].includes(status))
-    return { label: "Готово к съёмке", color: YELLOW, bg: "rgba(245,231,10,0.14)" };
+    return { label: "Готово к съёмке", color: ORANGE, bg: "rgba(240,148,78,0.14)" };
   return { label: "Черновик", color: MUTED, bg: "rgba(255,255,255,0.06)" };
 }
 
@@ -179,7 +177,7 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
               onClick={() => { hapticImpact("light"); setWeekStart(todayMonday()); }}
               style={{
                 appearance: "none", background: "none", border: "none",
-                color: YELLOW, fontSize: 11, cursor: "pointer", marginTop: 2, fontFamily: "inherit",
+                color: PINK, fontSize: 11, cursor: "pointer", marginTop: 2, fontFamily: "inherit",
               }}
             >
               ← к текущей неделе
@@ -316,7 +314,7 @@ function PostPublishSheet({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "linear-gradient(180deg, #0F1A10 0%, #0A0608 100%)",
+          background: CARD_BG,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
           border: "1px solid rgba(91,214,107,0.22)",
@@ -350,15 +348,15 @@ function WeekSummary({ plan }: { plan: WeekPlanDTO }) {
   return (
     <div
       style={{
-        background: "linear-gradient(135deg, rgba(245,231,10,0.10) 0%, rgba(245,231,10,0.03) 100%)",
-        border: "1px solid rgba(245,231,10,0.22)",
-        borderRadius: 16,
+        background: `linear-gradient(135deg, ${TINT_PINK} 0%, rgba(162,79,214,0.05) 100%)`,
+        border: `1px solid rgba(232,75,145,0.22)`,
+        borderRadius: 18,
         padding: 16,
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: INK }}>План на неделю</div>
-        <div style={{ fontSize: 13, color: YELLOW, fontWeight: 700 }}>
+        <div style={{ fontSize: 13, color: PINK, fontWeight: 700 }}>
           {s.ready + s.published} из {s.total} готовы
         </div>
       </div>
@@ -369,16 +367,16 @@ function WeekSummary({ plan }: { plan: WeekPlanDTO }) {
           style={{
             height: "100%",
             width: `${s.progress_pct}%`,
-            background: `linear-gradient(90deg, ${OK} 0%, ${YELLOW} 100%)`,
+            background: IG_GRADIENT,
             transition: "width 0.4s ease",
-            boxShadow: "0 0 12px rgba(245,231,10,0.4)",
+            boxShadow: "0 0 12px rgba(232,75,145,0.4)",
           }}
         />
       </div>
 
       <div style={{ display: "flex", gap: 14, marginTop: 12 }}>
         <SummaryStat label="Запланировано" value={s.planned} />
-        <SummaryStat label="Готово" value={s.ready} color={YELLOW} />
+        <SummaryStat label="Готово" value={s.ready} color={ORANGE} />
         <SummaryStat label="Опубликовано" value={s.published} color={OK} />
       </div>
     </div>
@@ -416,13 +414,13 @@ function DayRow({
         gap: 12,
         padding: 12,
         borderRadius: 14,
-        background: today ? "rgba(245,231,10,0.06)" : CARD_BG,
-        border: `1px solid ${today ? "rgba(245,231,10,0.28)" : CARD_BORDER}`,
+        background: today ? TINT_PINK : CARD_BG,
+        border: `1px solid ${today ? "rgba(232,75,145,0.28)" : CARD_BORDER}`,
       }}
     >
       {/* Дата */}
       <div style={{ flexShrink: 0, width: 40, textAlign: "center", paddingTop: 2 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: today ? YELLOW : INK }}>{dayNum}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: today ? PINK : INK }}>{dayNum}</div>
         <div style={{ fontSize: 10, color: SUB_MUTED, textTransform: "uppercase" }}>{weekday}</div>
       </div>
 
@@ -452,8 +450,8 @@ function DayRow({
                   gap: 8,
                 }}
               >
-                <span style={{ fontSize: 14, flexShrink: 0 }}>
-                  {TYPE_ICON[it.content_type] || "📄"}
+                <span style={{ flexShrink: 0, color: MUTED, display: "inline-flex" }}>
+                  <TypeIcon type={it.content_type} size={15} />
                 </span>
                 <span
                   style={{
@@ -519,7 +517,7 @@ function ActionSheet({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#15110A",
+          background: CARD_BG,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
           border: "1px solid rgba(255,255,255,0.10)",
@@ -528,7 +526,7 @@ function ActionSheet({
       >
         <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: INK, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-          <span>{TYPE_ICON[item.content_type] || "📄"}</span>
+          <span style={{ color: MUTED, display: "inline-flex" }}><TypeIcon type={item.content_type} size={16} /></span>
           <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {item.title}
           </span>
@@ -580,6 +578,37 @@ function SheetBtn({
   );
 }
 
+// Line-иконка типа материала (единый стиль с Home/Create).
+function TypeIcon({ type, size = 16, color = "currentColor" }: IconProps & { type: string }) {
+  if (type === "reel")
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="16" rx="4.5" stroke={color} strokeWidth="1.7" />
+        <path d="M3.5 8.5h17" stroke={color} strokeWidth="1.5" />
+        <path d="M10.5 11.8l3.8 2.4-3.8 2.4v-4.8z" fill={color} />
+      </svg>
+    );
+  if (type === "carousel")
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" />
+        <path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+      </svg>
+    );
+  if (type === "idea")
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M9 17h6M10 20h4M12 3a6 6 0 014 10.5c-.6.6-1 1.2-1 2H9c0-.8-.4-1.4-1-2A6 6 0 0112 3z" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="1.7" />
+      <path d="M8 9h8M8 13h8M8 17h5" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function WeekNavBtn({ dir, onClick }: { dir: "prev" | "next"; onClick: () => void }) {
   return (
     <button
@@ -626,6 +655,7 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
+        background: BG,
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
