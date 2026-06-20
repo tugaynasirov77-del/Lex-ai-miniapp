@@ -138,6 +138,19 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
     }
   }
 
+  async function rescheduleItem(item: PlanItemDTO, date: string) {
+    hapticImpact("light");
+    try {
+      await updateDraft(item.id, { planned_for_date: date });
+      hapticNotify("success");
+      track("content_status_changed", { draft_id: item.id, status: "rescheduled" });
+      setActiveItem(null);
+      void load();
+    } catch {
+      hapticNotify("error");
+    }
+  }
+
   if (!projectId) {
     return (
       <ScreenWrap>
@@ -256,6 +269,7 @@ export default function PlanScreen({ onBack: _onBack }: Props) {
           }}
           onStatus={changeStatus}
           onRemove={removeFromPlan}
+          onReschedule={rescheduleItem}
         />
       )}
 
@@ -494,13 +508,16 @@ function ActionSheet({
   onOpen,
   onStatus,
   onRemove,
+  onReschedule,
 }: {
   item: PlanItemDTO;
   onClose: () => void;
   onOpen: () => void;
   onStatus: (it: PlanItemDTO, s: ContentStatus) => void;
   onRemove: (it: PlanItemDTO) => void;
+  onReschedule: (it: PlanItemDTO, date: string) => void;
 }) {
+  const [pickDay, setPickDay] = useState(false);
   return (
     <div
       onClick={onClose}
@@ -532,13 +549,59 @@ function ActionSheet({
           </span>
         </div>
 
-        <SheetBtn label="Открыть материал" onClick={onOpen} />
-        <SheetBtn label="Отметить готовым к съёмке" onClick={() => onStatus(item, "ready_to_shoot")} />
-        <SheetBtn label="Отметить опубликованным" onClick={() => onStatus(item, "published")} />
-        <SheetBtn label="Вернуть в черновики" onClick={() => onStatus(item, "scenario_ready")} />
-        <SheetBtn label="Убрать из плана" onClick={() => onRemove(item)} danger />
-        <SheetBtn label="Отмена" onClick={onClose} subtle />
+        {pickDay ? (
+          <DayPicker
+            onPick={(date) => onReschedule(item, date)}
+            onCancel={() => setPickDay(false)}
+          />
+        ) : (
+          <>
+            <SheetBtn label="Открыть материал" onClick={onOpen} />
+            <SheetBtn label="Перенести на другой день" onClick={() => { hapticImpact("light"); setPickDay(true); }} />
+            <SheetBtn label="Отметить готовым к съёмке" onClick={() => onStatus(item, "ready_to_shoot")} />
+            <SheetBtn label="Отметить опубликованным" onClick={() => onStatus(item, "published")} />
+            <SheetBtn label="Вернуть в черновики" onClick={() => onStatus(item, "scenario_ready")} />
+            <SheetBtn label="Убрать из плана" onClick={() => onRemove(item)} danger />
+            <SheetBtn label="Отмена" onClick={onClose} subtle />
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+// Инлайн-выбор дня для переноса материала (ближайшие 14 дней).
+function DayPicker({ onPick, onCancel }: { onPick: (date: string) => void; onCancel: () => void }) {
+  const WD = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
+  const MO = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  const today = new Date();
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return { iso, dayNum: d.getDate(), wd: WD[d.getDay()], mo: MO[d.getMonth()], isToday: i === 0, isTomorrow: i === 1 };
+  });
+  return (
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 12 }}>На какой день перенести?</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+        {days.map((d) => (
+          <button
+            key={d.iso}
+            onClick={() => { hapticImpact("light"); onPick(d.iso); }}
+            style={{
+              appearance: "none", width: "calc(25% - 6px)", padding: "10px 0", borderRadius: 12,
+              border: `1px solid ${CARD_BORDER}`, background: "rgba(255,255,255,0.04)",
+              color: INK, fontFamily: "inherit", cursor: "pointer", textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800, color: d.isToday ? PINK : INK }}>{d.dayNum}</div>
+            <div style={{ fontSize: 9, color: SUB_MUTED, textTransform: "uppercase", marginTop: 1 }}>
+              {d.isToday ? "сегодня" : d.isTomorrow ? "завтра" : `${d.wd} ${d.mo}`}
+            </div>
+          </button>
+        ))}
+      </div>
+      <SheetBtn label="Назад" onClick={onCancel} subtle />
     </div>
   );
 }
