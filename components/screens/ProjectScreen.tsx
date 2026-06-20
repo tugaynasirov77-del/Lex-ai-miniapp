@@ -318,7 +318,7 @@ export default function ProjectScreen({ onBack }: Props) {
           .map((s: any) => `Слайд ${s.num}: ${s.text}`)
           .join("\n\n");
         fullCopy = [
-          `🎯 ${c.topic || ""}`,
+          `${c.topic || ""}`,
           c.hook ? `Hook: ${c.hook}` : "",
           "",
           "СЛАЙДЫ:",
@@ -340,7 +340,7 @@ export default function ProjectScreen({ onBack }: Props) {
           )
           .join("\n\n");
         fullCopy = [
-          `🎬 ${r.topic || ""}`,
+          `${r.topic || ""}`,
           `HOOK: ${r.hook || ""}`,
           "",
           "РАСКАДРОВКА:",
@@ -713,12 +713,12 @@ function IgTabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
 type QuickTool = "decoder" | "script" | "carousel" | "caption" | "pack";
 
-const QUICK_ACTIONS: { tool: QuickTool; label: string; icon: string }[] = [
-  { tool: "decoder", label: "Разобрать Reels", icon: "🔍" },
-  { tool: "script", label: "Сценарий с нуля", icon: "🎬" },
-  { tool: "carousel", label: "Карусель", icon: "🖼" },
-  { tool: "caption", label: "Подпись", icon: "✏️" },
-  { tool: "pack", label: "Пакет", icon: "📦" },
+const QUICK_ACTIONS: { tool: QuickTool; label: string }[] = [
+  { tool: "decoder", label: "Разобрать Reels" },
+  { tool: "script", label: "Сценарий с нуля" },
+  { tool: "carousel", label: "Карусель" },
+  { tool: "caption", label: "Подпись" },
+  { tool: "pack", label: "Пакет" },
 ];
 
 function IgOverviewTab({
@@ -811,7 +811,7 @@ function IgOverviewTab({
               cursor: "pointer",
             }}
           >
-            <span>{a.icon}</span>
+            <span style={{ display: "inline-flex", color: "#E84B91" }}><ToolIcon tool={a.tool} size={16} /></span>
             {a.label}
           </button>
         ))}
@@ -899,16 +899,6 @@ function IgOverviewTab({
 }
 
 function RecentRow({ draft, onOpen }: { draft: ContentDraftDTO; onOpen: () => void }) {
-  const icon =
-    draft.content_type === "reel"
-      ? "🎬"
-      : draft.content_type === "carousel"
-        ? "🖼"
-        : draft.content_type === "caption"
-          ? "✏️"
-          : draft.content_type === "idea"
-            ? "💡"
-            : "📝";
   const title =
     (draft.title && draft.title.trim()) ||
     (draft.source_topic && draft.source_topic.trim()) ||
@@ -935,7 +925,7 @@ function RecentRow({ draft, onOpen }: { draft: ContentDraftDTO; onOpen: () => vo
         cursor: "pointer",
       }}
     >
-      <span style={{ fontSize: 18 }}>{icon}</span>
+      <span style={{ display: "inline-flex", color: MUTED }}><TypeIcon type={draft.content_type} size={18} /></span>
       <span
         style={{
           flex: 1,
@@ -3462,3 +3452,26 @@ const primaryBtn: React.CSSProperties = {
   cursor: "pointer",
   boxShadow: `0 20px 48px ${YELLOW}33, 0 0 0 1px rgba(255,255,255,0.12) inset`,
 };
+
+
+// ─── Line-иконки типов/инструментов (единый стиль) ───
+type _IconProps = { size?: number; color?: string };
+function TypeIcon({ type, size = 16, color = "currentColor" }: _IconProps & { type: string }) {
+  if (type === "reel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="4.5" stroke={color} strokeWidth="1.7" /><path d="M3.5 8.5h17" stroke={color} strokeWidth="1.5" /><path d="M10.5 11.8l3.8 2.4-3.8 2.4v-4.8z" fill={color} /></svg>);
+  if (type === "carousel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" /><path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
+  if (type === "idea")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M9 17h6M10 20h4M12 3a6 6 0 014 10.5c-.6.6-1 1.2-1 2H9c0-.8-.4-1.4-1-2A6 6 0 0112 3z" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke={color} strokeWidth="1.7" /><path d="M8 9h8M8 13h8M8 17h5" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
+}
+function ToolIcon({ tool, size = 16, color = "currentColor" }: _IconProps & { tool: string }) {
+  if (tool === "decoder")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={color} strokeWidth="1.8" /><path d="M16.5 16.5L21 21" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>);
+  if (tool === "script")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 3l1.7 4.7L18.5 9.5l-4.8 1.8L12 16l-1.7-4.7L5.5 9.5l4.8-1.8L12 3z" fill={color} /></svg>);
+  if (tool === "carousel") return <TypeIcon type="carousel" size={size} color={color} />;
+  if (tool === "caption")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><path d="M14 7l3 3" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>);
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><path d="M4 7.5l8 4.5 8-4.5M12 12v9" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /></svg>);
+}
