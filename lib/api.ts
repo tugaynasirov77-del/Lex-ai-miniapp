@@ -513,6 +513,8 @@ export function updateDraft(
     planned_for_date?: string | null;
     scenario_data?: ReelScenarioData;
     title?: string;
+    ig_post_url?: string;
+    published_metrics?: { views?: number; likes?: number; comments?: number; saves?: number; shares?: number };
   },
 ): Promise<{ ok: true } | { id: string }> {
   return patchJSON(`/api/drafts/${draftId}`, patch);

@@ -153,6 +153,17 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (typeof body?.planned_for_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.planned_for_date))
     update.planned_for_date = body.planned_for_date;
   else if (body?.planned_for_date === null) update.planned_for_date = null;
+  // §20: ссылка на опубликованный Reels + ручные метрики.
+  if (typeof body?.ig_post_url === "string") update.ig_post_url = body.ig_post_url.slice(0, 500);
+  if (body?.published_metrics && typeof body.published_metrics === "object") {
+    const m = body.published_metrics as Record<string, unknown>;
+    const clean: Record<string, number> = {};
+    for (const k of ["views", "likes", "comments", "saves", "shares"]) {
+      const v = Number(m[k]);
+      if (Number.isFinite(v) && v >= 0) clean[k] = Math.floor(v);
+    }
+    update.published_metrics = clean;
+  }
   if (Object.keys(update).length === 0)
     return Response.json({ error: "no fields to update" }, { status: 400 });
 

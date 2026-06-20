@@ -312,6 +312,36 @@ function PostPublishSheet({
   onCreateNext: () => void;
   onAnalyzeNew: () => void;
 }) {
+  const [showResults, setShowResults] = useState(false);
+  const [igUrl, setIgUrl] = useState("");
+  const [views, setViews] = useState("");
+  const [likes, setLikes] = useState("");
+  const [comments, setComments] = useState("");
+  const [savingResults, setSavingResults] = useState(false);
+  const [savedResults, setSavedResults] = useState(false);
+
+  async function saveResults() {
+    if (savingResults) return;
+    setSavingResults(true);
+    hapticImpact("light");
+    try {
+      const metrics: Record<string, number> = {};
+      if (views.trim()) metrics.views = Number(views) || 0;
+      if (likes.trim()) metrics.likes = Number(likes) || 0;
+      if (comments.trim()) metrics.comments = Number(comments) || 0;
+      await updateDraft(item.id, {
+        ...(igUrl.trim() ? { ig_post_url: igUrl.trim() } : {}),
+        ...(Object.keys(metrics).length ? { published_metrics: metrics } : {}),
+      });
+      hapticNotify("success");
+      setSavedResults(true);
+    } catch {
+      hapticNotify("error");
+    } finally {
+      setSavingResults(false);
+    }
+  }
+
   return (
     <div
       onClick={onClose}
@@ -346,6 +376,43 @@ function PostPublishSheet({
             «{item.title}» вышел в свет. Что делаем дальше?
           </div>
         </div>
+
+        {/* §20: ручной ввод результатов публикации */}
+        {savedResults ? (
+          <div style={{ padding: "11px 14px", marginBottom: 8, borderRadius: 12, background: "rgba(79,212,137,0.10)", border: `1px solid rgba(79,212,137,0.30)`, fontSize: 13, color: OK, fontWeight: 600, textAlign: "center" }}>
+            ✓ Результаты сохранены
+          </div>
+        ) : showResults ? (
+          <div style={{ marginBottom: 8, padding: 12, borderRadius: 14, background: "rgba(255,255,255,0.03)", border: `1px solid ${CARD_BORDER}` }}>
+            <input
+              value={igUrl}
+              onChange={(e) => setIgUrl(e.target.value)}
+              placeholder="Ссылка на опубликованный Reels"
+              style={{ appearance: "none", width: "100%", padding: "10px 12px", marginBottom: 8, background: BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 10, color: INK, fontFamily: "inherit", fontSize: 13, outline: "none" }}
+            />
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              {([["Просмотры", views, setViews], ["Лайки", likes, setLikes], ["Комменты", comments, setComments]] as const).map(([ph, val, set]) => (
+                <input
+                  key={ph}
+                  value={val}
+                  onChange={(e) => set(e.target.value.replace(/[^\d]/g, ""))}
+                  inputMode="numeric"
+                  placeholder={ph}
+                  style={{ appearance: "none", width: 0, flex: 1, minWidth: 0, padding: "10px 8px", background: BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 10, color: INK, fontFamily: "inherit", fontSize: 13, outline: "none", textAlign: "center" }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={saveResults}
+              disabled={savingResults}
+              style={{ appearance: "none", width: "100%", padding: "12px 0", border: "none", borderRadius: 12, background: IG_GRADIENT, color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: savingResults ? "wait" : "pointer", opacity: savingResults ? 0.7 : 1 }}
+            >
+              {savingResults ? "Сохраняю…" : "Сохранить результаты"}
+            </button>
+          </div>
+        ) : (
+          <SheetBtn label="Добавить результаты (ссылка, метрики)" onClick={() => { hapticImpact("light"); setShowResults(true); }} />
+        )}
 
         <SheetBtn label="Создать продолжение темы" onClick={onCreateNext} />
         <SheetBtn label="Попробовать другой хук" onClick={onCreateNext} />
