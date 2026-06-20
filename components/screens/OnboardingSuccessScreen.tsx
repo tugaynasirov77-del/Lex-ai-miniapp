@@ -143,7 +143,7 @@ export default function OnboardingSuccessScreen({
                 whiteSpace: "nowrap",
               }}
             >
-              📝 «{scenarioTitle}» · {projectName}
+              «{scenarioTitle}» · {projectName}
             </div>
           )}
         </div>

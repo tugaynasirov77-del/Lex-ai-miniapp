@@ -25,9 +25,9 @@ type Pack = {
 };
 
 const LOADER_STEPS = [
-  "✍️ Пишу сценарий Reels…",
-  "🖼 Собираю карусель…",
-  "✏️ Подбираю подпись…",
+  "Пишу сценарий Reels…",
+  "Собираю карусель…",
+  "Подбираю подпись…",
 ];
 
 export default function ContentPackCard({ projectId }: Props) {
@@ -167,7 +167,7 @@ export default function ContentPackCard({ projectId }: Props) {
                 : `0 14px 32px rgba(232,75,145,0.40), 0 0 0 1px rgba(255,255,255,0.16) inset`,
           }}
         >
-          {busy ? "Собираю пакет…" : "📦 Собрать контент-пакет"}
+          {busy ? "Собираю пакет…" : "Собрать контент-пакет"}
         </button>
       </div>
 
@@ -208,7 +208,7 @@ export default function ContentPackCard({ projectId }: Props) {
 
 function PackResult({ pack }: { pack: Pack }) {
   const reelText = [
-    `🎬 ${pack.reel.title}`,
+    `${pack.reel.title}`,
     `HOOK: ${pack.reel.hook}`,
     "",
     "ОЗВУЧКА:",
@@ -221,7 +221,7 @@ function PackResult({ pack }: { pack: Pack }) {
   ].join("\n");
 
   const carouselText = [
-    `🖼 ${pack.carousel.topic}`,
+    `${pack.carousel.topic}`,
     "",
     ...pack.carousel.slides.map((s) => `Слайд ${s.num}: ${s.text}`),
     "",
@@ -249,21 +249,21 @@ function PackResult({ pack }: { pack: Pack }) {
       </div>
 
       <PackSection
-        icon="🎬"
+        type="reel"
         label="Reels — сценарий"
         accent="rgba(221,42,123,0.28)"
         preview={`${pack.reel.hook}\n\n${pack.reel.voice_over}`}
         copyText={reelText}
       />
       <PackSection
-        icon="🖼"
+        type="carousel"
         label={`Карусель — ${pack.carousel.slides.length} слайдов`}
         accent="rgba(40,160,235,0.28)"
         preview={pack.carousel.slides.map((s) => `${s.num}. ${s.text}`).join("\n")}
         copyText={carouselText}
       />
       <PackSection
-        icon="✏️"
+        type="caption"
         label="Подпись и хештеги"
         accent="rgba(91,214,107,0.28)"
         preview={captionText}
@@ -274,13 +274,13 @@ function PackResult({ pack }: { pack: Pack }) {
 }
 
 function PackSection({
-  icon,
+  type,
   label,
   accent,
   preview,
   copyText,
 }: {
-  icon: string;
+  type: string;
   label: string;
   accent: string;
   preview: string;
@@ -297,7 +297,7 @@ function PackSection({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ display: "inline-flex", color: INK }}><PackTypeIcon type={type} size={16} /></span>
         <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", color: INK }}>
           {label}
         </span>
@@ -344,8 +344,18 @@ function PackSection({
           cursor: "pointer",
         }}
       >
-        {done ? "✓ Скопировано" : "📋 Скопировать"}
+        {done ? "✓ Скопировано" : "Скопировать"}
       </button>
     </div>
   );
+}
+
+
+type _IconProps = { size?: number; color?: string };
+function PackTypeIcon({ type, size = 16, color = "currentColor" }: _IconProps & { type: string }) {
+  if (type === "reel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="4.5" stroke={color} strokeWidth="1.7" /><path d="M3.5 8.5h17" stroke={color} strokeWidth="1.5" /><path d="M10.5 11.8l3.8 2.4-3.8 2.4v-4.8z" fill={color} /></svg>);
+  if (type === "carousel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" /><path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><path d="M14 7l3 3" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>);
 }

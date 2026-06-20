@@ -146,7 +146,7 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
                 : "0 12px 28px rgba(91,214,107,0.30), 0 0 0 1px rgba(255,255,255,0.16) inset",
           }}
         >
-          {busy ? "Пишу подписи…" : "✨ Сгенерировать"}
+          {busy ? "Пишу подписи…" : "Сгенерировать"}
         </button>
       </div>
 
@@ -367,7 +367,7 @@ function CopyButton({
         cursor: "pointer",
       }}
     >
-      {done ? "✓ Скопировано" : `📋 ${label}`}
+      {done ? "✓ Скопировано" : label}
     </button>
   );
 }

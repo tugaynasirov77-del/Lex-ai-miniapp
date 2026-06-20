@@ -17,12 +17,12 @@ const MUTED = "rgba(255,255,255,0.58)";
 
 type Props = { onBack: () => void };
 
-const TABS: { id: ToolId; label: string; icon: string }[] = [
-  { id: "decoder", label: "Разобрать", icon: "🔍" },
-  { id: "script", label: "Сценарий", icon: "✨" },
-  { id: "carousel", label: "Карусель", icon: "🖼" },
-  { id: "caption", label: "Подпись", icon: "✏️" },
-  { id: "pack", label: "Пакет", icon: "📦" },
+const TABS: { id: ToolId; label: string }[] = [
+  { id: "decoder", label: "Разобрать" },
+  { id: "script", label: "Сценарий" },
+  { id: "carousel", label: "Карусель" },
+  { id: "caption", label: "Подпись" },
+  { id: "pack", label: "Пакет" },
 ];
 
 /**
@@ -115,7 +115,7 @@ export default function ToolsScreen({ onBack: _onBack }: Props) {
                   : "none",
               }}
             >
-              <span style={{ fontSize: 13 }}>{t.icon}</span>
+              <span style={{ display: "inline-flex" }}><ToolIcon tool={t.id} size={15} /></span>
               {t.label}
             </button>
           );
@@ -168,4 +168,18 @@ function Wrap({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+
+type _IconProps = { size?: number; color?: string };
+function ToolIcon({ tool, size = 15, color = "currentColor" }: _IconProps & { tool: string }) {
+  if (tool === "decoder")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={color} strokeWidth="1.8" /><path d="M16.5 16.5L21 21" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>);
+  if (tool === "script")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 3l1.7 4.7L18.5 9.5l-4.8 1.8L12 16l-1.7-4.7L5.5 9.5l4.8-1.8L12 3z" fill={color} /></svg>);
+  if (tool === "carousel")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="7" y="5" width="12" height="14" rx="2.5" stroke={color} strokeWidth="1.7" /><path d="M4 8v9a2 2 0 002 2h8" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></svg>);
+  if (tool === "caption")
+    return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><path d="M14 7l3 3" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>);
+  return (<svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><path d="M4 7.5l8 4.5 8-4.5M12 12v9" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /></svg>);
 }

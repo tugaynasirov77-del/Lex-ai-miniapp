@@ -57,7 +57,7 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
 
   const title =
     variant === "value_moment"
-      ? "Ваш первый сценарий готов 🎬"
+      ? "Ваш первый сценарий готов"
       : "Бесплатные разборы закончились";
   const subtitle =
     variant === "value_moment"

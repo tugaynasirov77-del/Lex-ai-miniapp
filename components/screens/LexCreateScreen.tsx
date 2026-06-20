@@ -990,10 +990,10 @@ function PostActions({
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {([
-              { key: "shorter" as const, icon: "✂️", label: "Короче" },
-              { key: "sharper" as const, icon: "🔥", label: "Острее" },
-              { key: "emotional" as const, icon: "💗", label: "Эмоциональнее" },
-              { key: "specific" as const, icon: "📊", label: "Конкретнее" },
+              { key: "shorter" as const, label: "Короче" },
+              { key: "sharper" as const, label: "Острее" },
+              { key: "emotional" as const, label: "Эмоциональнее" },
+              { key: "specific" as const, label: "Конкретнее" },
             ]).map((b) => {
               const busy = refineBusy === b.key;
               const anyBusy = refineBusy !== null;
@@ -1022,7 +1022,6 @@ function PostActions({
                     gap: 6,
                   }}
                 >
-                  <span>{b.icon}</span>
                   {busy ? "…" : b.label}
                 </button>
               );
@@ -1110,7 +1109,7 @@ function PostActions({
                 letterSpacing: "0.02em",
               }}
             >
-              {photoBusy ? "ЗАГРУЗКА…" : "📎 Прикрепить фото"}
+              {photoBusy ? "ЗАГРУЗКА…" : "Прикрепить фото"}
             </button>
           )}
           {photoErr && (
