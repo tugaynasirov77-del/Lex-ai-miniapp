@@ -239,6 +239,21 @@ export async function markOnboardingDone(): Promise<{ ok: true }> {
   );
 }
 
+// --- напоминания (частота) ---
+export type ReminderFrequency = "daily" | "medium" | "rare" | "off";
+
+export async function getReminderFrequency(): Promise<ReminderFrequency> {
+  const r = await getJSON<{ frequency: ReminderFrequency }>("/api/user/prefs/reminders");
+  return r.frequency;
+}
+
+export async function setReminderFrequency(frequency: ReminderFrequency): Promise<{ ok: true }> {
+  return postJSON<{ frequency: ReminderFrequency }, { ok: true }>(
+    "/api/user/prefs/reminders",
+    { frequency },
+  );
+}
+
 // --- personal script (Reels сценарий) ---
 
 export type ScriptRefineAction =

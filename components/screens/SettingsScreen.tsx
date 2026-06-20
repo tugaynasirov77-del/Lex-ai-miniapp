@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
 import { hapticImpact, hapticSelection } from "../../lib/telegram";
+import { getReminderFrequency, setReminderFrequency } from "../../lib/api";
 
 // ─── Гамма главной ───
 const BG = "#0B0B11";
@@ -47,6 +48,14 @@ export default function SettingsScreen({ onBack }: Props) {
       const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Пользователь";
       setTgUser({ name, handle: u.username });
     }
+    // Серверная истина: частота напоминаний (off → тогл выключен).
+    getReminderFrequency()
+      .then((f) => {
+        const on = f !== "off";
+        setNotif(on);
+        try { localStorage.setItem(NOTIF_KEY, on ? "1" : "0"); } catch {}
+      })
+      .catch(() => {});
   }, []);
 
   const toggleNotif = () => {
@@ -54,6 +63,8 @@ export default function SettingsScreen({ onBack }: Props) {
     setNotif((v) => {
       const next = !v;
       try { localStorage.setItem(NOTIF_KEY, next ? "1" : "0"); } catch {}
+      // Синхронизируем с бэкендом: on → daily, off → off (крон это читает).
+      setReminderFrequency(next ? "daily" : "off").catch(() => {});
       return next;
     });
   };
