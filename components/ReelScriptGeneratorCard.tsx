@@ -170,7 +170,7 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
                 : "0 12px 28px rgba(240,160,48,0.36), 0 0 0 1px rgba(255,255,255,0.16) inset",
           }}
         >
-          {busy ? "Пишу сценарий…" : "🎬 Сгенерировать сценарий"}
+          {busy ? "Пишу сценарий…" : "Сгенерировать сценарий"}
         </button>
       </div>
 
@@ -221,7 +221,7 @@ function ScriptResult({ script }: { script: LexReelScript }) {
             marginBottom: 6,
           }}
         >
-          🎯 Hook · первые 2-3 сек
+          Hook · первые 2-3 сек
         </div>
         <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>
           {script.hook}
@@ -247,7 +247,7 @@ function ScriptResult({ script }: { script: LexReelScript }) {
             marginBottom: 10,
           }}
         >
-          🎬 Раскадровка · {script.duration_sec} сек
+          Раскадровка · {script.duration_sec} сек
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {script.scenes.map((s, i) => (
@@ -298,7 +298,7 @@ function ScriptResult({ script }: { script: LexReelScript }) {
               marginBottom: 6,
             }}
           >
-            🎵 Музыка
+            Музыка
           </div>
           <div style={{ fontSize: 13, color: INK, lineHeight: 1.45 }}>
             {script.music_hint}
@@ -325,7 +325,7 @@ function ScriptResult({ script }: { script: LexReelScript }) {
             marginBottom: 8,
           }}
         >
-          ✏️ Подпись
+          Подпись
         </div>
         <p
           style={{
@@ -451,7 +451,7 @@ function CopyButton({
         cursor: "pointer",
       }}
     >
-      {done ? "✓ Скопировано" : `📋 ${label}`}
+      {done ? "✓ Скопировано" : label}
     </button>
   );
 }

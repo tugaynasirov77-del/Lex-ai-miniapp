@@ -179,7 +179,7 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
                 : "0 12px 28px rgba(221,42,123,0.36), 0 0 0 1px rgba(255,255,255,0.16) inset",
           }}
         >
-          {busy ? "Собираю карусель…" : "🎨 Собрать карусель"}
+          {busy ? "Собираю карусель…" : "Собрать карусель"}
         </button>
       </div>
 
@@ -245,7 +245,7 @@ function CarouselResult({
             marginBottom: 6,
           }}
         >
-          🎯 Hook
+          Hook
         </div>
         <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>
           {carousel.hook}
@@ -331,7 +331,7 @@ function CarouselResult({
             marginBottom: 8,
           }}
         >
-          ✏️ Подпись к посту
+          Подпись к посту
         </div>
         <p
           style={{
@@ -447,7 +447,7 @@ function CopyButton({
         cursor: "pointer",
       }}
     >
-      {done ? "✓ Скопировано" : `📋 ${label}`}
+      {done ? "✓ Скопировано" : label}
     </button>
   );
 }

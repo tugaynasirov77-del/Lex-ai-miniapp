@@ -148,7 +148,7 @@ export default function ReviewCard({
 
         {draft.scheduled_at && (
           <div className="text-xs text-indigo-300">
-            📅 {new Date(draft.scheduled_at).toLocaleString("ru-RU")}
+            {new Date(draft.scheduled_at).toLocaleString("ru-RU")}
           </div>
         )}
       </div>
@@ -372,7 +372,7 @@ function CarouselBody({
                     <div className="text-[9px] leading-snug text-white/80 line-clamp-4">{stripHtml(body)}</div>
                   )}
                   {s.visual && (
-                    <div className="text-[8px] italic text-white/50 line-clamp-2">🎨 {s.visual}</div>
+                    <div className="text-[8px] italic text-white/50 line-clamp-2">{s.visual}</div>
                   )}
                 </div>
               </div>

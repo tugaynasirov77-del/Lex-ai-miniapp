@@ -495,7 +495,7 @@ function TierCard({
             boxShadow: `0 8px 22px ${PINK_RGBA(0.4)}`,
           }}
         >
-          ⭐ Популярный
+          Популярный
         </div>
       )}
 
