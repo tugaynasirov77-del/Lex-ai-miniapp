@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { lexWriteCarousel, type CarouselStyle, type LexCarousel } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import PaywallSheet from "./PaywallSheet";
 
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
@@ -28,6 +29,7 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [carousel, setCarousel] = useState<LexCarousel | null>(null);
   const [slideIdx, setSlideIdx] = useState(0);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -42,6 +44,10 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
       hapticNotify("success");
     } catch (e: any) {
       hapticNotify("error");
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        return;
+      }
       setErr(e?.message || "Не получилось сгенерировать");
     } finally {
       setBusy(false);
@@ -199,6 +205,10 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
           slideIdx={slideIdx}
           setSlideIdx={setSlideIdx}
         />
+      )}
+
+      {paywallOpen && (
+        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
       )}
     </div>
   );

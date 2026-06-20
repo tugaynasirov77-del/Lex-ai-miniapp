@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { lexWriteReel, type LexReelScript } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
+import PaywallSheet from "./PaywallSheet";
 
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
@@ -20,6 +21,7 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [script, setScript] = useState<LexReelScript | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -33,6 +35,10 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
       hapticNotify("success");
     } catch (e: any) {
       hapticNotify("error");
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        return;
+      }
       setErr(e?.message || "Не получилось сгенерировать");
     } finally {
       setBusy(false);
@@ -185,6 +191,10 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
       )}
 
       {script && <ScriptResult script={script} />}
+
+      {paywallOpen && (
+        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import StateBlock from "./StateBlock";
+import PaywallSheet from "./PaywallSheet";
 
 const YELLOW = "#F5E70A";
 const INK = "#FFFFFF";
@@ -35,6 +36,7 @@ export default function ContentPackCard({ projectId }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [pack, setPack] = useState<Pack | null>(null);
   const [step, setStep] = useState(0);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -60,6 +62,11 @@ export default function ContentPackCard({ projectId }: Props) {
       hapticNotify("success");
     } catch (e: any) {
       hapticNotify("error");
+      if (e?.status === 402) {
+        setPaywallOpen(true);
+        if (stepTimer.current) clearInterval(stepTimer.current);
+        return;
+      }
       setErr(e?.message || "Не получилось собрать пакет");
     } finally {
       if (stepTimer.current) clearInterval(stepTimer.current);
@@ -191,6 +198,10 @@ export default function ContentPackCard({ projectId }: Props) {
 
       {/* Результат */}
       {pack && <PackResult pack={pack} />}
+
+      {paywallOpen && (
+        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
+      )}
     </div>
   );
 }
