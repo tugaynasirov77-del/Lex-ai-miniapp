@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { lexWriteReel, getDailyIdeas, type LexReelScript, type DailyIdeaDTO } from "../lib/api";
+import { lexWriteReel, getDailyIdeas, refineIdeaStandalone, type LexReelScript, type DailyIdeaDTO, type AdaptedTopicDTO } from "../lib/api";
 import { hapticImpact, hapticNotify, hapticSelection } from "../lib/telegram";
 import PaywallSheet from "./PaywallSheet";
 
@@ -28,6 +28,27 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
   function toggleStyle(s: string) {
     hapticImpact("light");
     setStyles((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  }
+
+  // §14: «Мы усилили вашу идею» — refine сырой формулировки.
+  const [refining, setRefining] = useState(false);
+  const [refined, setRefined] = useState<AdaptedTopicDTO | null>(null);
+
+  async function enhanceIdea() {
+    if (topic.trim().length < 5 || refining || busy) return;
+    setRefining(true);
+    setErr(null);
+    hapticImpact("light");
+    try {
+      const r = await refineIdeaStandalone(projectId, topic.trim());
+      setRefined(r.topic);
+      hapticNotify("success");
+    } catch (e: any) {
+      hapticNotify("error");
+      setErr(e?.message || "Не получилось усилить идею");
+    } finally {
+      setRefining(false);
+    }
   }
 
   // §14: вилка «есть тема / подскажи идею».
@@ -185,6 +206,7 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
           value={topic}
           onChange={(e) => {
             setTopic(e.target.value);
+            if (refined) setRefined(null);
             if (err) setErr(null);
           }}
           placeholder="Например: показываю 3 фишки макияжа за 30 секунд"
@@ -206,6 +228,48 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
           }}
           disabled={busy}
         />
+
+        {/* §14: усилить сырую формулировку */}
+        {topic.trim().length >= 5 && !refined && (
+          <button
+            onClick={enhanceIdea}
+            disabled={refining || busy}
+            style={{
+              appearance: "none", alignSelf: "flex-start", padding: "8px 14px", borderRadius: 999,
+              border: `1px solid ${ORANGE}`, background: "rgba(240,160,48,0.10)", color: ORANGE,
+              fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: refining ? "wait" : "pointer",
+            }}
+          >
+            {refining ? "Усиливаю…" : "Усилить идею"}
+          </button>
+        )}
+
+        {refined && (
+          <div style={{ padding: 12, borderRadius: 14, background: "rgba(240,160,48,0.07)", border: `1px solid rgba(240,160,48,0.28)` }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.10em", textTransform: "uppercase", color: ORANGE, marginBottom: 8 }}>
+              Мы усилили вашу идею
+            </div>
+            <div style={{ fontSize: 11, color: SUB_MUTED, marginBottom: 2 }}>Было</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 8, lineHeight: 1.4 }}>{topic.trim()}</div>
+            <div style={{ fontSize: 11, color: SUB_MUTED, marginBottom: 2 }}>Стало</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: INK, lineHeight: 1.35, marginBottom: 4 }}>{refined.title}</div>
+            <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.4, marginBottom: 10 }}>«{refined.hook}»</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => { hapticSelection(); setTopic(refined.hook || refined.title); setRefined(null); }}
+                style={{ appearance: "none", flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #FFD58A 0%, #F0A030 50%, #C97D10 100%)", color: "#1A0E04", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+              >
+                Использовать
+              </button>
+              <button
+                onClick={() => { hapticImpact("light"); setRefined(null); }}
+                style={{ appearance: "none", padding: "10px 16px", borderRadius: 10, border: `1px solid ${CARD_BORDER}`, background: "transparent", color: MUTED, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                Оставить
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 6 }}>
           {([15, 30, 60] as Duration[]).map((d) => (

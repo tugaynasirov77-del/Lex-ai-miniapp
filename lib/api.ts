@@ -453,6 +453,16 @@ export function refineMyTopic(
   });
 }
 
+// §14: усиление сырой идеи без референсного разбора («Сценарий с нуля»).
+export function refineIdeaStandalone(
+  projectId: string,
+  userIdea: string,
+): Promise<{ ok: true; topic: AdaptedTopicDTO }> {
+  return postJSON(`/api/projects/${projectId}/ig/refine-idea`, {
+    user_idea: userIdea,
+  });
+}
+
 // ───────────── Контент-план (Этап 2) ─────────────
 
 export type PlanItemDTO = {

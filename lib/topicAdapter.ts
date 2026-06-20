@@ -125,6 +125,68 @@ export async function adaptTopics(args: {
  * Улучшает пользовательскую идею: берёт её формулировку + механику исходного Reels
  * + контекст проекта, возвращает усиленную версию.
  */
+/**
+ * Усиление сырой идеи БЕЗ референсного разбора (§14 «Сценарий с нуля»).
+ * Опирается только на контекст проекта — даёт улучшенную формулировку.
+ */
+export async function refineIdeaStandalone(args: {
+  userIdea: string;
+  brand: BrandKit | null;
+  projectCtx: ProjectContext;
+}): Promise<AdaptedTopic> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const niche = args.projectCtx.niche || args.brand?.short_description || "не задано";
+  const audience = args.projectCtx.audience || args.brand?.audience || "не задано";
+  const style = args.projectCtx.content_style || args.brand?.voice || "не задано";
+  const goal = args.projectCtx.content_goal || "не задано";
+
+  const prompt = `Ты — креативный директор для Instagram Reels. Автор предложил сырую идею для ролика — усиль её под его проект.
+
+Проект:
+- Ниша: ${niche}
+- Аудитория: ${audience}
+- Стиль подачи: ${style}
+- Цель контента: ${goal}
+
+Идея автора:
+"""
+${args.userIdea}
+"""
+
+ЗАДАЧА:
+Сделай из сырой идеи сильную тему для Reels: цепляющий хук в первых 2-3 секундах, чёткий формат под нишу и аудиторию. Сохрани суть идеи автора, только усиль её и конкретизируй.
+
+Верни СТРОГО JSON без markdown:
+{
+  "title": "...",
+  "hook": "...",
+  "rationale": "почему так сильнее (1 предложение)",
+  "format": "...",
+  "duration_sec": 30
+}`;
+
+  const r = await client.messages.create({
+    model: MODEL,
+    max_tokens: 700,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const raw = r.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("AI вернул некорректный ответ");
+  const t = JSON.parse(m[0]) as AdaptedTopic;
+  return {
+    title: String(t.title || "").trim(),
+    hook: String(t.hook || "").trim(),
+    rationale: String(t.rationale || "").trim(),
+    format: String(t.format || "").trim(),
+    duration_sec: Math.max(10, Math.min(90, Number(t.duration_sec) || 30)),
+  };
+}
+
 export async function refineUserIdea(args: {
   userIdea: string;
   analysis: ReelAnalysisDTO;
