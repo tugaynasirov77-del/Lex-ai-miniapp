@@ -98,7 +98,7 @@ export default function BottomTabBar() {
               color: isActive ? ACTIVE : MUTED,
               fontFamily: "inherit",
               fontSize: 10.5,
-              fontWeight: isActive ? 700 : 600,
+              fontWeight: 600,
               letterSpacing: "0.02em",
               transition: "color 220ms ease",
             }}
@@ -118,8 +118,8 @@ export default function BottomTabBar() {
       })}
       <style>{`
         @keyframes lex-tab-fade {
-          0% { transform: scale(0.92); opacity: 0.55; }
-          100% { transform: scale(1); opacity: 1; }
+          0% { opacity: 0.55; }
+          100% { opacity: 1; }
         }
       `}</style>
     </div>
