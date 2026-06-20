@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFlowActions } from "../../flow";
 import { hapticImpact, hapticSelection } from "../../lib/telegram";
+import * as P from "../icons/PremiumIcons";
 
 // ─── Гамма главной ───
 const BG = "#0B0B11";
@@ -122,7 +123,7 @@ export default function SettingsScreen({ onBack }: Props) {
       <SectionTitle>Предпочтения</SectionTitle>
 
       <ToggleRow
-        icon={<BellIcon />}
+        icon={<P.PremiumBellIcon size={40} />}
         label="Уведомления о плане"
         sub="Напоминания о публикации"
         value={notif}
@@ -134,9 +135,7 @@ export default function SettingsScreen({ onBack }: Props) {
         padding: "12px 14px", marginBottom: 12,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: SOFT, border: `1px solid ${CARD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, flexShrink: 0 }}>
-            <GlobeIcon />
-          </div>
+          <div style={{ flexShrink: 0 }}><P.PremiumGlobeIcon size={40} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: INK }}>Язык генерации</div>
             <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>На каком языке AI пишет сценарии</div>
@@ -172,15 +171,7 @@ export default function SettingsScreen({ onBack }: Props) {
           padding: "12px 14px", color: INK, fontFamily: "inherit", cursor: "pointer", marginBottom: 12,
         }}
       >
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: IG_GRADIENT,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#FFFFFF", flexShrink: 0,
-          boxShadow: `0 6px 16px ${PINK}40`,
-        }}>
-          <RestartIcon />
-        </div>
+        <P.PremiumRestartIcon size={40} />
         <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: INK }}>Пройти онбординг заново</div>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>Перенастроить AI под себя</div>
@@ -213,9 +204,7 @@ export default function SettingsScreen({ onBack }: Props) {
             fontSize: 13.5, fontWeight: 700,
           }}
         >
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: `${RED}1A`, border: `1px solid ${RED}40`, display: "flex", alignItems: "center", justifyContent: "center", color: RED, flexShrink: 0 }}>
-            <TrashIcon />
-          </div>
+          <div style={{ flexShrink: 0 }}><P.PremiumTrashIcon size={40} /></div>
           <span style={{ flex: 1, textAlign: "left" }}>Удалить аккаунт</span>
         </button>
       ) : (
