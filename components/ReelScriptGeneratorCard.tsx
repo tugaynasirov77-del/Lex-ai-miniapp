@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { lexWriteReel, type LexReelScript } from "../lib/api";
-import { hapticImpact, hapticNotify } from "../lib/telegram";
+import { lexWriteReel, getDailyIdeas, type LexReelScript, type DailyIdeaDTO } from "../lib/api";
+import { hapticImpact, hapticNotify, hapticSelection } from "../lib/telegram";
 import PaywallSheet from "./PaywallSheet";
 
 const INK = "#FFFFFF";
@@ -22,6 +22,30 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [script, setScript] = useState<LexReelScript | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // §14: вилка «есть тема / подскажи идею».
+  const [mode, setMode] = useState<"own" | "suggest">("own");
+  const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
+  const [ideasLoading, setIdeasLoading] = useState(false);
+
+  async function loadIdeas() {
+    if (ideas || ideasLoading) return;
+    setIdeasLoading(true);
+    try {
+      const r = await getDailyIdeas(projectId);
+      setIdeas(r.ideas);
+    } catch {
+      setIdeas([]);
+    } finally {
+      setIdeasLoading(false);
+    }
+  }
+
+  function pickIdea(idea: DailyIdeaDTO) {
+    hapticSelection();
+    setTopic(idea.hook || idea.title);
+    setMode("own");
+  }
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -87,6 +111,64 @@ export default function ReelScriptGeneratorCard({ projectId }: Props) {
         Опиши тему и длительность — получи готовый сценарий с раскадровкой,
         хуком, подписью и подбором музыки.
       </p>
+
+      {/* §14: выбор «есть тема / подскажи идею» */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {([["own", "У меня есть тема"], ["suggest", "Подскажи идею"]] as const).map(([m, label]) => (
+          <button
+            key={m}
+            onClick={() => {
+              hapticImpact("light");
+              setMode(m);
+              if (m === "suggest") void loadIdeas();
+            }}
+            disabled={busy}
+            style={{
+              appearance: "none", flex: 1, padding: "9px 0", borderRadius: 10,
+              border: `1px solid ${mode === m ? ORANGE : CARD_BORDER}`,
+              background: mode === m ? "rgba(240,160,48,0.12)" : "rgba(255,255,255,0.04)",
+              color: mode === m ? ORANGE : MUTED, fontFamily: "inherit",
+              fontSize: 12.5, fontWeight: mode === m ? 800 : 600, cursor: busy ? "wait" : "pointer",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "suggest" && (
+        <div style={{ marginBottom: 12 }}>
+          {ideasLoading && !ideas ? (
+            <div style={{ fontSize: 12, color: MUTED, textAlign: "center", padding: 12 }}>
+              Подбираю идеи под твою нишу…
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(ideas || []).map((idea, i) => (
+                <button
+                  key={i}
+                  onClick={() => pickIdea(idea)}
+                  style={{
+                    appearance: "none", textAlign: "left", width: "100%", padding: "11px 12px",
+                    borderRadius: 12, border: `1px solid ${CARD_BORDER}`, background: "rgba(255,255,255,0.04)",
+                    color: INK, fontFamily: "inherit", cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.3 }}>{idea.title}</div>
+                  {idea.hook && (
+                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3, lineHeight: 1.4 }}>«{idea.hook}»</div>
+                  )}
+                </button>
+              ))}
+              {ideas && ideas.length === 0 && (
+                <div style={{ fontSize: 12, color: SUB_MUTED, textAlign: "center", padding: 8 }}>
+                  Идеи не загрузились — введи тему вручную.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <textarea
