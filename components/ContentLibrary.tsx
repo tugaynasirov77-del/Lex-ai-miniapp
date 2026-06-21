@@ -90,6 +90,7 @@ export default function ContentLibrary({ projectId, onOpenItem }: Props) {
   const [reloadTick, setReloadTick] = useState(0);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [active, setActive] = useState<ContentDraftDTO | null>(null);
 
   // Грузим ВСЁ один раз, дальше фильтруем на клиенте.
   useEffect(() => {
@@ -173,12 +174,88 @@ export default function ContentLibrary({ projectId, onOpenItem }: Props) {
               item={it}
               onOpen={() => {
                 hapticImpact("light");
-                onOpenItem?.(it.id);
+                if (onOpenItem) onOpenItem(it.id);
+                else setActive(it);
               }}
             />
           ))}
         </div>
       )}
+
+      {active && <DraftDetailSheet item={active} onClose={() => setActive(null)} />}
+    </div>
+  );
+}
+
+// Имя материала: пробуем все источники, иначе по типу.
+function draftTitle(it: ContentDraftDTO): string {
+  const sd: any = it.scenario_data;
+  const cand =
+    (it.title && it.title.trim()) ||
+    (sd?.title && String(sd.title).trim()) ||
+    (it.source_topic && it.source_topic.trim()) ||
+    (it.idea_text && it.idea_text.trim()) ||
+    (sd?.hook && String(sd.hook).trim()) ||
+    (it.body && it.body.trim().split("\n")[0]) ||
+    (it.caption && it.caption.trim().split("\n")[0]) ||
+    "";
+  if (cand) return cand.length > 80 ? cand.slice(0, 80) + "…" : cand;
+  const byType: Record<string, string> = {
+    reel: "Сценарий Reels", carousel: "Карусель", caption: "Подпись", idea: "Идея", post: "Пост",
+  };
+  return byType[it.content_type] || "Материал";
+}
+
+// Собирает читаемый текст материала для просмотра/копирования.
+function draftBodyText(it: ContentDraftDTO): string {
+  const sd: any = it.scenario_data;
+  if (sd) {
+    const parts: string[] = [];
+    if (sd.hook) parts.push(`Хук: ${sd.hook}`);
+    const scenes = sd.storyboard || sd.scenes;
+    if (Array.isArray(scenes) && scenes.length) {
+      parts.push("\nРаскадровка:");
+      scenes.forEach((s: any, i: number) => {
+        const t = s.seconds || (s.start != null ? `${s.start}-${s.end}с` : `${i + 1}`);
+        parts.push(`[${t}] ${s.action || s.text || ""}${s.on_screen ? `\n  на экране: ${s.on_screen}` : ""}`);
+      });
+    }
+    if (sd.voice_over) parts.push(`\nОзвучка:\n${sd.voice_over}`);
+    if (sd.cta) parts.push(`\nCTA: ${sd.cta}`);
+    if (sd.caption || it.caption) parts.push(`\nПодпись:\n${sd.caption || it.caption}`);
+    return parts.join("\n").trim();
+  }
+  return (it.body || it.caption || it.idea_text || "Содержимое недоступно").trim();
+}
+
+function DraftDetailSheet({ item, onClose }: { item: ContentDraftDTO; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const text = draftBodyText(item);
+  const sl = statusBadge(statusGroup(item.status));
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#15151E", borderTopLeftRadius: 22, borderTopRightRadius: 22, border: "1px solid rgba(255,255,255,0.10)", padding: "16px 18px max(calc(env(safe-area-inset-bottom) + 18px), 28px)", maxHeight: "82vh", display: "flex", flexDirection: "column" }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 14px", flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: sl.color, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)" }}>{sl.label}</span>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 12, letterSpacing: "-0.01em" }}>{draftTitle(item)}</div>
+        <div style={{ overflowY: "auto", flex: 1, fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
+          {text}
+        </div>
+        <button
+          onClick={() => { navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}
+          style={{ flexShrink: 0, appearance: "none", width: "100%", padding: "13px 0", border: "none", borderRadius: 12, background: "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)", color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+        >
+          {copied ? "✓ Скопировано" : "Скопировать"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -240,10 +317,7 @@ function LibraryCard({
   item: ContentDraftDTO;
   onOpen: () => void;
 }) {
-  const title =
-    (item.title && item.title.trim()) ||
-    (item.source_topic && item.source_topic.trim()) ||
-    "Без названия";
+  const title = draftTitle(item);
   const badge = statusBadge(statusGroup(item.status));
   const date = formatDate(item.created_at);
 
