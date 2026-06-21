@@ -71,7 +71,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const sb = getSupabase();
   const { data } = await sb
     .from("content_drafts")
-    .select("id, title, body, content_type, status, planned_for_date, source_topic, scenario_data, created_at")
+    .select("id, chosen_title, body, content_type, status, planned_for_date, source_topic, scenario_data, idea_text, caption, created_at")
     .eq("project_id", id)
     .gte("planned_for_date", weekStart)
     .lte("planned_for_date", weekEnd)
@@ -89,7 +89,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .filter((it) => it.planned_for_date === date)
       .map((it) => ({
         id: it.id,
-        title: it.title || it.source_topic || "Без названия",
+        title:
+          (it as any).chosen_title ||
+          (it as any).scenario_data?.title ||
+          it.source_topic ||
+          (it as any).idea_text ||
+          ((it as any).body ? String((it as any).body).split("\n")[0].slice(0, 80) : "") ||
+          "Без названия",
         content_type: it.content_type,
         status: it.status,
         planned_for_date: it.planned_for_date,

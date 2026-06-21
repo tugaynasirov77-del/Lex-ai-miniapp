@@ -529,15 +529,7 @@ export default function ProjectScreen({ onBack }: Props) {
 
       {!settingsOnly && !isIg && <TabHint tab={tab} isIg={isIg} />}
 
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          marginTop: 6,
-          paddingBottom:
-            "max(calc(env(safe-area-inset-bottom) + 110px), 130px)",
-        }}
-      >
+      <div style={{ marginTop: 6 }}>
         {isIg && igTab === "overview" && (
           <IgOverviewTab
             projectId={projectId}
