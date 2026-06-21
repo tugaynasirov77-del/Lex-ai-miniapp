@@ -358,92 +358,46 @@ function ResultBlock({
       {/* 2. Карточка исходного Reels */}
       <SourceReelsCard decode={decode} />
 
-      {/* 3. Почему этот Reels цепляет */}
+      {/* 3. Почему этот Reels цепляет — спокойный абзац */}
       {shortSummary && (
-        <ResultSection
-          title="Почему этот Reels цепляет"
-          accent="pink"
-        >
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: INK }}>
+        <ResultSection title="Почему этот Reels цепляет" accent="pink">
+          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: INK }}>
             {shortSummary}
           </p>
         </ResultSection>
       )}
 
-      {/* 4. Главная механика ролика */}
+      {/* 4. Главная механика — «термин — объяснение», без значков */}
       {mainMechanic.length > 0 && (
-        <ResultSection title="Главная механика ролика" accent="cyan">
-          <ul
-            style={{
-              margin: 0,
-              padding: 0,
-              listStyle: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
+        <ResultSection title="Главная механика ролика" accent="pink">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {mainMechanic.map((it, i) => (
-              <li
-                key={i}
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.45,
-                  display: "flex",
-                  gap: 8,
-                  paddingLeft: 14,
-                  position: "relative",
-                }}
-              >
-                <span style={{ position: "absolute", left: 0, color: "#7AC8FF" }}>·</span>
-                <span style={{ color: "#7AC8FF", fontWeight: 700, flexShrink: 0 }}>
-                  {it.label}:
-                </span>
-                <span style={{ color: INK }}>{it.text}</span>
-              </li>
+              <div key={i}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: INK, marginBottom: 2 }}>
+                  {it.label}
+                </div>
+                <div style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.55 }}>
+                  {it.text}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </ResultSection>
       )}
 
-      {/* 5. Что стоит взять в свой контент */}
+      {/* 5. Что взять — пронумерованные шаги, ведём за руку */}
       {recommendations.length > 0 && (
-        <ResultSection title="Что стоит взять в свой контент" accent="green">
-          <ul
-            style={{
-              margin: 0,
-              padding: 0,
-              listStyle: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
+        <ResultSection title="Что взять в свой контент" accent="pink">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {recommendations.map((t, i) => (
-              <li
-                key={i}
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.45,
-                  paddingLeft: 22,
-                  position: "relative",
-                  color: INK,
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    color: "#5BD66B",
-                    fontWeight: 800,
-                  }}
-                >
-                  {i + 1}.
+              <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 999, background: "rgba(232,75,145,0.14)", border: "1px solid rgba(232,75,145,0.30)", color: "#F58AC0", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
+                  {i + 1}
                 </span>
-                {t}
-              </li>
+                <span style={{ fontSize: 14, color: INK, lineHeight: 1.55 }}>{t}</span>
+              </div>
             ))}
-          </ul>
+          </div>
         </ResultSection>
       )}
 
@@ -1204,22 +1158,23 @@ function CopyButton({ text }: { text: string }) {
 function clean(s: string): string {
   if (!s) return "";
   let r = String(s).trim();
-  // Убираем парные кавычки в начале и конце (одинарные, двойные, ёлочки)
+  // Снимаем markdown-разметку (модель иногда добавляет вопреки промпту).
+  r = r.replace(/\*\*(.+?)\*\*/g, "$1"); // **bold**
+  r = r.replace(/\*(.+?)\*/g, "$1");      // *italic*
+  r = r.replace(/(?<!\w)_(.+?)_(?!\w)/g, "$1"); // _underline_
+  r = r.replace(/`+/g, "");                // `code`
+  r = r.replace(/^#{1,6}\s*/, "");          // ## заголовки
+  // Срезаем ведущие list-маркеры и «крючки» (—, –, •, ·, *, -, ▪, ◦, →, ►, 1) 2.)
+  r = r.replace(/^\s*(?:[-–—*•·▪◦‣●○►▶→]+|\d+[.)])\s+/, "");
+  // Убираем парные кавычки/ёлочки по краям.
   const pairs: [string, string][] = [
-    ["«", "»"],
-    ['"', '"'],
-    ["'", "'"],
-    ["“", "”"],
-    ["‘", "’"],
-    ["`", "`"],
+    ["«", "»"], ['"', '"'], ["'", "'"], ["“", "”"], ["‘", "’"], ["`", "`"],
   ];
   for (const [a, b] of pairs) {
-    if (r.startsWith(a) && r.endsWith(b) && r.length > 2) {
-      r = r.slice(a.length, -b.length).trim();
-    }
+    if (r.startsWith(a) && r.endsWith(b) && r.length > 2) r = r.slice(a.length, -b.length).trim();
   }
-  // Снимаем висящие точку или запятую в самом начале (если AI странно вернул)
-  r = r.replace(/^[.,;:]\s*/, "");
+  // Висящая пунктуация в начале + схлопываем пробелы.
+  r = r.replace(/^[.,;:!?]\s*/, "").replace(/\s{2,}/g, " ").trim();
   return r;
 }
 
