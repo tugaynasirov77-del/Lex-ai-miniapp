@@ -100,6 +100,7 @@ export default function DashboardScreen({ onBack: _onBack }: Props) {
 
 function TierCard({ billing, onUpgrade }: { billing: BillingSummary | null; onUpgrade: () => void }) {
   const isFree = !billing || billing.tier === "free";
+  const isPro = billing?.tier === "pro"; // Pro может апнуться до Pro+ (business)
   const tierLabel = billing?.current_config?.label ?? "Free";
   const price = billing?.current_config?.priceRub;
   const expires = billing?.subscription?.expires_at
@@ -145,8 +146,23 @@ function TierCard({ billing, onUpgrade }: { billing: BillingSummary | null; onUp
           Улучшить до Pro <ArrowRight />
         </button>
       ) : (
-        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 8 }}>
-          {expires ? `Активен до ${expires}` : "Активен"}
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontSize: 11.5, color: MUTED }}>
+            {expires ? `Активен до ${expires}` : "Активен"}
+          </div>
+          {isPro && (
+            <button
+              onClick={onUpgrade}
+              style={{
+                appearance: "none", width: "100%", padding: "11px 0", borderRadius: 12,
+                border: `1px solid ${PINK}`, background: "rgba(232,75,145,0.10)", color: "#F58AC0",
+                fontSize: 13, fontWeight: 800, fontFamily: "inherit", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}
+            >
+              Перейти на Pro+ <ArrowRight />
+            </button>
+          )}
         </div>
       )}
     </div>
