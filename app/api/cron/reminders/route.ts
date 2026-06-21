@@ -161,10 +161,17 @@ function ctaForTrigger(trigger: ReminderTrigger): string {
   }
 }
 
+// Deep-link на нужную вкладку: AppFlow читает ?screen=<tab> и уводит туда.
+function appUrlForTrigger(trigger: ReminderTrigger): string {
+  if (trigger === "scheduled_today") return `${APP_URL}?screen=plan`;
+  if (trigger === "draft_unfinished") return `${APP_URL}?screen=home`;
+  return APP_URL;
+}
+
 function buildKeyboard(trigger: ReminderTrigger) {
   return {
     inline_keyboard: [
-      [{ text: ctaForTrigger(trigger), web_app: { url: APP_URL } }],
+      [{ text: ctaForTrigger(trigger), web_app: { url: appUrlForTrigger(trigger) } }],
       [{ text: "🔕 Отключить напоминания", callback_data: "reminders:off" }],
     ],
   };

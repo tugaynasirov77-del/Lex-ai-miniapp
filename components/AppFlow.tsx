@@ -75,6 +75,24 @@ export default function AppFlow() {
   // Решает, показать ли welcome-онбординг новому юзеру.
   useWelcomeGate();
 
+  // Deep-link из уведомлений бота: web_app-кнопка открывает app с ?screen=<tab>
+  // (или Telegram startapp=<tab>). Уводим на нужную вкладку после resume.
+  useEffect(() => {
+    let target = "";
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get("screen");
+      const fromTg = (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param;
+      target = String(fromUrl || fromTg || "");
+    } catch { /* noop */ }
+    const allowed = ["plan", "home", "create-hub", "dashboard"];
+    if (!allowed.includes(target)) return;
+    // setTimeout 0 — даём useResumeFlow выполнить свою стартовую навигацию,
+    // затем перебиваем её адресом из уведомления.
+    const t = setTimeout(() => actions.navigate(target as any), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Завершение онбординга: ставим флаги (локально + сервер) и уводим в создание
   // проекта. completeOnboarding вызывается из WelcomeScreen.
   const completeOnboarding = () => {
