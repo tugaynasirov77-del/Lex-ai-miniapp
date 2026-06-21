@@ -10,6 +10,7 @@ import {
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import StateBlock from "./StateBlock";
 import PaywallSheet from "./PaywallSheet";
+import ProLock, { useIsFree } from "./ProLock";
 
 const YELLOW = "#E84B91";
 const INK = "#FFFFFF";
@@ -37,6 +38,7 @@ export default function ContentPackCard({ projectId }: Props) {
   const [pack, setPack] = useState<Pack | null>(null);
   const [step, setStep] = useState(0);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const isFree = useIsFree();
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -197,16 +199,16 @@ export default function ContentPackCard({ projectId }: Props) {
       )}
 
       {/* Результат */}
-      {pack && <PackResult pack={pack} />}
+      {pack && <PackResult pack={pack} isFree={isFree} onUnlock={() => { setPaywallOpen(true); }} />}
 
       {paywallOpen && (
-        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
+        <PaywallSheet variant="pro_feature" onClose={() => setPaywallOpen(false)} />
       )}
     </div>
   );
 }
 
-function PackResult({ pack }: { pack: Pack }) {
+function PackResult({ pack, isFree, onUnlock }: { pack: Pack; isFree?: boolean; onUnlock?: () => void }) {
   const reelText = [
     `${pack.reel.title}`,
     `HOOK: ${pack.reel.hook}`,
@@ -255,20 +257,31 @@ function PackResult({ pack }: { pack: Pack }) {
         preview={`${pack.reel.hook}\n\n${pack.reel.voice_over}`}
         copyText={reelText}
       />
-      <PackSection
-        type="carousel"
-        label={`Карусель — ${pack.carousel.slides.length} слайдов`}
-        accent="rgba(40,160,235,0.28)"
-        preview={pack.carousel.slides.map((s) => `${s.num}. ${s.text}`).join("\n")}
-        copyText={carouselText}
-      />
-      <PackSection
-        type="caption"
-        label="Подпись и хештеги"
-        accent="rgba(91,214,107,0.28)"
-        preview={captionText}
-        copyText={captionText}
-      />
+      <ProLock
+        locked={!!isFree}
+        title="Карусель и подпись пакета — в Pro"
+        subtitle="Из одной идеи LEX собирает Reels + карусель + подпись. Reels уже у тебя — остальное в Pro."
+        cta="Открыть весь пакет"
+        onUnlock={onUnlock}
+        maxHeight={220}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <PackSection
+            type="carousel"
+            label={`Карусель — ${pack.carousel.slides.length} слайдов`}
+            accent="rgba(40,160,235,0.28)"
+            preview={pack.carousel.slides.map((s) => `${s.num}. ${s.text}`).join("\n")}
+            copyText={carouselText}
+          />
+          <PackSection
+            type="caption"
+            label="Подпись и хештеги"
+            accent="rgba(91,214,107,0.28)"
+            preview={captionText}
+            copyText={captionText}
+          />
+        </div>
+      </ProLock>
     </div>
   );
 }
