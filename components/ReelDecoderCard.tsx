@@ -439,6 +439,19 @@ function ResultBlock({
         </ResultSection>
       )}
 
+      {/* Мост: переключаем с «прочитал чужое» на «делаю своё» (открытая петля) */}
+      {decode.id && (
+        <div style={{ textAlign: "center", padding: "6px 0 2px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: INK, lineHeight: 1.4 }}>
+            Понять чужой Reels — это половина.
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, lineHeight: 1.45 }}>
+            Сейчас LEX соберёт <span style={{ color: PINK, fontWeight: 700 }}>твою версию</span> под нишу — её можно снять уже сегодня.
+          </div>
+          <div style={{ fontSize: 20, color: PINK, marginTop: 4 }}>↓</div>
+        </div>
+      )}
+
       {/* 6. Адаптированные темы под проект + sticky CTA «Создать мой Reels» */}
       {decode.id && (
         <AdaptedTopicsBlock
