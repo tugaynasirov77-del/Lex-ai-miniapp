@@ -123,6 +123,20 @@ export async function GET(req: Request) {
   const text = lines.join("\n");
   await sendTg(text);
 
+  // Hobby fallback: Vercel-крон запускается раз в сутки, отдельного hourly-tick
+  // нет. Дёргаем tick отсюда (fire-and-forget) → reminders/publish-scheduled
+  // отрабатывают хотя бы раз в день. Для почасового запуска — GitHub Actions.
+  try {
+    const secret = process.env.CRON_SECRET || "";
+    const base = process.env.NEXT_PUBLIC_APP_URL || "https://lex-ai-miniapp.vercel.app";
+    fetch(`${base}/api/cron/tick?secret=${encodeURIComponent(secret)}`, {
+      method: "GET",
+      headers: { "x-cron-secret": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(1500),
+    }).catch(() => { /* fire-and-forget */ });
+  } catch { /* noop */ }
+
   return Response.json({
     ok: true,
     label,

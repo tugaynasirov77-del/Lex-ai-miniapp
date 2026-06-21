@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/cleanup-raw-uploads",
       "schedule": "30 3 * * *"
-    },
-    {
-      "path": "/api/cron/tick",
-      "schedule": "0 6 * * *"
     }
   ]
 }
