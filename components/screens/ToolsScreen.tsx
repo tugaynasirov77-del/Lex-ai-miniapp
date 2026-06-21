@@ -152,15 +152,16 @@ function Wrap({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        flex: 1,
-        minHeight: 0,
+        position: "absolute",
+        inset: 0,
         display: "flex",
         flexDirection: "column",
+        background: "#0B0B11",
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
           "max(calc(env(safe-area-inset-top) + 56px), 88px) 18px " +
-          "max(calc(env(safe-area-inset-bottom) + 96px), 110px)",
+          "max(calc(env(safe-area-inset-bottom) + 110px), 128px)",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }}

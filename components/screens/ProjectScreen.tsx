@@ -653,7 +653,6 @@ const IG_TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Обзор" },
   { key: "library", label: "Контент" },
   { key: "archive", label: "Разборы" },
-  { key: "settings", label: "Настройки" },
 ];
 
 function IgTabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
@@ -3293,15 +3292,16 @@ function ScreenWrap({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        flex: 1,
-        minHeight: 0,
+        position: "absolute",
+        inset: 0,
         display: "flex",
         flexDirection: "column",
+        background: "#0B0B11",
         color: INK,
         fontFamily: "'Inter', system-ui, sans-serif",
         padding:
           "max(calc(env(safe-area-inset-top) + 64px), 96px) 22px " +
-          "max(calc(env(safe-area-inset-bottom) + 100px), 116px)",
+          "max(calc(env(safe-area-inset-bottom) + 110px), 128px)",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }}
