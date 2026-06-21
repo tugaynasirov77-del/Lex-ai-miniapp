@@ -75,6 +75,25 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     model: "claude-haiku-4-5-20251001",
   });
 
+  // Сохраняем как черновик, чтобы подпись попадала в «Контент».
+  const variants: any[] = (result as any)?.variants || [];
+  const hashtags: string[] = (result as any)?.hashtags || [];
+  const fullText = [
+    ...variants.map((v: any) => `[${v.style_label || v.style}]\n${v.text}`),
+    hashtags.length ? hashtags.map((h) => `#${String(h).replace(/^#+/, "")}`).join(" ") : "",
+  ].filter(Boolean).join("\n\n");
+  await sb.from("content_drafts").insert({
+    project_id: id,
+    platform: "instagram",
+    content_type: "caption",
+    status: "scenario_ready",
+    chosen_title: topic.slice(0, 120),
+    source_topic: topic,
+    caption: variants[0]?.text || fullText,
+    body: fullText,
+    source: "caption_generator",
+  }).then(() => {}, () => {});
+
   return Response.json({
     ok: true,
     result,

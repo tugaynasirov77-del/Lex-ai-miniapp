@@ -190,8 +190,10 @@ export default function ContentLibrary({ projectId, onOpenItem }: Props) {
 // Имя материала: пробуем все источники, иначе по типу.
 function draftTitle(it: ContentDraftDTO): string {
   const sd: any = it.scenario_data;
+  const anyIt: any = it;
   const cand =
     (it.title && it.title.trim()) ||
+    (anyIt.chosen_title && String(anyIt.chosen_title).trim()) ||
     (sd?.title && String(sd.title).trim()) ||
     (it.source_topic && it.source_topic.trim()) ||
     (it.idea_text && it.idea_text.trim()) ||
@@ -208,6 +210,17 @@ function draftTitle(it: ContentDraftDTO): string {
 
 // Собирает читаемый текст материала для просмотра/копирования.
 function draftBodyText(it: ContentDraftDTO): string {
+  const anyIt: any = it;
+  // Карусель: слайды из lex_carousel/media_urls.
+  const carousel = anyIt.lex_carousel;
+  if (it.content_type === "carousel" && (carousel?.slides || Array.isArray(anyIt.media_urls))) {
+    const slides = carousel?.slides || anyIt.media_urls || [];
+    const parts: string[] = [];
+    if (carousel?.hook) parts.push(`Хук: ${carousel.hook}`);
+    slides.forEach((s: any, i: number) => parts.push(`Слайд ${s.num ?? s.index ?? i + 1}:\n${s.text || ""}`));
+    if (it.caption) parts.push(`\nПодпись:\n${it.caption}`);
+    return parts.join("\n\n").trim();
+  }
   const sd: any = it.scenario_data;
   if (sd) {
     const parts: string[] = [];

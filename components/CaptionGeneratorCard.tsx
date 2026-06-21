@@ -65,16 +65,16 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
         overflow: "hidden",
         background:
           "radial-gradient(circle 200px at 0% 0%, rgba(122,200,255,0.18), transparent 60%)," +
-          "radial-gradient(circle 220px at 100% 100%, rgba(91,214,107,0.14), transparent 60%)," +
-          "linear-gradient(135deg, #0F1418 0%, #0A0C0E 100%)",
+          "radial-gradient(circle 220px at 100% 100%, rgba(232,75,145,0.14), transparent 60%)," +
+          "linear-gradient(135deg, #16101C 0%, #0B0911 100%)",
         border: "1px solid rgba(255,255,255,0.10)",
-        boxShadow: "0 18px 44px rgba(91,214,107,0.10)",
+        boxShadow: "0 18px 44px rgba(232,75,145,0.10)",
       }}
     >
       <div
         style={{
           fontSize: 10,
-          color: "#5BD66B",
+          color: "#F58AC0",
           letterSpacing: "0.14em",
           textTransform: "uppercase",
           fontWeight: 800,
@@ -135,8 +135,8 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
             background:
               busy || topic.trim().length < 5
                 ? "rgba(255,255,255,0.08)"
-                : "linear-gradient(135deg, #6EE085 0%, #5BD66B 50%, #3FB852 100%)",
-            color: busy || topic.trim().length < 5 ? MUTED : "#04140A",
+                : "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)",
+            color: busy || topic.trim().length < 5 ? MUTED : "#FFFFFF",
             fontSize: 14,
             fontWeight: 800,
             letterSpacing: "0.04em",
@@ -146,7 +146,7 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
             boxShadow:
               busy || topic.trim().length < 5
                 ? "none"
-                : "0 12px 28px rgba(91,214,107,0.30), 0 0 0 1px rgba(255,255,255,0.16) inset",
+                : "0 12px 28px rgba(232,75,145,0.30), 0 0 0 1px rgba(255,255,255,0.16) inset",
           }}
         >
           {busy ? "Пишу подписи…" : "Сгенерировать"}
@@ -288,7 +288,7 @@ function CaptionPanel({ variant }: { variant: CaptionVariantDTO }) {
           fontSize: 10,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: "#5BD66B",
+          color: "#F58AC0",
           fontWeight: 800,
           marginBottom: 8,
         }}
