@@ -2,8 +2,9 @@
 
 /**
  * Статичный фон приложения. Живёт ВНЕ AnimatePresence,
- * не перерисовывается при смене экранов — burgundy/purple glow
- * остаётся фиксированным, плывут только foreground-экраны.
+ * не перерисовывается при смене экранов. База #0B0B11 совпадает с фоном
+ * экранов — на кросс-фейде переходов ничего не «мелькает». Лёгкий
+ * IG-glow (pink/purple) для глубины.
  */
 export default function AppBg() {
   return (
@@ -15,9 +16,9 @@ export default function AppBg() {
         zIndex: 0,
         pointerEvents: "none",
         background:
-          "radial-gradient(140% 80% at 100% 100%, rgba(178,30,60,0.45) 0%, rgba(178,30,60,0) 55%)," +
-          "radial-gradient(110% 70% at 0% 100%, rgba(96,18,80,0.32) 0%, rgba(96,18,80,0) 60%)," +
-          "#0A0608",
+          "radial-gradient(120% 70% at 100% 100%, rgba(232,75,145,0.10) 0%, rgba(232,75,145,0) 55%)," +
+          "radial-gradient(110% 70% at 0% 100%, rgba(162,79,214,0.10) 0%, rgba(162,79,214,0) 60%)," +
+          "#0B0B11",
       }}
     />
   );

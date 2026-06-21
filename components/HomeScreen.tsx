@@ -130,9 +130,12 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     if (!url.trim()) return;
     hapticImpact("medium");
     try { localStorage.setItem(PREFILL_URL_KEY, url.trim()); } catch {}
-    if (activeId) actions.setIds({ projectId: activeId });
-    actions.setScreenMeta("projectInitialTab", "overview");
-    actions.navigate(activeId ? "project" : "create-project");
+    if (!activeId) { actions.navigate("create-project"); return; }
+    // Сразу в инструмент «Разобрать» — ReelDecoderCard подхватит prefill-URL
+    // и автоматически запустит анализ (никаких промежуточных экранов).
+    actions.setIds({ projectId: activeId });
+    actions.setScreenMeta("toolTab", "decoder");
+    actions.navigate("tools");
   };
 
   const goToTool = (toolTab: string) => {
