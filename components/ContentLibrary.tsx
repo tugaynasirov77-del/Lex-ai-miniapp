@@ -246,7 +246,7 @@ function DraftDetailSheet({ item, onClose }: { item: ContentDraftDTO; onClose: (
           <span style={{ fontSize: 10, fontWeight: 700, color: sl.color, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)" }}>{sl.label}</span>
         </div>
         <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 12, letterSpacing: "-0.01em" }}>{draftTitle(item)}</div>
-        <div style={{ overflowY: "auto", flex: 1, fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
+        <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", flex: 1, minHeight: 0, fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
           {text}
         </div>
         <button
