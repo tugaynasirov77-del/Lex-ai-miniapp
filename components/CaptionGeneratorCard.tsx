@@ -9,8 +9,10 @@ import {
 } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import PaywallSheet from "./PaywallSheet";
+import ProLock, { useIsFree } from "./ProLock";
 
 const YELLOW = "#E84B91";
+const PINK = "#E84B91";
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
 const SUB_MUTED = "rgba(255,255,255,0.42)";
@@ -27,6 +29,7 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
   const [quota, setQuota] = useState<CaptionQuotaDTO | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const isFree = useIsFree();
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -184,11 +187,13 @@ export default function CaptionGeneratorCard({ projectId }: Props) {
           result={result}
           activeIdx={activeIdx}
           setActiveIdx={setActiveIdx}
+          isFree={isFree}
+          onUnlock={() => { hapticImpact("medium"); setPaywallOpen(true); }}
         />
       )}
 
       {paywallOpen && (
-        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
+        <PaywallSheet variant="pro_feature" onClose={() => setPaywallOpen(false)} />
       )}
     </div>
   );
@@ -198,44 +203,70 @@ function ResultBlock({
   result,
   activeIdx,
   setActiveIdx,
+  isFree,
+  onUnlock,
 }: {
   result: CaptionGenResultDTO;
   activeIdx: number;
   setActiveIdx: (i: number) => void;
+  isFree?: boolean;
+  onUnlock?: () => void;
 }) {
   const active = result.variants[activeIdx];
+  // Free: первый стиль открыт, остальные заблюрены под Pro (FOMO).
+  const activeLocked = !!isFree && activeIdx > 0;
   return (
     <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-        {result.variants.map((v, i) => (
-          <button
-            key={v.style}
-            onClick={() => {
-              hapticImpact("light");
-              setActiveIdx(i);
-            }}
-            style={{
-              appearance: "none",
-              flexShrink: 0,
-              padding: "7px 12px",
-              borderRadius: 999,
-              border: `1px solid ${i === activeIdx ? "#5BD66B" : CARD_BORDER}`,
-              background:
-                i === activeIdx ? "rgba(91,214,107,0.14)" : "rgba(255,255,255,0.04)",
-              color: i === activeIdx ? "#5BD66B" : MUTED,
-              fontFamily: "inherit",
-              fontSize: 12,
-              fontWeight: i === activeIdx ? 800 : 600,
-              letterSpacing: "0.02em",
-              cursor: "pointer",
-            }}
-          >
-            {v.style_label}
-          </button>
-        ))}
+        {result.variants.map((v, i) => {
+          const lockedTab = !!isFree && i > 0;
+          return (
+            <button
+              key={v.style}
+              onClick={() => {
+                hapticImpact("light");
+                setActiveIdx(i);
+              }}
+              style={{
+                appearance: "none",
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "7px 12px",
+                borderRadius: 999,
+                border: `1px solid ${i === activeIdx ? PINK : CARD_BORDER}`,
+                background:
+                  i === activeIdx ? "rgba(232,75,145,0.14)" : "rgba(255,255,255,0.04)",
+                color: i === activeIdx ? "#F58AC0" : MUTED,
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: i === activeIdx ? 800 : 600,
+                letterSpacing: "0.02em",
+                cursor: "pointer",
+              }}
+            >
+              {lockedTab && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M7 10V8a5 5 0 0110 0v2M5 10h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>
+              )}
+              {v.style_label}
+            </button>
+          );
+        })}
       </div>
 
-      {active && <CaptionPanel variant={active} />}
+      {active && (
+        <ProLock
+          locked={activeLocked}
+          title="Этот стиль — в Pro"
+          subtitle="Открой все стили подписей и хэштег-паки. Один стиль доступен бесплатно."
+          cta="Открыть все стили"
+          onUnlock={onUnlock}
+          maxHeight={220}
+        >
+          <CaptionPanel variant={active} />
+        </ProLock>
+      )}
 
       {result.hashtags.length > 0 && <HashtagBlock hashtags={result.hashtags} />}
     </div>
