@@ -239,19 +239,27 @@ function DraftDetailSheet({ item, onClose }: { item: ContentDraftDTO; onClose: (
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#15151E", borderTopLeftRadius: 22, borderTopRightRadius: 22, border: "1px solid rgba(255,255,255,0.10)", padding: "16px 18px max(calc(env(safe-area-inset-bottom) + 18px), 28px)", maxHeight: "82vh", display: "flex", flexDirection: "column" }}
+        style={{
+          background: "#15151E",
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          border: "1px solid rgba(255,255,255,0.10)",
+          // Клиренс под нижний таб-бар (~78px) + safe-area.
+          padding: "16px 18px max(calc(env(safe-area-inset-bottom) + 96px), 110px)",
+        }}
       >
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 14px", flexShrink: 0 }} />
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.2)", margin: "0 auto 14px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: sl.color, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)" }}>{sl.label}</span>
         </div>
         <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 12, letterSpacing: "-0.01em" }}>{draftTitle(item)}</div>
-        <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", flex: 1, minHeight: 0, fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
+        {/* Скролл-блок с явным max-height (не зависит от flex — надёжно в WebView) */}
+        <div style={{ maxHeight: "50vh", overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
           {text}
         </div>
         <button
           onClick={() => { navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}
-          style={{ flexShrink: 0, appearance: "none", width: "100%", padding: "13px 0", border: "none", borderRadius: 12, background: "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)", color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+          style={{ appearance: "none", width: "100%", padding: "13px 0", border: "none", borderRadius: 12, background: "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)", color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
         >
           {copied ? "✓ Скопировано" : "Скопировать"}
         </button>
