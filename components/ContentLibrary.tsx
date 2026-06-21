@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   listProjectDrafts,
+  setDraftPlannedDate,
   type ContentDraftDTO,
   type ContentStatus,
 } from "../lib/api";
@@ -241,10 +242,35 @@ function draftBodyText(it: ContentDraftDTO): string {
   return (it.body || it.caption || it.idea_text || "Содержимое недоступно").trim();
 }
 
+const planBtn: React.CSSProperties = {
+  appearance: "none", flex: 1, padding: "11px 0", borderRadius: 12,
+  border: "1px solid rgba(232,75,145,0.40)", background: "rgba(232,75,145,0.10)",
+  color: "#F58AC0", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
+};
+
+function isoDay(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function DraftDetailSheet({ item, onClose }: { item: ContentDraftDTO; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [planned, setPlanned] = useState<string | null>(item.planned_for_date || null);
+  const [savingPlan, setSavingPlan] = useState(false);
   const text = draftBodyText(item);
   const sl = statusBadge(statusGroup(item.status));
+
+  async function addToPlan(date: string) {
+    if (savingPlan) return;
+    setSavingPlan(true);
+    hapticImpact("light");
+    try {
+      await setDraftPlannedDate(item.id, date);
+      setPlanned(date);
+    } catch { /* ignore */ }
+    finally { setSavingPlan(false); }
+  }
   return (
     <div
       onClick={onClose}
@@ -267,9 +293,22 @@ function DraftDetailSheet({ item, onClose }: { item: ContentDraftDTO; onClose: (
         </div>
         <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 12, letterSpacing: "-0.01em" }}>{draftTitle(item)}</div>
         {/* Скролл-блок с явным max-height (не зависит от flex — надёжно в WebView) */}
-        <div style={{ maxHeight: "50vh", overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
+        <div style={{ maxHeight: "44vh", overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", fontSize: 13.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 12 }}>
           {text}
         </div>
+
+        {/* В план — чтобы материал появился в контент-плане */}
+        {planned ? (
+          <div style={{ padding: "10px 0", marginBottom: 10, borderRadius: 12, background: "rgba(79,212,137,0.10)", border: "1px solid rgba(79,212,137,0.30)", fontSize: 12.5, color: "#4FD489", fontWeight: 700, textAlign: "center" }}>
+            ✓ В плане на {planned.split("-").reverse().slice(0, 2).join(".")}
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button onClick={() => addToPlan(isoDay(0))} disabled={savingPlan} style={planBtn}>В план: сегодня</button>
+            <button onClick={() => addToPlan(isoDay(1))} disabled={savingPlan} style={planBtn}>Завтра</button>
+          </div>
+        )}
+
         <button
           onClick={() => { navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}
           style={{ appearance: "none", width: "100%", padding: "13px 0", border: "none", borderRadius: 12, background: "linear-gradient(135deg, #A24FD6 0%, #E84B91 50%, #F88A4A 100%)", color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
