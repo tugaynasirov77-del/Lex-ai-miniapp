@@ -850,13 +850,13 @@ function PlanModal({
         <div style={{ width: 40, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
         <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800 }}>Когда снять / опубликовать?</h3>
         <p style={{ margin: "0 0 16px", fontSize: 13, color: MUTED }}>
-          Материал попадёт в контент-план проекта.
+          Добавим в план — и бот напомнит снять в этот день, чтобы не потерялось.
         </p>
 
         {!showPicker ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <PlanOption label="Завтра" primary sub="LEX напомнит утром" onClick={() => onPick(tomorrow)} />
             <PlanOption label="Сегодня" onClick={() => onPick(today)} />
-            <PlanOption label="Завтра" onClick={() => onPick(tomorrow)} />
             <PlanOption label="Выбрать дату" onClick={() => setShowPicker(true)} />
             <PlanOption label="Пока не знаю" muted onClick={() => onPick(null)} />
           </div>
@@ -883,7 +883,7 @@ function PlanModal({
   );
 }
 
-function PlanOption({ label, muted, onClick }: { label: string; muted?: boolean; onClick: () => void }) {
+function PlanOption({ label, sub, muted, primary, onClick }: { label: string; sub?: string; muted?: boolean; primary?: boolean; onClick: () => void }) {
   return (
     <button
       onClick={() => { hapticSelection(); onClick(); }}
@@ -893,16 +893,22 @@ function PlanOption({ label, muted, onClick }: { label: string; muted?: boolean;
         textAlign: "left",
         padding: "14px 16px",
         borderRadius: 14,
-        border: `1px solid ${CARD_BORDER}`,
-        background: muted ? "transparent" : "rgba(255,255,255,0.04)",
-        color: muted ? MUTED : INK,
+        border: primary ? "none" : `1px solid ${CARD_BORDER}`,
+        background: primary ? IG_GRADIENT : muted ? "transparent" : "rgba(255,255,255,0.04)",
+        color: primary ? "#FFFFFF" : muted ? MUTED : INK,
         fontFamily: "inherit",
         fontSize: 15,
-        fontWeight: 600,
+        fontWeight: primary ? 800 : 600,
         cursor: "pointer",
+        boxShadow: primary ? "0 10px 24px rgba(232,75,145,0.30)" : "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
       }}
     >
-      {label}
+      <span>{label}</span>
+      {sub && <span style={{ fontSize: 11.5, fontWeight: 600, opacity: 0.85 }}>{sub}</span>}
     </button>
   );
 }
