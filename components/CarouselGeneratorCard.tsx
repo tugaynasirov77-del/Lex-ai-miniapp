@@ -4,6 +4,9 @@ import { useState } from "react";
 import { lexWriteCarousel, type CarouselStyle, type LexCarousel } from "../lib/api";
 import { hapticImpact, hapticNotify } from "../lib/telegram";
 import PaywallSheet from "./PaywallSheet";
+import ProLock, { useIsFree } from "./ProLock";
+
+const FREE_SLIDES = 3;
 
 const INK = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.58)";
@@ -30,6 +33,7 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
   const [carousel, setCarousel] = useState<LexCarousel | null>(null);
   const [slideIdx, setSlideIdx] = useState(0);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const isFree = useIsFree();
 
   async function run() {
     if (topic.trim().length < 5 || busy) return;
@@ -204,11 +208,13 @@ export default function CarouselGeneratorCard({ projectId }: Props) {
           carousel={carousel}
           slideIdx={slideIdx}
           setSlideIdx={setSlideIdx}
+          isFree={isFree}
+          onUnlock={() => { hapticImpact("medium"); setPaywallOpen(true); }}
         />
       )}
 
       {paywallOpen && (
-        <PaywallSheet variant="limit_reached" onClose={() => setPaywallOpen(false)} />
+        <PaywallSheet variant="pro_feature" onClose={() => setPaywallOpen(false)} />
       )}
     </div>
   );
@@ -218,12 +224,17 @@ function CarouselResult({
   carousel,
   slideIdx,
   setSlideIdx,
+  isFree,
+  onUnlock,
 }: {
   carousel: LexCarousel;
   slideIdx: number;
   setSlideIdx: (i: number) => void;
+  isFree?: boolean;
+  onUnlock?: () => void;
 }) {
   const slide = carousel.slides[slideIdx];
+  const slideLocked = !!isFree && slideIdx >= FREE_SLIDES;
   return (
     <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Hook */}
@@ -254,62 +265,82 @@ function CarouselResult({
 
       {/* Slide tabs */}
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-        {carousel.slides.map((s, i) => (
-          <button
-            key={s.num}
-            onClick={() => {
-              hapticImpact("light");
-              setSlideIdx(i);
-            }}
-            style={{
-              appearance: "none",
-              flexShrink: 0,
-              minWidth: 36,
-              height: 36,
-              borderRadius: 999,
-              border: `1px solid ${i === slideIdx ? PINK : CARD_BORDER}`,
-              background:
-                i === slideIdx ? "rgba(221,42,123,0.16)" : "rgba(255,255,255,0.04)",
-              color: i === slideIdx ? "#F58AC0" : MUTED,
-              fontFamily: "inherit",
-              fontSize: 13,
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            {s.num}
-          </button>
-        ))}
+        {carousel.slides.map((s, i) => {
+          const lockedTab = !!isFree && i >= FREE_SLIDES;
+          return (
+            <button
+              key={s.num}
+              onClick={() => {
+                hapticImpact("light");
+                setSlideIdx(i);
+              }}
+              style={{
+                appearance: "none",
+                flexShrink: 0,
+                minWidth: 36,
+                height: 36,
+                padding: lockedTab ? "0 9px" : 0,
+                borderRadius: 999,
+                border: `1px solid ${i === slideIdx ? PINK : CARD_BORDER}`,
+                background:
+                  i === slideIdx ? "rgba(221,42,123,0.16)" : "rgba(255,255,255,0.04)",
+                color: i === slideIdx ? "#F58AC0" : MUTED,
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 3,
+              }}
+            >
+              {lockedTab && (
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M7 10V8a5 5 0 0110 0v2M5 10h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>
+              )}
+              {s.num}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Slide content */}
+      {/* Slide content (для Free слайды 4+ заблюрены под Pro) */}
       {slide && (
-        <div
-          style={{
-            background: CARD_BG,
-            border: `1px solid ${CARD_BORDER}`,
-            borderRadius: 14,
-            padding: 18,
-            minHeight: 140,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+        <ProLock
+          locked={slideLocked}
+          title={`Слайды ${FREE_SLIDES + 1}–${carousel.slides.length} — в Pro`}
+          subtitle={`Первые ${FREE_SLIDES} слайда бесплатно. Полная карусель и дизайн-подсказки — в Pro.`}
+          cta="Открыть всю карусель"
+          onUnlock={onUnlock}
+          maxHeight={180}
         >
-          <p
+          <div
             style={{
-              margin: 0,
-              fontSize: 16,
-              fontWeight: 700,
-              lineHeight: 1.4,
-              textAlign: "center",
-              whiteSpace: "pre-wrap",
-              color: INK,
+              background: CARD_BG,
+              border: `1px solid ${CARD_BORDER}`,
+              borderRadius: 14,
+              padding: 18,
+              minHeight: 140,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {slide.text}
-          </p>
-        </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                lineHeight: 1.4,
+                textAlign: "center",
+                whiteSpace: "pre-wrap",
+                color: INK,
+              }}
+            >
+              {slide.text}
+            </p>
+          </div>
+        </ProLock>
       )}
 
       {/* Caption */}
@@ -395,12 +426,12 @@ function CarouselResult({
         </div>
       )}
 
-      {/* Полный текст всех слайдов — кнопка экспорта */}
+      {/* Экспорт: Free копирует только открытые слайды */}
       <CopyButton
-        text={carousel.slides
+        text={(isFree ? carousel.slides.slice(0, FREE_SLIDES) : carousel.slides)
           .map((s) => `Слайд ${s.num}:\n${s.text}`)
           .join("\n\n")}
-        label="Скопировать все слайды"
+        label={isFree ? `Скопировать ${FREE_SLIDES} слайда` : "Скопировать все слайды"}
         accent="pink"
       />
     </div>
