@@ -45,6 +45,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
   const [quota, setQuota] = useState<ReelQuotaDTO | null>(null);
   const [cached, setCached] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallVariant, setPaywallVariant] = useState<"limit_reached" | "deep_dive">("limit_reached");
 
   // Prefill: если юзер ввёл ссылку на Home («Что создаём сегодня?») —
   // подставляем её сюда и сразу запускаем разбор.
@@ -84,6 +85,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       hapticNotify("error");
       // Квота исчерпана (402) → показываем paywall, а не текстовую ошибку (бриф р.22)
       if (e?.status === 402) {
+        setPaywallVariant("limit_reached");
         setPaywallOpen(true);
         track("reels_analysis_failed", { project_id: projectId, reason: "quota" });
         return;
@@ -255,6 +257,8 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
           cached={cached}
           projectId={projectId}
           onCreateScript={onCreateScript}
+          deepLocked={!!quota && quota.tier !== "pro" && quota.tier !== "business"}
+          onUnlock={() => { hapticImpact("medium"); setPaywallVariant("deep_dive"); setPaywallOpen(true); }}
         />
       )}
 
@@ -266,7 +270,7 @@ export default function ReelDecoderCard({ projectId, onDecoded, onCreateScript }
       {/* Paywall — при исчерпании квоты (бриф р.22) */}
       {paywallOpen && (
         <PaywallSheet
-          variant="limit_reached"
+          variant={paywallVariant}
           onClose={() => setPaywallOpen(false)}
         />
       )}
@@ -289,11 +293,15 @@ function ResultBlock({
   cached,
   projectId,
   onCreateScript,
+  deepLocked,
+  onUnlock,
 }: {
   decode: ReelDecodeDTO;
   cached: boolean;
   projectId: string;
   onCreateScript?: (args: { decodeId: string; topic: AdaptedTopicDTO }) => void;
+  deepLocked?: boolean;
+  onUnlock?: () => void;
 }) {
   const m = decode.metadata;
   const a = decode.analysis;
@@ -464,8 +472,8 @@ function ResultBlock({
         />
       )}
 
-      {/* 7. Подробный анализ — аккордеоны (по умолчанию закрыты) */}
-      <DeepDiveAccordions decode={decode} />
+      {/* 7. Подробный анализ — аккордеоны (для Free заблюрены под Pro) */}
+      <DeepDiveAccordions decode={decode} locked={deepLocked} onUnlock={onUnlock} />
     </div>
   );
 }
@@ -615,8 +623,47 @@ function ResultSection({
 }
 
 /** Подробный анализ — все длинные блоки в аккордеонах (по умолчанию закрыты). */
-function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
+function DeepDiveAccordions({ decode, locked, onUnlock }: { decode: ReelDecodeDTO; locked?: boolean; onUnlock?: () => void }) {
   const a = decode.analysis;
+
+  // Free: показываем глубокий разбор заблюренным с плашкой Pro (FOMO).
+  if (locked) {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", color: MUTED, fontWeight: 700, paddingLeft: 4, marginBottom: 8 }}>
+          Подробный анализ
+        </div>
+        <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", border: `1px solid ${CARD_BORDER}` }}>
+          {/* Заблюренный превью реального контента */}
+          <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none", opacity: 0.65, maxHeight: 300, overflow: "hidden", padding: 14, display: "flex", flexDirection: "column", gap: 10 }} aria-hidden>
+            <LockTeaserRow label="Хук и первые секунды" body={a.hook?.verbatim_quote || a.hook?.text || "Разбор первых 3 секунд по словам"} />
+            <LockTeaserRow label="Раскадровка по сценам" body="0:00–0:03 · 0:03–0:10 · 0:10–0:22 · покадровый таймлайн" />
+            <LockTeaserRow label="Психологические триггеры" body={(a.engagement_triggers || []).slice(0, 4).join(" · ") || "любопытство · соц-доказательство · конкретика"} />
+            <LockTeaserRow label="Оригинальный транскрипт" body={(decode.transcript || "Полная расшифровка речи из ролика").slice(0, 140)} />
+          </div>
+          {/* Оверлей с Pro-плашкой */}
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20, background: "linear-gradient(180deg, rgba(11,11,17,0.35) 0%, rgba(11,11,17,0.82) 70%)" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 28px rgba(232,75,145,0.4)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V8a5 5 0 0110 0v2M5 10h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z" stroke="#FFFFFF" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: INK, textAlign: "center", letterSpacing: "-0.01em" }}>
+              Полный разбор — в Pro
+            </div>
+            <div style={{ fontSize: 12.5, color: MUTED, textAlign: "center", lineHeight: 1.45, maxWidth: 300 }}>
+              Раскадровка по секундам, психотриггеры, «как снять такой же» и транскрипт. Сценарий под нишу у тебя уже есть — это разбор вглубь.
+            </div>
+            <button
+              onClick={() => onUnlock?.()}
+              style={{ appearance: "none", marginTop: 4, padding: "12px 22px", border: "none", borderRadius: 999, background: IG_GRADIENT, color: "#FFFFFF", fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: "0 12px 28px rgba(232,75,145,0.4)" }}
+            >
+              Открыть полный разбор
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
       <div
@@ -816,6 +863,16 @@ function DeepDiveAccordions({ decode }: { decode: ReelDecodeDTO }) {
           </div>
         </Accordion>
       )}
+    </div>
+  );
+}
+
+/** Строка-тизер для заблюренного Pro-превью глубокого разбора. */
+function LockTeaserRow({ label, body }: { label: string; body: string }) {
+  return (
+    <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 12, padding: "10px 12px" }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: INK, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.4 }}>{body}</div>
     </div>
   );
 }

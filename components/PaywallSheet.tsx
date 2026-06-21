@@ -12,7 +12,7 @@ const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type Props = {
   /** Контекст показа: после первого результата vs упёрся в лимит. */
-  variant?: "value_moment" | "limit_reached";
+  variant?: "value_moment" | "limit_reached" | "deep_dive";
   /** Заголовок-достижение (бриф: текст опирается на достигнутый результат). */
   achievement?: string;
   onClose: () => void;
@@ -58,11 +58,15 @@ export default function PaywallSheet({ variant = "limit_reached", achievement, o
   const title =
     variant === "value_moment"
       ? "Ваш первый сценарий готов"
-      : "Бесплатные разборы закончились";
+      : variant === "deep_dive"
+        ? "Полный разбор — в Pro"
+        : "Бесплатные разборы закончились";
   const subtitle =
     variant === "value_moment"
       ? "Продолжай превращать Reels в контент для своего блога с LEX Pro."
-      : "На Pro ты разбираешь до 30 Reels в месяц и собираешь сценарии без ограничений.";
+      : variant === "deep_dive"
+        ? "Раскадровка по секундам, психотриггеры, «как снять такой же» и транскрипт. Плюс до 30 разборов в месяц."
+        : "На Pro ты разбираешь до 30 Reels в месяц и собираешь сценарии без ограничений.";
 
   return (
     <div
