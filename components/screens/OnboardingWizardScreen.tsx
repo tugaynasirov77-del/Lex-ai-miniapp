@@ -208,7 +208,10 @@ export default function OnboardingWizardScreen() {
             try { localStorage.setItem(ONBOARDING_LS_KEY, "1"); } catch {}
             markOnboardingDone().catch(() => {});
             hapticNotify("success");
-            actions.navigate("home");
+            // Активация: сразу на экран «Разобрать» (с подсказкой как взять
+            // ссылку), а не на Home с холодным полем — разбор как шаг 2/2.
+            actions.setScreenMeta("toolTab", "decoder");
+            actions.navigate("tools");
           }}
         />
       )}
@@ -565,7 +568,7 @@ function SuccessStep({
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
         }}
       >
-        {busy ? "Создаём…" : <>Начать анализ <ArrowIcon /></>}
+        {busy ? "Создаём…" : <>Разобрать первый Reels <ArrowIcon /></>}
       </button>
 
       <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: MUTED, fontSize: 11, fontWeight: 600 }}>
