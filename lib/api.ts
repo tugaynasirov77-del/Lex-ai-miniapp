@@ -456,6 +456,55 @@ export function adaptDecodeToTopics(
   });
 }
 
+// ───────────── Свободный диалог с агентом LEX (SSE-стрим) ─────────────
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/**
+ * Стримит ответ агента по SSE. onDelta — на каждый кусок текста,
+ * onDone — финальный полный текст. Бросает Error при сбое.
+ */
+export async function streamChat(
+  projectId: string,
+  messages: ChatTurn[],
+  onDelta: (text: string) => void,
+  onDone: (reply: string) => void,
+): Promise<void> {
+  const r = await tgFetch(`/api/projects/${projectId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ messages }),
+  });
+  if (!r.ok || !r.body) throw new ApiError(r.status, await readError(r));
+
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let full = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split("\n\n");
+    buf = parts.pop() || "";
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data:")) continue;
+      let evt: any;
+      try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+      if (evt.type === "delta" && typeof evt.text === "string") {
+        full += evt.text;
+        onDelta(evt.text);
+      } else if (evt.type === "done") {
+        onDone(typeof evt.reply === "string" ? evt.reply : full);
+        return;
+      } else if (evt.type === "error") {
+        throw new Error(evt.error || "Ошибка ответа агента");
+      }
+    }
+  }
+  onDone(full);
+}
+
 export function refineMyTopic(
   projectId: string,
   decodeId: string,

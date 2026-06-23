@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AppBg from "./AppBg";
-import HomeScreen from "./HomeScreen";
+import ChatScreen from "./screens/ChatScreen";
 import WelcomeScreen from "./WelcomeScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 import ProjectScreen from "./screens/ProjectScreen";
@@ -150,9 +150,7 @@ export default function AppFlow() {
             flexDirection: "column",
           }}
         >
-          {currentScreen === "home" && (
-            <HomeScreen onStart={() => goNext("dashboard")} />
-          )}
+          {currentScreen === "home" && <ChatScreen />}
           {currentScreen === "welcome" && (
             <WelcomeScreen
               onComplete={completeOnboarding}
