@@ -72,7 +72,19 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [paywall, setPaywall] = useState<null | "limit_reached">(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Клавиатура открыта → visualViewport схлопывается (таб-бар уезжает,
+  // панель ввода прижимаем к клавиатуре).
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => setKeyboardOpen(window.innerHeight - vv.height > 120);
+    vv.addEventListener("resize", onResize);
+    onResize();
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   const activeProject = projects.find((p) => p.id === activeId) || projects[0] || null;
   const firstName = (getTgUser()?.first_name?.trim() || "").split(/\s+/)[0] || "";
@@ -396,10 +408,13 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
         style={{
           flexShrink: 0,
           padding: "10px 14px",
-          paddingBottom: "max(calc(env(safe-area-inset-bottom) + 108px), 120px)",
+          paddingBottom: keyboardOpen
+            ? "max(env(safe-area-inset-bottom), 10px)"
+            : "max(calc(env(safe-area-inset-bottom) + 108px), 120px)",
           borderTop: `1px solid ${CARD_BORDER}`,
           background: "rgba(11,11,17,0.96)",
           backdropFilter: "blur(12px)",
+          transition: "padding-bottom 200ms ease-out",
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>

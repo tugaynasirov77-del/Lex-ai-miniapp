@@ -82,8 +82,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   );
   const [plan, setPlan] = useState<WeekPlanDTO | null>(null);
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
-  const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
-  const [ideasLoading, setIdeasLoading] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   useEffect(() => {
@@ -105,17 +103,10 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     let alive = true;
     getWeekPlan(activeId).then((p) => alive && setPlan(p)).catch(() => {});
     listProjectDrafts(activeId).then((r) => alive && setDrafts(r.drafts)).catch(() => alive && setDrafts([]));
-    setIdeasLoading(true);
-    getDailyIdeas(activeId)
-      .then((r) => { if (alive) setIdeas(r.ideas); })
-      .catch(() => {})
-      .finally(() => { if (alive) setIdeasLoading(false); });
     return () => { alive = false; };
   }, [activeId]);
 
   const activeProject = projects.find((p) => p.id === activeId) || null;
-  // Только имя (первое слово) — как в Instagram: «Привет, Даниил».
-  const firstName = (getTgUser()?.first_name?.trim() || "").split(/\s+/)[0] || "";
 
   // Воронка-возврат: незавершённые материалы (не опубликованы/не в архиве).
   const unfinished = (drafts ?? []).filter(
@@ -140,11 +131,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
     actions.navigate("tools");
   };
 
-  const useIdea = (idea: IdeaDef) => {
-    hapticImpact("light");
-    try { localStorage.setItem(PREFILL_IDEA_KEY, idea.hook || idea.title); } catch {}
-    goToTool("script");
-  };
 
   const goLibrary = () => {
     hapticImpact("light");
@@ -155,29 +141,23 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
   return (
     <ScreenWrap>
-      {/* Шапка: имя слева, проект-переключатель справа (одна строка, без дублей) */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 28, minHeight: 36 }}>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", color: INK, display: "flex", alignItems: "center", gap: 7, overflow: "hidden" }}>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Привет{firstName ? `, ${firstName}` : ""}
-          </span>
-          <WaveIcon size={22} />
-        </div>
-        {activeProject && (
+      {/* Топ-бар: только переключатель проекта (приветствие — в чате) */}
+      {activeProject && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8, minHeight: 36 }}>
           <button
             onClick={() => { if (projects.length > 1) { hapticSelection(); setSwitcherOpen((v) => !v); } }}
             style={{
               flexShrink: 0, appearance: "none", background: SOFT, border: `1px solid ${CARD_BORDER}`,
               borderRadius: 999, padding: "8px 14px", color: INK, fontFamily: "inherit",
               fontSize: 13, fontWeight: 600, cursor: projects.length > 1 ? "pointer" : "default",
-              display: "flex", alignItems: "center", gap: 6, maxWidth: 168,
+              display: "flex", alignItems: "center", gap: 6, maxWidth: 200,
             }}
           >
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeProject.title}</span>
             {projects.length > 1 && <span style={{ color: MUTED, fontSize: 11 }}>▾</span>}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {switcherOpen && projects.length > 1 && (
         <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -198,35 +178,38 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         </div>
       )}
 
-      {/* 1. Вход в воронку — чат с ИИ-агентом */}
-      <div style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
-        Что создаём сегодня?
-      </div>
-      <button
-        onClick={openChat}
-        style={{
-          appearance: "none", textAlign: "left", width: "100%", fontFamily: "inherit", cursor: "pointer",
-          position: "relative", overflow: "hidden", marginBottom: 26, padding: 18, borderRadius: 22,
-          border: "1px solid rgba(255,255,255,0.10)",
-          background:
-            "radial-gradient(circle 200px at 100% 0%, rgba(245,133,41,0.28), transparent 60%)," +
-            "radial-gradient(circle 220px at 0% 100%, rgba(129,52,175,0.26), transparent 60%)," +
-            "linear-gradient(135deg, #1B0822 0%, #0A050C 100%)",
-          boxShadow: "0 14px 34px rgba(221,42,123,0.18)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}>
-            <div style={{ position: "absolute", inset: -5, borderRadius: 18, background: IG_GRADIENT, filter: "blur(12px)", opacity: 0.55 }} />
-            <div style={{ position: "relative", width: 52, height: 52, borderRadius: 16, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}><SparkleIcon /></div>
+      {/* Фокус-зона: вход в чат с ИИ-агентом по центру */}
+      <div style={{ minHeight: "56vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "8px 4px 28px" }}>
+        {/* орб */}
+        <div style={{ position: "relative", width: 88, height: 88, marginBottom: 22 }}>
+          <div style={{ position: "absolute", inset: -14, borderRadius: "50%", background: IG_GRADIENT, filter: "blur(24px)", opacity: 0.5, animation: "lexhomepulse 3.4s ease-in-out infinite" }} />
+          <div style={{ position: "relative", width: 88, height: 88, borderRadius: 26, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 18px 42px rgba(221,42,123,0.4)" }}>
+            <SparkleIcon size={38} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: INK, letterSpacing: "-0.01em", marginBottom: 3 }}>Разобрать с ИИ-агентом</div>
-            <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>Скинь Reels в чат — LEX разберёт и соберёт сценарий под тебя</div>
-          </div>
-          <span style={{ flexShrink: 0, color: PINK, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>→</span>
+          <style>{`@keyframes lexhomepulse{0%,100%{opacity:.38;transform:scale(1)}50%{opacity:.62;transform:scale(1.07)}}`}</style>
         </div>
-      </button>
+
+        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: PINK, marginBottom: 10 }}>LEX · умный агент</div>
+        <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.18, color: INK, maxWidth: 320 }}>
+          Создавай Reels,<br />которые цепляют
+        </h1>
+        <p style={{ margin: "12px 0 26px", fontSize: 14, lineHeight: 1.5, color: MUTED, maxWidth: 300 }}>
+          Разбери любой ролик и собери свой под твою нишу — за пару минут.
+        </p>
+
+        <button
+          onClick={openChat}
+          style={{
+            appearance: "none", fontFamily: "inherit", cursor: "pointer", width: "100%", maxWidth: 360,
+            padding: "17px 0", borderRadius: 18, border: "none", background: IG_GRADIENT, color: "#fff",
+            fontSize: 16.5, fontWeight: 800, letterSpacing: "0.01em",
+            boxShadow: "0 14px 30px rgba(221,42,123,0.38)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+          }}
+        >
+          <SparkleIcon size={18} /> Начать чат с агентом
+        </button>
+      </div>
 
       {/* 2. Продолжить работу — возврат в воронку (незавершённые материалы) */}
       {unfinished.length > 0 && (
@@ -281,18 +264,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         </div>
       )}
 
-      {/* 5. Идеи для Reels на сегодня — вдохновение (низ экрана) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <InstagramIcon color={PINK} />
-        <span style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>Идеи для Reels на сегодня</span>
-      </div>
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", margin: "0 -18px", padding: "0 18px 4px", scrollbarWidth: "none" }}>
-        {ideasLoading && !ideas
-          ? [0, 1, 2].map((i) => <IdeaSkeleton key={i} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} />)
-          : (ideas && ideas.length > 0 ? ideas : FALLBACK_IDEAS).map((idea, i) => (
-              <IdeaCard key={i} idea={idea} visual={IDEA_VISUALS[i % IDEA_VISUALS.length]} onUse={() => useIdea(idea)} />
-            ))}
-      </div>
     </ScreenWrap>
   );
 }
