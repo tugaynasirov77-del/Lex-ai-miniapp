@@ -3,6 +3,7 @@ import { getSupabase } from "../../../../../../lib/supabase";
 import { verifyInitData } from "../../../../../../lib/verifyTelegram";
 import { getBrandKitFromProject } from "../../../../../../lib/lexAI";
 import { adaptTopics, refineUserIdea, type ProjectContext } from "../../../../../../lib/topicAdapter";
+import { getActiveTier } from "../../../../../../lib/gating";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -54,6 +55,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   if (!process.env.ANTHROPIC_API_KEY)
     return Response.json({ error: "ANTHROPIC_API_KEY missing" }, { status: 500 });
+
+  // Монетизация: разбор бесплатный, адаптация под нишу + сценарий — только Pro.
+  const tier = await getActiveTier(a.tgId);
+  if (tier === "free")
+    return Response.json(
+      { error: "Адаптация под нишу доступна на Pro", code: "pro_required" },
+      { status: 402 },
+    );
 
   // Тянем разбор и проверяем что он принадлежит этому юзеру
   const sb = getSupabase();

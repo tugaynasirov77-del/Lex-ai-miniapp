@@ -13,7 +13,8 @@ import {
   type ContentDraftDTO,
   type DailyIdeaDTO,
 } from "../lib/api";
-import { hapticImpact, hapticSelection, getTgUser } from "../lib/telegram";
+import { hapticImpact, hapticSelection } from "../lib/telegram";
+import LexLogo from "./LexLogo";
 
 // Локальная YYYY-MM-DD (без UTC-сдвига) — для поиска «сегодня» в плане.
 function todayISO(): string {
@@ -180,13 +181,13 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
 
       {/* Фокус-зона: вход в чат с ИИ-агентом по центру */}
       <div style={{ minHeight: "56vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "8px 4px 28px" }}>
-        {/* орб */}
+        {/* логотип */}
         <div style={{ position: "relative", width: 88, height: 88, marginBottom: 22 }}>
-          <div style={{ position: "absolute", inset: -14, borderRadius: "50%", background: IG_GRADIENT, filter: "blur(24px)", opacity: 0.5, animation: "lexhomepulse 3.4s ease-in-out infinite" }} />
-          <div style={{ position: "relative", width: 88, height: 88, borderRadius: 26, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 18px 42px rgba(221,42,123,0.4)" }}>
-            <SparkleIcon size={38} />
+          <div style={{ position: "absolute", inset: -14, borderRadius: "50%", background: IG_GRADIENT, filter: "blur(26px)", opacity: 0.45, animation: "lexhomepulse 3.4s ease-in-out infinite" }} />
+          <div style={{ position: "relative", width: 88, height: 88, borderRadius: 26, background: "#15151E", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 18px 42px rgba(221,42,123,0.28)" }}>
+            <LexLogo size={50} />
           </div>
-          <style>{`@keyframes lexhomepulse{0%,100%{opacity:.38;transform:scale(1)}50%{opacity:.62;transform:scale(1.07)}}`}</style>
+          <style>{`@keyframes lexhomepulse{0%,100%{opacity:.34;transform:scale(1)}50%{opacity:.58;transform:scale(1.07)}}`}</style>
         </div>
 
         <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: PINK, marginBottom: 10 }}>LEX · умный агент</div>

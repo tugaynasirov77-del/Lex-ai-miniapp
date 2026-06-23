@@ -14,6 +14,7 @@ import {
   setDraftPlannedDate,
   streamChat,
   ApiError,
+  peekBilling,
   type ProjectDTO,
   type ReelDecodeDTO,
   type AdaptedTopicDTO,
@@ -24,6 +25,7 @@ import {
 import { getTgUser, hapticImpact, hapticSelection, hapticNotify } from "../../lib/telegram";
 import { track } from "../../lib/analytics";
 import PaywallSheet from "../PaywallSheet";
+import LexLogo from "../LexLogo";
 
 // ─── Тёмная тема (как на HomeScreen) ───
 const BG = "#0B0B11";
@@ -71,9 +73,11 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [paywall, setPaywall] = useState<null | "limit_reached">(null);
+  const [paywall, setPaywall] = useState<null | "limit_reached" | "pro_feature">(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const tierRef = useRef<"free" | "pro" | "business">(peekBilling()?.tier ?? "free");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typeTimer = useRef<number | null>(null);
 
   // Клавиатура открыта → visualViewport схлопывается (таб-бар уезжает,
   // панель ввода прижимаем к клавиатуре).
@@ -120,7 +124,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
       remove(pendingId);
       hapticNotify("error");
       if (e instanceof ApiError && e.status === 402) {
-        setPaywall("limit_reached");
+        setPaywall(/pro/i.test(e.message) ? "pro_feature" : "limit_reached");
         return;
       }
       push({
@@ -146,23 +150,40 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
       try {
         const r = await decodeReel(activeId, url);
         const decodeId = r.decode.id;
+        if (r.quota?.tier) tierRef.current = r.quota.tier;
         remove(pid);
         push({ id: uid(), role: "agent", kind: "decode", decode: r.decode });
         const niche = activeProject?.niche;
-        push({
-          id: uid(),
-          role: "agent",
-          kind: "text",
-          text: niche
-            ? `Разобрал. Теперь адаптирую под твою нишу — ${niche}. Подберу 3 темы, которые зайдут именно твоей аудитории.`
-            : "Разобрал. Давай адаптирую под твою нишу — подберу 3 темы под тебя.",
-          actions: decodeId
-            ? [
-                { label: "Адаптировать под мою нишу", primary: true, onTap: () => runAdapt(decodeId) },
-                { label: "Разобрать ещё", onTap: () => focusInput() },
-              ]
-            : [{ label: "Разобрать ещё", onTap: () => focusInput() }],
-        });
+        const isPro = tierRef.current !== "free";
+        if (!decodeId) {
+          push({ id: uid(), role: "agent", kind: "text", text: "Готов разбор 👆", actions: [{ label: "Разобрать ещё", onTap: () => focusInput() }] });
+        } else if (isPro) {
+          push({
+            id: uid(),
+            role: "agent",
+            kind: "text",
+            text: niche
+              ? `Разобрал. Теперь адаптирую под твою нишу — ${niche}. Подберу 3 темы, которые зайдут именно твоей аудитории.`
+              : "Разобрал. Давай адаптирую под твою нишу — подберу 3 темы под тебя.",
+            actions: [
+              { label: "Адаптировать под мою нишу", primary: true, onTap: () => runAdapt(decodeId) },
+              { label: "Разобрать ещё", onTap: () => focusInput() },
+            ],
+          });
+        } else {
+          // Free: разбор бесплатно, адаптация под нишу и сценарий — в Pro
+          push({
+            id: uid(),
+            role: "agent",
+            kind: "text",
+            text:
+              "Это базовый разбор — он бесплатный 🎁\n\nА вот адаптацию под твою нишу и готовый сценарий под тебя собираю в Pro. Открыть?",
+            actions: [
+              { label: "Разблокировать в Pro", primary: true, onTap: () => { hapticImpact("medium"); setPaywall("pro_feature"); } },
+              { label: "Разобрать ещё", onTap: () => focusInput() },
+            ],
+          });
+        }
         track("reels_analysis_completed", { project_id: activeId, from: "chat", cached: r.cached });
         hapticNotify("success");
       } catch (e: any) {
@@ -294,17 +315,35 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const focusInput = () => inputRef.current?.focus();
 
-  // ── приветствие агента при открытии чата ──
+  // ── приветствие агента: «печатает…» → typewriter ──
   useEffect(() => {
     if (greetedRef.current) return;
     greetedRef.current = true;
-    push({
-      id: uid(),
-      role: "agent",
-      kind: "text",
-      text: `Привет${firstName ? `, ${firstName}` : ""}! Скинь ссылку на Reels — разберу его и покажу, как сделать такой же.`,
-      actions: [{ label: "Не знаю что снять — предложи идею", onTap: () => runFreeText("Не знаю, что снять. Предложи мне идеи для Reels под мою нишу.") }],
-    });
+    const text = `Привет${firstName ? `, ${firstName}` : ""}! Скинь ссылку на Reels — разберу его и покажу, как сделать такой же.`;
+    const greetActions: Action[] = [
+      { label: "Не знаю что снять — предложи идею", onTap: () => runFreeText("Не знаю, что снять. Предложи мне идеи для Reels под мою нишу.") },
+    ];
+    const pid = uid();
+    push({ id: pid, role: "agent", kind: "pending", label: "" });
+    const t0 = window.setTimeout(() => {
+      remove(pid);
+      const gid = uid();
+      push({ id: gid, role: "agent", kind: "text", text: "", streaming: true });
+      let i = 0;
+      typeTimer.current = window.setInterval(() => {
+        i += 2;
+        const done = i >= text.length;
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.id === gid && x.kind === "text" && x.role === "agent"
+              ? { ...x, text: text.slice(0, i), streaming: !done, actions: done ? greetActions : undefined }
+              : x,
+          ),
+        );
+        if (done && typeTimer.current) { window.clearInterval(typeTimer.current); typeTimer.current = null; }
+      }, 26);
+    }, 850);
+    return () => { window.clearTimeout(t0); if (typeTimer.current) window.clearInterval(typeTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProject]);
 
@@ -375,9 +414,9 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
           </button>
         )}
         <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: -3, borderRadius: 14, background: IG_GRADIENT, filter: "blur(8px)", opacity: 0.5 }} />
-          <div style={{ position: "relative", width: 36, height: 36, borderRadius: 12, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <SparkleIcon />
+          <div style={{ position: "absolute", inset: -3, borderRadius: 14, background: IG_GRADIENT, filter: "blur(8px)", opacity: 0.4 }} />
+          <div style={{ position: "relative", width: 36, height: 36, borderRadius: 12, background: "#15151E", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <LexLogo size={24} />
           </div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
