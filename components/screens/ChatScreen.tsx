@@ -135,11 +135,15 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
         const r = await decodeReel(activeId, url);
         const decodeId = r.decode.id;
         remove(pid);
+        push({ id: uid(), role: "agent", kind: "decode", decode: r.decode });
+        const niche = activeProject?.niche;
         push({
           id: uid(),
           role: "agent",
-          kind: "decode",
-          decode: r.decode,
+          kind: "text",
+          text: niche
+            ? `Разобрал. Теперь адаптирую под твою нишу — ${niche}. Подберу 3 темы, которые зайдут именно твоей аудитории.`
+            : "Разобрал. Давай адаптирую под твою нишу — подберу 3 темы под тебя.",
           actions: decodeId
             ? [
                 { label: "Адаптировать под мою нишу", primary: true, onTap: () => runAdapt(decodeId) },
@@ -282,17 +286,11 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     if (greetedRef.current) return;
     greetedRef.current = true;
-    const nichePart =
-      activeProject?.niche && activeProject?.audience
-        ? `Вижу, ты ведёшь ${activeProject.niche} для ${activeProject.audience}. `
-        : activeProject?.niche
-        ? `Вижу, твоя ниша — ${activeProject.niche}. `
-        : "";
     push({
       id: uid(),
       role: "agent",
       kind: "text",
-      text: `Привет${firstName ? `, ${firstName}` : ""}! ${nichePart}Скинь ссылку на любой Reels, который тебе понравился — я разберу его по полочкам и помогу сделать такой же под тебя.`,
+      text: `Привет${firstName ? `, ${firstName}` : ""}! Скинь ссылку на Reels — разберу его и покажу, как сделать такой же.`,
       actions: [{ label: "Не знаю что снять — предложи идею", onTap: () => runFreeText("Не знаю, что снять. Предложи мне идеи для Reels под мою нишу.") }],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -398,7 +396,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
         style={{
           flexShrink: 0,
           padding: "10px 14px",
-          paddingBottom: "max(calc(env(safe-area-inset-bottom) + 86px), 96px)",
+          paddingBottom: "max(calc(env(safe-area-inset-bottom) + 108px), 120px)",
           borderTop: `1px solid ${CARD_BORDER}`,
           background: "rgba(11,11,17,0.96)",
           backdropFilter: "blur(12px)",
