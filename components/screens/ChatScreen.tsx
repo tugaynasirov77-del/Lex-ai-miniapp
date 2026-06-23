@@ -59,9 +59,10 @@ type Msg =
 let _seq = 0;
 const uid = () => `m${++_seq}_${Date.now()}`;
 
-export default function ChatScreen() {
+export default function ChatScreen({ onBack }: { onBack?: () => void }) {
   const { state } = useFlow();
   const actions = useFlowActions();
+  const greetedRef = useRef(false);
 
   const [projects, setProjects] = useState<ProjectDTO[]>(
     () => peekProjects()?.projects.filter((p) => p.platform === "instagram") ?? [],
@@ -274,10 +275,28 @@ export default function ChatScreen() {
     [activeId, busy],
   );
 
-  const engaged = messages.some((m) => m.role === "user");
-
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const focusInput = () => inputRef.current?.focus();
+
+  // ── приветствие агента при открытии чата ──
+  useEffect(() => {
+    if (greetedRef.current) return;
+    greetedRef.current = true;
+    const nichePart =
+      activeProject?.niche && activeProject?.audience
+        ? `Вижу, ты ведёшь ${activeProject.niche} для ${activeProject.audience}. `
+        : activeProject?.niche
+        ? `Вижу, твоя ниша — ${activeProject.niche}. `
+        : "";
+    push({
+      id: uid(),
+      role: "agent",
+      kind: "text",
+      text: `Привет${firstName ? `, ${firstName}` : ""}! ${nichePart}Скинь ссылку на любой Reels, который тебе понравился — я разберу его по полочкам и помогу сделать такой же под тебя.`,
+      actions: [{ label: "Не знаю что снять — предложи идею", onTap: () => runFreeText("Не знаю, что снять. Предложи мне идеи для Reels под мою нишу.") }],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject]);
 
   const send = () => {
     const t = input.trim();
@@ -340,6 +359,11 @@ export default function ChatScreen() {
           backdropFilter: "blur(12px)",
         }}
       >
+        {onBack && (
+          <button onClick={() => { hapticSelection(); onBack(); }} aria-label="Назад" style={{ flexShrink: 0, width: 34, height: 34, marginLeft: -4, borderRadius: 11, border: "none", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+        )}
         <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }}>
           <div style={{ position: "absolute", inset: -3, borderRadius: 14, background: IG_GRADIENT, filter: "blur(8px)", opacity: 0.5 }} />
           <div style={{ position: "relative", width: 36, height: 36, borderRadius: 12, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -362,24 +386,12 @@ export default function ChatScreen() {
         )}
       </div>
 
-      {/* Тело: hero-вход до первого сообщения, затем лента */}
-      {!engaged ? (
-        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column" }}>
-          <HeroIntro
-            firstName={firstName}
-            niche={activeProject?.niche || null}
-            audience={activeProject?.audience || null}
-            onDecode={() => focusInput()}
-            onIdea={() => runFreeText("Не знаю, что снять. Предложи мне идеи для Reels под мою нишу.")}
-          />
-        </div>
-      ) : (
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "18px 16px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
-          {messages.map((m) => (
-            <MessageView key={m.id} m={m} onAdapt={runAdapt} onPickTopic={runScript} onRefineIdea={runRefineIdea} onSaveScript={onSaveScript} projectId={activeId} />
-          ))}
-        </div>
-      )}
+      {/* Лента */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "18px 16px 8px", display: "flex", flexDirection: "column", gap: 14 }}>
+        {messages.map((m) => (
+          <MessageView key={m.id} m={m} onAdapt={runAdapt} onPickTopic={runScript} onRefineIdea={runRefineIdea} onSaveScript={onSaveScript} projectId={activeId} />
+        ))}
+      </div>
 
       {/* Композер */}
       <div
@@ -431,77 +443,6 @@ export default function ChatScreen() {
       </div>
 
       {paywall && <PaywallSheet variant={paywall} onClose={() => setPaywall(null)} />}
-    </div>
-  );
-}
-
-// ───────────────────── Hero-вход (до первого сообщения) ─────────────────────
-function HeroIntro({
-  firstName, niche, audience, onDecode, onIdea,
-}: {
-  firstName: string;
-  niche: string | null;
-  audience: string | null;
-  onDecode: () => void;
-  onIdea: () => void;
-}) {
-  const sub =
-    niche && audience
-      ? `Веду тебя по ${niche} для ${audience}: разберу любой Reels и соберу такой же под тебя.`
-      : niche
-      ? `Твоя ниша — ${niche}. Разберу любой Reels и соберу такой же под тебя.`
-      : "Скинь Reels, который тебе понравился — разберу по полочкам и соберу такой же под твою нишу.";
-
-  const STEPS: { n: string; t: string }[] = [
-    { n: "1", t: "Кидаешь ссылку на Reels" },
-    { n: "2", t: "Разбираю хук, структуру и метрики" },
-    { n: "3", t: "Собираю готовый сценарий под тебя" },
-  ];
-
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px 22px 28px", gap: 0 }}>
-      {/* орб */}
-      <div style={{ position: "relative", width: 92, height: 92, marginBottom: 22 }}>
-        <div style={{ position: "absolute", inset: -14, borderRadius: "50%", background: IG_GRADIENT, filter: "blur(26px)", opacity: 0.55, animation: "lexpulse 3.2s ease-in-out infinite" }} />
-        <div style={{ position: "relative", width: 92, height: 92, borderRadius: 28, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 18px 44px rgba(221,42,123,0.4)" }}>
-          <SparkleIcon size={40} />
-        </div>
-        <style>{`@keyframes lexpulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.7;transform:scale(1.08)}}`}</style>
-      </div>
-
-      <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: PINK, marginBottom: 10 }}>
-        Умный агент
-      </div>
-      <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.18, color: INK }}>
-        {firstName ? `${firstName}, начни работу` : "Начни работу"}<br />с агентом LEX
-      </h1>
-      <p style={{ margin: "12px 0 0", fontSize: 14, lineHeight: 1.5, color: MUTED, maxWidth: 320 }}>{sub}</p>
-
-      {/* шаги-воронка */}
-      <div style={{ width: "100%", maxWidth: 340, margin: "24px 0 26px", display: "flex", flexDirection: "column", gap: 10 }}>
-        {STEPS.map((s) => (
-          <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-            <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 9, background: SOFT, border: `1px solid ${CARD_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: PINK }}>{s.n}</span>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: INK }}>{s.t}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* CTA */}
-      <div style={{ width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 }}>
-        <button
-          onClick={() => { hapticImpact("medium"); onDecode(); }}
-          style={{ appearance: "none", fontFamily: "inherit", width: "100%", padding: "16px 0", borderRadius: 16, border: "none", background: IG_GRADIENT, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", boxShadow: "0 12px 28px rgba(221,42,123,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-        >
-          <SparkleIcon size={18} /> Разобрать Reels
-        </button>
-        <button
-          onClick={() => { hapticSelection(); onIdea(); }}
-          style={{ appearance: "none", fontFamily: "inherit", width: "100%", padding: "14px 0", borderRadius: 16, border: `1px solid ${CARD_BORDER}`, background: SOFT, color: INK, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-        >
-          Не знаю что снять — предложи идею
-        </button>
-      </div>
     </div>
   );
 }

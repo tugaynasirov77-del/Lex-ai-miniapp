@@ -84,7 +84,6 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   const [drafts, setDrafts] = useState<ContentDraftDTO[] | null>(null);
   const [ideas, setIdeas] = useState<DailyIdeaDTO[] | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
-  const [url, setUrl] = useState("");
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   useEffect(() => {
@@ -126,16 +125,11 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
   const todayDay = plan?.days.find((d) => d.date === todayISO()) || null;
   const todayItems = todayDay?.items ?? [];
 
-  const runDecode = () => {
-    if (!url.trim()) return;
+  const openChat = () => {
     hapticImpact("medium");
-    try { localStorage.setItem(PREFILL_URL_KEY, url.trim()); } catch {}
     if (!activeId) { actions.navigate("create-project"); return; }
-    // Сразу в инструмент «Разобрать» — ReelDecoderCard подхватит prefill-URL
-    // и автоматически запустит анализ (никаких промежуточных экранов).
     actions.setIds({ projectId: activeId });
-    actions.setScreenMeta("toolTab", "decoder");
-    actions.navigate("tools");
+    actions.navigate("chat");
   };
 
   const goToTool = (toolTab: string) => {
@@ -204,54 +198,35 @@ export default function HomeScreen(_props: HomeScreenProps = {}) {
         </div>
       )}
 
-      {/* 1. Что создаём сегодня — вход в воронку (новый разбор) */}
+      {/* 1. Вход в воронку — чат с ИИ-агентом */}
       <div style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: "-0.02em", marginBottom: 12 }}>
         Что создаём сегодня?
       </div>
-      <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 22, padding: 16, boxShadow: "0 8px 28px rgba(20,20,40,0.06)", marginBottom: 26 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 4px 14px" }}>
-          <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 14, ...iconTile(ACC_PINK), display: "flex", alignItems: "center", justifyContent: "center" }}><LinkIcon color={PINK} /></div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 2 }}>Вставьте ссылку на Reels</div>
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.instagram.com/reel/..."
-              style={{
-                appearance: "none", width: "100%", outline: "none",
-                background: SOFT, color: INK, fontFamily: "inherit", fontSize: 13,
-                border: `1px solid ${CARD_BORDER}`, borderRadius: 10, padding: "9px 12px",
-              }}
-            />
+      <button
+        onClick={openChat}
+        style={{
+          appearance: "none", textAlign: "left", width: "100%", fontFamily: "inherit", cursor: "pointer",
+          position: "relative", overflow: "hidden", marginBottom: 26, padding: 18, borderRadius: 22,
+          border: "1px solid rgba(255,255,255,0.10)",
+          background:
+            "radial-gradient(circle 200px at 100% 0%, rgba(245,133,41,0.28), transparent 60%)," +
+            "radial-gradient(circle 220px at 0% 100%, rgba(129,52,175,0.26), transparent 60%)," +
+            "linear-gradient(135deg, #1B0822 0%, #0A050C 100%)",
+          boxShadow: "0 14px 34px rgba(221,42,123,0.18)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}>
+            <div style={{ position: "absolute", inset: -5, borderRadius: 18, background: IG_GRADIENT, filter: "blur(12px)", opacity: 0.55 }} />
+            <div style={{ position: "relative", width: 52, height: 52, borderRadius: 16, background: IG_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}><SparkleIcon /></div>
           </div>
-          <button
-            onClick={async () => {
-              hapticSelection();
-              try { const t = await navigator.clipboard.readText(); if (t) setUrl(t.trim()); } catch {}
-            }}
-            aria-label="Вставить из буфера"
-            style={{ appearance: "none", alignSelf: "flex-end", flexShrink: 0, width: 38, height: 38, borderRadius: 10, border: `1px solid ${CARD_BORDER}`, background: SOFT, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
-          >
-            <CopyIcon color={MUTED} />
-          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: INK, letterSpacing: "-0.01em", marginBottom: 3 }}>Разобрать с ИИ-агентом</div>
+            <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>Скинь Reels в чат — LEX разберёт и соберёт сценарий под тебя</div>
+          </div>
+          <span style={{ flexShrink: 0, color: PINK, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>→</span>
         </div>
-        <button
-          onClick={runDecode}
-          disabled={!url.trim()}
-          style={{
-            appearance: "none", width: "100%", padding: "16px 0", border: "none", borderRadius: 16,
-            background: IG_GRADIENT, color: "#FFFFFF", fontSize: 16, fontWeight: 800,
-            letterSpacing: "0.01em", fontFamily: "inherit", lineHeight: 1,
-            cursor: url.trim() ? "pointer" : "not-allowed",
-            opacity: url.trim() ? 1 : 0.55,
-            boxShadow: url.trim() ? "0 12px 28px rgba(221,42,123,0.35)" : "none",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          }}
-        >
-          <span style={{ display: "inline-flex", alignItems: "center" }}><SparkleIcon /></span>
-          <span style={{ lineHeight: 1, display: "inline-block" }}>Разобрать и адаптировать</span>
-        </button>
-      </div>
+      </button>
 
       {/* 2. Продолжить работу — возврат в воронку (незавершённые материалы) */}
       {unfinished.length > 0 && (

@@ -28,7 +28,8 @@ export type ScreenKey =
   | "onboarding-success"
   | "plan"
   | "create-hub"
-  | "tools";
+  | "tools"
+  | "chat";
 
 /** Какой контент юзер выбрал на choose-format. */
 export type ContentFormat = "reel" | "carousel" | "post" | "weekly-plan";

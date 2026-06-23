@@ -46,7 +46,7 @@ export default function BottomTabBar() {
   if (cs === "welcome" || cs === "create-project" || cs === "onboarding-wizard") return null;
   // Настройки/биллинг живут внутри Профиля → подсвечиваем «Профиль».
   const active: Tab["key"] =
-    cs === "home"
+    cs === "home" || cs === "chat"
       ? "main"
       : cs === "create-hub" || cs === "tools" || cs === "project"
       ? "create"
