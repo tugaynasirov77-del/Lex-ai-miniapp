@@ -550,10 +550,31 @@ function MessageView({
   );
 }
 
+// Лёгкий рендер: **жирный** → bold, маркеры списка "* "/"- " → "• ".
+function renderRich(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  return lines.map((line, li) => {
+    const clean = line.replace(/^\s*[-*]\s+/, "• ");
+    const parts = clean.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+    return (
+      <span key={li}>
+        {parts.map((p, pi) =>
+          p.startsWith("**") && p.endsWith("**") ? (
+            <strong key={pi} style={{ fontWeight: 800 }}>{p.slice(2, -2)}</strong>
+          ) : (
+            <span key={pi}>{p}</span>
+          ),
+        )}
+        {li < lines.length - 1 && <br />}
+      </span>
+    );
+  });
+}
+
 function TextBubble({ text, streaming }: { text: string; streaming?: boolean }) {
   return (
-    <div style={{ padding: "11px 14px", borderRadius: "16px 16px 16px 4px", background: CARD_BG, border: `1px solid ${CARD_BORDER}`, fontSize: 14, lineHeight: 1.5, color: INK, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-      {text || (streaming ? "" : "")}
+    <div style={{ padding: "11px 14px", borderRadius: "16px 16px 16px 4px", background: CARD_BG, border: `1px solid ${CARD_BORDER}`, fontSize: 14, lineHeight: 1.5, color: INK, wordBreak: "break-word" }}>
+      {renderRich(text)}
       {streaming && <span style={{ display: "inline-block", width: 7, height: 14, marginLeft: 2, background: PINK, borderRadius: 2, verticalAlign: "-2px", animation: "lexblink 1s steps(2) infinite" }} />}
       <style>{`@keyframes lexblink{0%,49%{opacity:1}50%,100%{opacity:0}}`}</style>
     </div>
