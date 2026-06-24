@@ -359,9 +359,13 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
 
   const onSaveScript = useCallback(
     async (m: Extract<Msg, { kind: "script" }>, plan: boolean): Promise<boolean> => {
-      if (!activeId) return false;
+      const pid = activeId || peekProjects()?.projects.find((p) => p.platform === "instagram")?.id || null;
+      if (!pid) {
+        push({ id: uid(), role: "agent", kind: "text", text: "Не вижу активный проект — открой чат заново с главного экрана." });
+        return false;
+      }
       try {
-        const { id } = await saveScenarioDraft(activeId, {
+        const { id } = await saveScenarioDraft(pid, {
           content_type: "reel",
           status: "scenario_ready",
           title: m.scenario.title,
@@ -373,7 +377,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
         });
         if (plan) await setDraftPlannedDate(id, todayISO());
         hapticNotify("success");
-        track(plan ? "script_added_to_plan" : "script_saved", { project_id: activeId, draft_id: id, from: "chat" });
+        track(plan ? "script_added_to_plan" : "script_saved", { project_id: pid, draft_id: id, from: "chat" });
         push({
           id: uid(),
           role: "agent",
@@ -386,7 +390,8 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
         return true;
       } catch (e: any) {
         hapticNotify("error");
-        if (e instanceof ApiError && e.status === 402) setPaywall("limit_reached");
+        if (e instanceof ApiError && e.status === 402) { setPaywall("limit_reached"); return false; }
+        push({ id: uid(), role: "agent", kind: "text", text: `Не удалось сохранить: ${e?.message || "ошибка"}. Попробуй ещё раз.` });
         return false;
       }
     },
