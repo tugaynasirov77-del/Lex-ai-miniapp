@@ -331,7 +331,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
       push({ id: gid, role: "agent", kind: "text", text: "", streaming: true });
       let i = 0;
       typeTimer.current = window.setInterval(() => {
-        i += 2;
+        i += 4;
         const done = i >= text.length;
         setMessages((prev) =>
           prev.map((x) =>
@@ -341,8 +341,8 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
           ),
         );
         if (done && typeTimer.current) { window.clearInterval(typeTimer.current); typeTimer.current = null; }
-      }, 26);
-    }, 850);
+      }, 18);
+    }, 300);
     return () => { window.clearTimeout(t0); if (typeTimer.current) window.clearInterval(typeTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProject]);
