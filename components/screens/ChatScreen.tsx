@@ -292,12 +292,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
             setMessages((prev) =>
               prev.map((x) =>
                 x.id === aid && x.kind === "text" && x.role === "agent"
-                  ? {
-                      ...x,
-                      text: reply || x.text,
-                      streaming: false,
-                      actions: [{ label: "Разобрать Reels", primary: true, onTap: () => focusInput() }],
-                    }
+                  ? { ...x, text: reply || x.text, streaming: false }
                   : x,
               ),
             ),
