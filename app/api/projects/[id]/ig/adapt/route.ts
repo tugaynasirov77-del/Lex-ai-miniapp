@@ -66,11 +66,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   // Тянем разбор и проверяем что он принадлежит этому юзеру
   const sb = getSupabase();
+  // reel_decodes — общий кэш разборов публичных Reels (ключ — shortcode),
+  // строка может принадлежать другому tg_id. Ищем только по id.
   const { data: decode } = await sb
     .from("reel_decodes")
-    .select("id, tg_id, analysis")
+    .select("id, analysis")
     .eq("id", decodeId)
-    .eq("tg_id", a.tgId)
     .maybeSingle();
   if (!decode || !decode.analysis)
     return Response.json({ error: "Разбор не найден" }, { status: 404 });

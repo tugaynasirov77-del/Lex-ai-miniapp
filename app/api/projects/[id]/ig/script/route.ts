@@ -59,7 +59,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       .from("reel_decodes")
       .select("analysis")
       .eq("id", decodeId)
-      .eq("tg_id", a.tgId)
       .maybeSingle();
     sourceAnalysis = decode?.analysis ?? null;
   }
