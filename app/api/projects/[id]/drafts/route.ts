@@ -85,7 +85,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     content_type: contentType,
     status: typeof body?.status === "string" ? body.status : "scenario_ready",
   };
-  if (typeof body?.title === "string") insert.title = body.title.slice(0, 200);
+  // В таблице нет колонки `title` (есть `title_variants text[]`).
+  // Название кладём туда; отображение фолбэчит на source_topic.
+  if (typeof body?.title === "string" && body.title.trim())
+    insert.title_variants = [body.title.slice(0, 200)];
   if (typeof body?.body === "string") insert.body = body.body.slice(0, 4096);
   if (typeof body?.caption === "string") insert.caption = body.caption.slice(0, 2048);
   if (typeof body?.source_decode_id === "string" && body.source_decode_id)
