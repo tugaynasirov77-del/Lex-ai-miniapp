@@ -345,7 +345,7 @@ export default function ChatScreen({ onBack }: { onBack?: () => void }) {
     }, 300);
     return () => { window.clearTimeout(t0); if (typeTimer.current) window.clearInterval(typeTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProject]);
+  }, []);
 
   const send = () => {
     const t = input.trim();
