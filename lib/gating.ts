@@ -41,7 +41,16 @@ function startOfWeekIso(): string {
 }
 
 /** Текущий активный tier для tg_id юзера. */
+/**
+ * Ручная выдача Pro без оплаты (промо / индивидуально).
+ * Эти tg_id получают Pro-доступ напрямую, минуя таблицу subscriptions.
+ */
+const MANUAL_PRO_TG_IDS = new Set<number>([
+  766452755, // ручная выдача Pro
+]);
+
 export async function getActiveTier(tgId: number): Promise<Tier> {
+  if (MANUAL_PRO_TG_IDS.has(tgId)) return "pro";
   const sb = getSupabase();
   const { data } = await sb
     .from("subscriptions")
