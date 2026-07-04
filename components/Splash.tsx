@@ -65,59 +65,14 @@ export default function Splash() {
             animation: "lex-glow 2.2s ease-in-out infinite",
           }}
         />
-        <svg
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/lex-logo.png"
+          alt=""
           width={132}
           height={132}
-          viewBox="0 0 200 200"
-          shapeRendering="geometricPrecision"
-          style={{ position: "relative", display: "block" }}
-        >
-          <defs>
-            <linearGradient id="lexMarkGrad" x1="20%" y1="0%" x2="85%" y2="100%">
-              <stop offset="0%" stopColor="#B026FF" />
-              <stop offset="42%" stopColor="#E0249B" />
-              <stop offset="72%" stopColor="#FF3D62" />
-              <stop offset="100%" stopColor="#FF8A1E" />
-            </linearGradient>
-          </defs>
-          <g
-            stroke="url(#lexMarkGrad)"
-            fill="none"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          >
-            {/* outer rounded triangle */}
-            <path
-              d="M100 30 L170 154 L30 154 Z"
-              strokeWidth="18"
-              style={{
-                strokeDasharray: 460,
-                strokeDashoffset: 460,
-                animation: "lex-draw 900ms ease 250ms forwards",
-              }}
-            />
-            {/* inner left diagonal */}
-            <path
-              d="M64 150 L102 84"
-              strokeWidth="15"
-              style={{
-                strokeDasharray: 90,
-                strokeDashoffset: 90,
-                animation: "lex-draw 600ms ease 850ms forwards",
-              }}
-            />
-            {/* inner right bar */}
-            <path
-              d="M122 150 L130 108"
-              strokeWidth="15"
-              style={{
-                strokeDasharray: 50,
-                strokeDashoffset: 50,
-                animation: "lex-draw 500ms ease 1050ms forwards",
-              }}
-            />
-          </g>
-        </svg>
+          style={{ position: "relative", display: "block", width: 132, height: 132 }}
+        />
       </div>
 
       {/* wordmark */}
@@ -173,9 +128,6 @@ export default function Splash() {
         @keyframes lex-mark-in {
           0%   { opacity: 0; transform: scale(0.7); }
           100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes lex-draw {
-          100% { stroke-dashoffset: 0; }
         }
         @keyframes lex-word-in {
           0%   { opacity: 0; transform: translateY(8px); }
