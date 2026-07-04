@@ -12,8 +12,8 @@ export default function Splash() {
   useEffect(() => {
     if (pathname?.startsWith("/legal")) return;
     hapticImpact("light");
-    const t1 = setTimeout(() => setFading(true), 2000);
-    const t2 = setTimeout(() => setVisible(false), 2450);
+    const t1 = setTimeout(() => setFading(true), 2400);
+    const t2 = setTimeout(() => setVisible(false), 2850);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -30,6 +30,7 @@ export default function Splash() {
         position: "fixed",
         inset: 0,
         zIndex: 100,
+        overflow: "hidden",
         background:
           "radial-gradient(120% 120% at 50% 40%, #18101c 0%, #0A0705 60%, #050304 100%)",
         display: "flex",
@@ -42,7 +43,37 @@ export default function Splash() {
         pointerEvents: fading ? "none" : "auto",
       }}
     >
-      {/* mark */}
+      {/* ambient aurora blobs */}
+      <div
+        style={{
+          position: "absolute",
+          top: "22%",
+          left: "18%",
+          width: 260,
+          height: 260,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(176,38,255,0.35) 0%, rgba(176,38,255,0) 70%)",
+          filter: "blur(30px)",
+          animation: "lex-aurora-a 7s ease-in-out infinite",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "20%",
+          right: "16%",
+          width: 300,
+          height: 300,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(255,138,30,0.28) 0%, rgba(255,138,30,0) 70%)",
+          filter: "blur(34px)",
+          animation: "lex-aurora-b 9s ease-in-out infinite",
+        }}
+      />
+
+      {/* mark + motion rings */}
       <div
         style={{
           position: "relative",
@@ -53,7 +84,54 @@ export default function Splash() {
             "lex-mark-in 700ms cubic-bezier(0.34,1.56,0.64,1) 100ms forwards",
         }}
       >
-        {/* glow */}
+        {/* rotating conic gradient ring */}
+        <div
+          style={{
+            position: "absolute",
+            inset: -18,
+            borderRadius: "50%",
+            padding: 3,
+            background:
+              "conic-gradient(from 0deg, rgba(176,38,255,0) 0deg, #B026FF 90deg, #E0249B 180deg, #FF8A1E 270deg, rgba(255,138,30,0) 360deg)",
+            WebkitMask:
+              "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
+            mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
+            animation: "lex-spin 3.2s linear infinite",
+          }}
+        />
+        {/* counter-rotating dashed ring */}
+        <div
+          style={{
+            position: "absolute",
+            inset: -30,
+            borderRadius: "50%",
+            border: "1.5px dashed rgba(224,36,155,0.35)",
+            animation: "lex-spin-rev 12s linear infinite",
+          }}
+        />
+        {/* orbiting spark */}
+        <div
+          style={{
+            position: "absolute",
+            inset: -18,
+            animation: "lex-spin 2.6s linear infinite",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: -3,
+              left: "50%",
+              width: 7,
+              height: 7,
+              marginLeft: -3.5,
+              borderRadius: "50%",
+              background: "#FF8A1E",
+              boxShadow: "0 0 10px 2px rgba(255,138,30,0.8)",
+            }}
+          />
+        </div>
+        {/* soft glow */}
         <div
           style={{
             position: "absolute",
@@ -78,6 +156,7 @@ export default function Splash() {
       {/* wordmark */}
       <div
         style={{
+          position: "relative",
           fontSize: 30,
           fontWeight: 700,
           letterSpacing: "-0.02em",
@@ -103,6 +182,7 @@ export default function Splash() {
       {/* loader dots */}
       <div
         style={{
+          position: "relative",
           display: "flex",
           gap: 7,
           opacity: 0,
@@ -140,6 +220,20 @@ export default function Splash() {
         @keyframes lex-dot {
           0%, 100% { opacity: 0.3; transform: translateY(0); }
           50%      { opacity: 1;   transform: translateY(-4px); }
+        }
+        @keyframes lex-spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes lex-spin-rev {
+          to { transform: rotate(-360deg); }
+        }
+        @keyframes lex-aurora-a {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+          50%      { transform: translate(30px, -24px) scale(1.15); opacity: 1; }
+        }
+        @keyframes lex-aurora-b {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+          50%      { transform: translate(-26px, 20px) scale(1.12); opacity: 1; }
         }
       `}</style>
     </div>
